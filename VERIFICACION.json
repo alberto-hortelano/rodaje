@@ -1,0 +1,14 @@
+{
+  "testsPassed": 8,
+  "uiConsoleErrors": [],
+  "renders": [
+    "group",
+    "Gilbert dialogue"
+  ],
+  "audioCorrelation": 0.9992053613582232,
+  "alignmentErrorMs": -0.0625,
+  "videoDuration": 6.459,
+  "expectedDuration": 6.458333333333334,
+  "fullDecode": "passed",
+  "cloudGenerationsDuringDevelopment": 0
+}

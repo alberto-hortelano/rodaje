@@ -1,0 +1,1 @@
+The browser entry app.js is generated. Edit app.source.js and md-editor.source.js, then run `npm run build:ui`. stage.js and workflow.mjs remain separate modules. The Markdown editor is bundled locally; no runtime CDN or server restart is required.

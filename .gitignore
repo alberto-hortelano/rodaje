@@ -1,0 +1,7 @@
+node_modules/
+proyectos/
+config.local.json
+.env
+backups/
+pruebas-desarrollo/
+*.tmp
