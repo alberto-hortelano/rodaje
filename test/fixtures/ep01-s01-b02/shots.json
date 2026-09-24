@@ -1,0 +1,2001 @@
+{
+ "ep01-s1-p1": {
+  "id": "ep01-s1-p1",
+  "title": "Acci\u00f3n \u00b7 Black. Then a headlamp beam finds frost on a bulkhead, ",
+  "description": "Black. Then a headlamp beam finds frost on a bulkhead, and a mural: a beach at sunset, and CAPTAIN CHILLY, a cartoon penguin in a space helmet, giving a thumbs-up to nobody.\n\nThe beam belongs to ROZ. Cream suit, the shipping line's logo half worn off, the penguin sticker on her helmet crossed out in marker. She walks. Actually walks: there's a floor tonight, the drum is spinning, and her boots land on rail tracks with a dull transmitted thud.\n\nBehind her a container the size of a garden shed rides the rail on a cradle, pushed by EARL (dark grey, weld patches, a lanyard of keys tapping his chest) and NNAMDI (tug-company orange, NNAMDI hand-lettered on a strip of tape over his old employer's name). Straps everywhere. Thirty-nine more containers in two long ranks down the bay.",
+  "duration": 5.7,
+  "camera": {
+   "position": [
+    3,
+    2.8,
+    7
+   ],
+   "target": [
+    0,
+    4.5,
+    -12.4
+   ],
+   "fov": 32
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "Black. Then a headlamp beam finds frost on a bulkhead, and a mural: a beach at sunset, and CAPTAIN CHILLY, a cartoon penguin in a space helmet, giving a thumbs-up to nobody.\n\nThe beam belongs to ROZ. Cream suit, the shipping line's logo half worn off, the penguin sticker on her helmet crossed out in marker. She walks. Actually walks: there's a floor tonight, the drum is spinning, and her boots land on rail tracks with a dull transmitted thud.\n\nBehind her a container the size of a garden shed rides the rail on a cradle, pushed by EARL (dark grey, weld patches, a lanyard of keys tapping his chest) and NNAMDI (tug-company orange, NNAMDI hand-lettered on a strip of tape over his old employer's name). Straps everywhere. Thirty-nine more containers in two long ranks down the bay.",
+  "detail": false,
+  "gravity": "normal",
+  "variant": "red",
+  "coverage": [],
+  "blockingRevision": "ep01-coverage-v02",
+  "cameraMotion": "establishing-reveal",
+  "cameraNotes": "Arranque sobre el mural de Captain Chilly; travelling lento hacia delante con inclinaci\u00f3n descendente que revela a Roz y al equipo en la bodega, sin corte. Termina en el punto de c\u00e1mara del di\u00e1logo.",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 1,
+   "props": [
+    "cargo"
+   ],
+   "moves": {
+    "roz": {
+     "delta": [
+      0,
+      0,
+      2.8
+     ],
+     "kind": "walk"
+    },
+    "earl": {
+     "delta": [
+      0,
+      0,
+      2.8
+     ],
+     "kind": "walk"
+    },
+    "nnamdi": {
+     "delta": [
+      0,
+      0,
+      2.8
+     ],
+     "kind": "walk"
+    }
+   },
+   "tasks": {
+    "roz": "idle",
+    "earl": "push",
+    "nnamdi": "push"
+   },
+   "potatoes": "none",
+   "look": null
+  }
+ },
+ "ep01-s1-p2": {
+  "id": "ep01-s1-p2",
+  "title": "PA / NNAMDI / ROZ / EARL \u00b7 di\u00e1logo",
+  "description": "**PA (PA):** Good morning, passengers. Gravity is now available on all decks.\n\n**NNAMDI (RADIO):** Love a service you have to announce.\n\n**ROZ (RADIO):** Forty containers. Seed potatoes. Nobody opens anything.\n\n**EARL (RADIO):** They're strapped down.",
+  "duration": 13.13,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [
+   {
+    "id": "ep01-line-1",
+    "character": "pa",
+    "text": "Good morning, passengers. Gravity is now available on all decks.",
+    "spokenText": "Good morning, passengers. Gravity is now available on all decks.",
+    "direction": "",
+    "channel": "pa",
+    "offscreen": true,
+    "start": 0.35,
+    "estimatedDuration": 4.096153846153846,
+    "browserTts": true,
+    "sourceText": "**PA (PA):** Good morning, passengers. Gravity is now available on all decks."
+   },
+   {
+    "id": "ep01-line-2",
+    "character": "nnamdi",
+    "text": "Love a service you have to announce.",
+    "spokenText": "Love a service you have to announce.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 4.746153846153845,
+    "estimatedDuration": 2.942307692307692,
+    "browserTts": true,
+    "sourceText": "**NNAMDI (RADIO):** Love a service you have to announce."
+   },
+   {
+    "id": "ep01-line-3",
+    "character": "roz",
+    "text": "Forty containers. Seed potatoes. Nobody opens anything.",
+    "spokenText": "Forty containers. Seed potatoes. Nobody opens anything.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 7.988461538461538,
+    "estimatedDuration": 2.942307692307692,
+    "browserTts": true,
+    "sourceText": "**ROZ (RADIO):** Forty containers. Seed potatoes. Nobody opens anything."
+   },
+   {
+    "id": "ep01-line-4",
+    "character": "earl",
+    "text": "They're strapped down.",
+    "spokenText": "They're strapped down.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 11.23076923076923,
+    "estimatedDuration": 1.4038461538461537,
+    "browserTts": true,
+    "sourceText": "**EARL (RADIO):** They're strapped down."
+   }
+  ],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "",
+  "detail": false,
+  "gravity": "normal",
+  "variant": "red",
+  "coverage": [
+   {
+    "start": 0.25,
+    "camera": {
+     "position": [
+      3.2,
+      2.15,
+      6.3
+     ],
+     "target": [
+      0,
+      1.15,
+      -0.1
+     ],
+     "fov": 54
+    },
+    "speaker": "pa",
+    "type": "reaction"
+   },
+   {
+    "start": 4.626153846153845,
+    "camera": {
+     "position": [
+      0.85,
+      1.7000000000000002,
+      2.35
+     ],
+     "target": [
+      1.5,
+      1.53,
+      0.5
+     ],
+     "fov": 42
+    },
+    "speaker": "nnamdi",
+    "type": "medium-single"
+   },
+   {
+    "start": 7.8684615384615375,
+    "camera": {
+     "position": [
+      -0.85,
+      1.7000000000000002,
+      2.55
+     ],
+     "target": [
+      -1.5,
+      1.53,
+      0.7
+     ],
+     "fov": 42
+    },
+    "speaker": "roz",
+    "type": "medium-single"
+   },
+   {
+    "start": 11.11076923076923,
+    "camera": {
+     "position": [
+      -0.45,
+      1.7000000000000002,
+      0.6000000000000001
+     ],
+     "target": [
+      0.2,
+      1.53,
+      -1.25
+     ],
+     "fov": 42
+    },
+    "speaker": "earl",
+    "type": "medium-single"
+   }
+  ],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 2,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "idle"
+   },
+   "potatoes": "none",
+   "look": null
+  }
+ },
+ "ep01-s1-p3": {
+  "id": "ep01-s1-p3",
+  "title": "ROZ \u00b7 di\u00e1logo",
+  "description": "**ROZ (RADIO):** I meant the crew.",
+  "duration": 2.64,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [
+   {
+    "id": "ep01-line-5",
+    "character": "roz",
+    "text": "I meant the crew.",
+    "spokenText": "I meant the crew.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 0.35,
+    "estimatedDuration": 1.7884615384615383,
+    "browserTts": true,
+    "sourceText": "**ROZ (RADIO):** I meant the crew."
+   }
+  ],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "",
+  "detail": false,
+  "gravity": "normal",
+  "variant": "red",
+  "coverage": [
+   {
+    "start": 0.25,
+    "camera": {
+     "position": [
+      -0.85,
+      1.7000000000000002,
+      2.55
+     ],
+     "target": [
+      -1.5,
+      1.53,
+      0.7
+     ],
+     "fov": 42
+    },
+    "speaker": "roz",
+    "type": "medium-single"
+   }
+  ],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 3,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "idle"
+   },
+   "potatoes": "none",
+   "look": null
+  }
+ },
+ "ep01-s1-p4": {
+  "id": "ep01-s1-p4",
+  "title": "Acci\u00f3n \u00b7 Earl locks the cradle. Nnamdi hangs off the strap like ",
+  "description": "Earl locks the cradle. Nnamdi hangs off the strap like it's a subway pole.",
+  "duration": 3,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "Earl locks the cradle. Nnamdi hangs off the strap like it's a subway pole.",
+  "detail": false,
+  "gravity": "normal",
+  "variant": "red",
+  "coverage": [],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 4,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "lock",
+    "nnamdi": "hold"
+   },
+   "potatoes": "none",
+   "look": null,
+   "cut": true
+  }
+ },
+ "ep01-s1-p5": {
+  "id": "ep01-s1-p5",
+  "title": "NNAMDI / ROZ / BRADY \u00b7 di\u00e1logo",
+  "description": "**NNAMDI (RADIO):** One quick question. Are we being paid in money or pota\u2014\n\n**ROZ (RADIO):** Don't ask Brady that.\n\n**BRADY (RADIO):** (from somewhere else, instantly) I heard my name.\n\n**ROZ (RADIO):** You didn't.\n\n**BRADY (RADIO):** I heard it in the tone.",
+  "duration": 13.68,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [
+   {
+    "id": "ep01-line-6",
+    "character": "nnamdi",
+    "text": "One quick question. Are we being paid in money or pota\u2014",
+    "spokenText": "One quick question. Are we being paid in money or pota\u2014",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 0.35,
+    "estimatedDuration": 4.480769230769231,
+    "browserTts": true,
+    "sourceText": "**NNAMDI (RADIO):** One quick question. Are we being paid in money or pota\u2014"
+   },
+   {
+    "id": "ep01-line-7",
+    "character": "roz",
+    "text": "Don't ask Brady that.",
+    "spokenText": "Don't ask Brady that.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 5.13076923076923,
+    "estimatedDuration": 1.7884615384615383,
+    "browserTts": true,
+    "sourceText": "**ROZ (RADIO):** Don't ask Brady that."
+   },
+   {
+    "id": "ep01-line-8",
+    "character": "brady",
+    "text": "(from somewhere else, instantly) I heard my name.",
+    "spokenText": "I heard my name.",
+    "direction": "(from somewhere else, instantly)",
+    "channel": "radio",
+    "offscreen": true,
+    "start": 7.2192307692307685,
+    "estimatedDuration": 1.7884615384615383,
+    "browserTts": true,
+    "sourceText": "**BRADY (RADIO):** (from somewhere else, instantly) I heard my name."
+   },
+   {
+    "id": "ep01-line-9",
+    "character": "roz",
+    "text": "You didn't.",
+    "spokenText": "You didn't.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 9.307692307692307,
+    "estimatedDuration": 1.0192307692307692,
+    "browserTts": true,
+    "sourceText": "**ROZ (RADIO):** You didn't."
+   },
+   {
+    "id": "ep01-line-10",
+    "character": "brady",
+    "text": "I heard it in the tone.",
+    "spokenText": "I heard it in the tone.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": true,
+    "start": 10.626923076923076,
+    "estimatedDuration": 2.5576923076923075,
+    "browserTts": true,
+    "sourceText": "**BRADY (RADIO):** I heard it in the tone."
+   }
+  ],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "",
+  "detail": false,
+  "gravity": "normal",
+  "variant": "red",
+  "coverage": [
+   {
+    "start": 0.25,
+    "camera": {
+     "position": [
+      0.85,
+      1.7000000000000002,
+      2.35
+     ],
+     "target": [
+      1.5,
+      1.53,
+      0.5
+     ],
+     "fov": 42
+    },
+    "speaker": "nnamdi",
+    "type": "medium-single"
+   },
+   {
+    "start": 5.01076923076923,
+    "camera": {
+     "position": [
+      -0.85,
+      1.7000000000000002,
+      2.55
+     ],
+     "target": [
+      -1.5,
+      1.53,
+      0.7
+     ],
+     "fov": 42
+    },
+    "speaker": "roz",
+    "type": "medium-single"
+   },
+   {
+    "start": 7.099230769230768,
+    "camera": {
+     "position": [
+      -0.85,
+      1.7000000000000002,
+      2.55
+     ],
+     "target": [
+      -1.5,
+      1.53,
+      0.7
+     ],
+     "fov": 42
+    },
+    "speaker": "brady",
+    "type": "reaction"
+   },
+   {
+    "start": 9.187692307692307,
+    "camera": {
+     "position": [
+      -0.85,
+      1.7000000000000002,
+      2.55
+     ],
+     "target": [
+      -1.5,
+      1.53,
+      0.7
+     ],
+     "fov": 42
+    },
+    "speaker": "roz",
+    "type": "medium-single"
+   },
+   {
+    "start": 10.506923076923076,
+    "camera": {
+     "position": [
+      -0.85,
+      1.7000000000000002,
+      2.55
+     ],
+     "target": [
+      -1.5,
+      1.53,
+      0.7
+     ],
+     "fov": 42
+    },
+    "speaker": "brady",
+    "type": "reaction"
+   }
+  ],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 5,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "hold"
+   },
+   "potatoes": "none",
+   "look": null
+  }
+ },
+ "ep01-s1-p6": {
+  "id": "ep01-s1-p6",
+  "title": "Acci\u00f3n \u00b7 Earl's helmet turns to the ceiling. Not at anything. At",
+  "description": "Earl's helmet turns to the ceiling. Not at anything. At a sound.",
+  "duration": 3,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "Earl's helmet turns to the ceiling. Not at anything. At a sound.",
+  "detail": false,
+  "gravity": "normal",
+  "variant": "red",
+  "coverage": [],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 6,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "hold"
+   },
+   "potatoes": "none",
+   "look": "ceiling",
+   "cut": true
+  }
+ },
+ "ep01-s1-p7": {
+  "id": "ep01-s1-p7",
+  "title": "EARL / NNAMDI / PA \u00b7 di\u00e1logo",
+  "description": "**EARL (RADIO):** Bearing's talking.\n\n**NNAMDI (RADIO):** What's it saying?\n\n**EARL (RADIO):** Same thing it always says.\n\n**PA (PA):** Please disregard the previous gravity advisory.\n\n**NNAMDI (RADIO):** That feels like a sentence with consequences.\n\n**EARL (RADIO):** Hold the rail.",
+  "duration": 13.85,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [
+   {
+    "id": "ep01-line-11",
+    "character": "earl",
+    "text": "Bearing's talking.",
+    "spokenText": "Bearing's talking.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 0.35,
+    "estimatedDuration": 1.0192307692307692,
+    "browserTts": true,
+    "sourceText": "**EARL (RADIO):** Bearing's talking."
+   },
+   {
+    "id": "ep01-line-12",
+    "character": "nnamdi",
+    "text": "What's it saying?",
+    "spokenText": "What's it saying?",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 1.669230769230769,
+    "estimatedDuration": 1.4038461538461537,
+    "browserTts": true,
+    "sourceText": "**NNAMDI (RADIO):** What's it saying?"
+   },
+   {
+    "id": "ep01-line-13",
+    "character": "earl",
+    "text": "Same thing it always says.",
+    "spokenText": "Same thing it always says.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 3.3730769230769226,
+    "estimatedDuration": 2.173076923076923,
+    "browserTts": true,
+    "sourceText": "**EARL (RADIO):** Same thing it always says."
+   },
+   {
+    "id": "ep01-line-14",
+    "character": "pa",
+    "text": "Please disregard the previous gravity advisory.",
+    "spokenText": "Please disregard the previous gravity advisory.",
+    "direction": "",
+    "channel": "pa",
+    "offscreen": true,
+    "start": 5.846153846153845,
+    "estimatedDuration": 2.5576923076923075,
+    "browserTts": true,
+    "sourceText": "**PA (PA):** Please disregard the previous gravity advisory."
+   },
+   {
+    "id": "ep01-line-15",
+    "character": "nnamdi",
+    "text": "That feels like a sentence with consequences.",
+    "spokenText": "That feels like a sentence with consequences.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 8.703846153846152,
+    "estimatedDuration": 2.942307692307692,
+    "browserTts": true,
+    "sourceText": "**NNAMDI (RADIO):** That feels like a sentence with consequences."
+   },
+   {
+    "id": "ep01-line-16",
+    "character": "earl",
+    "text": "Hold the rail.",
+    "spokenText": "Hold the rail.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 11.946153846153845,
+    "estimatedDuration": 1.4038461538461537,
+    "browserTts": true,
+    "sourceText": "**EARL (RADIO):** Hold the rail."
+   }
+  ],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "",
+  "detail": false,
+  "gravity": "normal",
+  "variant": "red",
+  "coverage": [
+   {
+    "start": 0.25,
+    "camera": {
+     "position": [
+      -0.45,
+      1.7000000000000002,
+      0.6000000000000001
+     ],
+     "target": [
+      0.2,
+      1.53,
+      -1.25
+     ],
+     "fov": 42
+    },
+    "speaker": "earl",
+    "type": "medium-single"
+   },
+   {
+    "start": 1.549230769230769,
+    "camera": {
+     "position": [
+      0.85,
+      1.7000000000000002,
+      2.35
+     ],
+     "target": [
+      1.5,
+      1.53,
+      0.5
+     ],
+     "fov": 42
+    },
+    "speaker": "nnamdi",
+    "type": "medium-single"
+   },
+   {
+    "start": 3.2530769230769225,
+    "camera": {
+     "position": [
+      -0.45,
+      1.7000000000000002,
+      0.6000000000000001
+     ],
+     "target": [
+      0.2,
+      1.53,
+      -1.25
+     ],
+     "fov": 42
+    },
+    "speaker": "earl",
+    "type": "medium-single"
+   },
+   {
+    "start": 5.726153846153845,
+    "camera": {
+     "position": [
+      -0.45,
+      1.7000000000000002,
+      0.6000000000000001
+     ],
+     "target": [
+      0.2,
+      1.53,
+      -1.25
+     ],
+     "fov": 42
+    },
+    "speaker": "pa",
+    "type": "reaction"
+   },
+   {
+    "start": 8.583846153846153,
+    "camera": {
+     "position": [
+      0.85,
+      1.7000000000000002,
+      2.35
+     ],
+     "target": [
+      1.5,
+      1.53,
+      0.5
+     ],
+     "fov": 42
+    },
+    "speaker": "nnamdi",
+    "type": "medium-single"
+   },
+   {
+    "start": 11.826153846153845,
+    "camera": {
+     "position": [
+      -0.45,
+      1.7000000000000002,
+      0.6000000000000001
+     ],
+     "target": [
+      0.2,
+      1.53,
+      -1.25
+     ],
+     "fov": 42
+    },
+    "speaker": "earl",
+    "type": "medium-single"
+   }
+  ],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 7,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "hold"
+   },
+   "potatoes": "none",
+   "look": null
+  }
+ },
+ "ep01-s1-p8": {
+  "id": "ep01-s1-p8",
+  "title": "Acci\u00f3n \u00b7 They hold the rail. The floor doesn't leave. It gets so",
+  "description": "They hold the rail. The floor doesn't leave. It gets *soft*. Roz's boots come off the deck by a finger's width and settle back. A strap goes slack and starts to drift in a slow curve.\n\nAnd on the deck, between the ranks of containers, one potato rises. Small, brown, ordinary, turning very slowly in Roz's beam.\n\nThree helmets follow it up.",
+  "duration": 3.1,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "They hold the rail. The floor doesn't leave. It gets *soft*. Roz's boots come off the deck by a finger's width and settle back. A strap goes slack and starts to drift in a slow curve.\n\nAnd on the deck, between the ranks of containers, one potato rises. Small, brown, ordinary, turning very slowly in Roz's beam.\n\nThree helmets follow it up.",
+  "detail": false,
+  "gravity": "changing",
+  "variant": "red",
+  "coverage": [],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 8,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "hold"
+   },
+   "potatoes": "single",
+   "look": "potato",
+   "cut": true
+  }
+ },
+ "ep01-s1-p9": {
+  "id": "ep01-s1-p9",
+  "title": "ROZ / NNAMDI / EARL \u00b7 di\u00e1logo",
+  "description": "**ROZ (RADIO):** Who opened a container.\n\n**NNAMDI (RADIO):** Define opened.\n\n**ROZ (RADIO):** Nnamdi.\n\n**NNAMDI (RADIO):** I have been lied to by cargo before, Roz. I looked. I closed it. Mostly.\n\n**EARL (RADIO):** Which one.",
+  "duration": 12.9,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [
+   {
+    "id": "ep01-line-17",
+    "character": "roz",
+    "text": "Who opened a container.",
+    "spokenText": "Who opened a container.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 0.35,
+    "estimatedDuration": 1.7884615384615383,
+    "browserTts": true,
+    "sourceText": "**ROZ (RADIO):** Who opened a container."
+   },
+   {
+    "id": "ep01-line-18",
+    "character": "nnamdi",
+    "text": "Define opened.",
+    "spokenText": "Define opened.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 2.4384615384615382,
+    "estimatedDuration": 1.0192307692307692,
+    "browserTts": true,
+    "sourceText": "**NNAMDI (RADIO):** Define opened."
+   },
+   {
+    "id": "ep01-line-19",
+    "character": "roz",
+    "text": "Nnamdi.",
+    "spokenText": "Nnamdi.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 3.7576923076923077,
+    "estimatedDuration": 1,
+    "browserTts": true,
+    "sourceText": "**ROZ (RADIO):** Nnamdi."
+   },
+   {
+    "id": "ep01-line-20",
+    "character": "nnamdi",
+    "text": "I have been lied to by cargo before, Roz. I looked. I closed it. Mostly.",
+    "spokenText": "I have been lied to by cargo before, Roz. I looked. I closed it. Mostly.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 5.0576923076923075,
+    "estimatedDuration": 6.019230769230769,
+    "browserTts": true,
+    "sourceText": "**NNAMDI (RADIO):** I have been lied to by cargo before, Roz. I looked. I closed it. Mostly."
+   },
+   {
+    "id": "ep01-line-21",
+    "character": "earl",
+    "text": "Which one.",
+    "spokenText": "Which one.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 11.376923076923077,
+    "estimatedDuration": 1.0192307692307692,
+    "browserTts": true,
+    "sourceText": "**EARL (RADIO):** Which one."
+   }
+  ],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "",
+  "detail": false,
+  "gravity": "changing",
+  "variant": "red",
+  "coverage": [
+   {
+    "start": 0.25,
+    "camera": {
+     "position": [
+      -0.85,
+      1.7000000000000002,
+      2.55
+     ],
+     "target": [
+      -1.5,
+      1.53,
+      0.7
+     ],
+     "fov": 42
+    },
+    "speaker": "roz",
+    "type": "medium-single"
+   },
+   {
+    "start": 2.318461538461538,
+    "camera": {
+     "position": [
+      0.85,
+      1.7000000000000002,
+      2.35
+     ],
+     "target": [
+      1.5,
+      1.53,
+      0.5
+     ],
+     "fov": 42
+    },
+    "speaker": "nnamdi",
+    "type": "medium-single"
+   },
+   {
+    "start": 3.6376923076923076,
+    "camera": {
+     "position": [
+      -0.85,
+      1.7000000000000002,
+      2.55
+     ],
+     "target": [
+      -1.5,
+      1.53,
+      0.7
+     ],
+     "fov": 42
+    },
+    "speaker": "roz",
+    "type": "medium-single"
+   },
+   {
+    "start": 4.937692307692307,
+    "camera": {
+     "position": [
+      0.85,
+      1.7000000000000002,
+      2.35
+     ],
+     "target": [
+      1.5,
+      1.53,
+      0.5
+     ],
+     "fov": 42
+    },
+    "speaker": "nnamdi",
+    "type": "medium-single"
+   },
+   {
+    "start": 11.256923076923078,
+    "camera": {
+     "position": [
+      -0.45,
+      1.7000000000000002,
+      0.6000000000000001
+     ],
+     "target": [
+      0.2,
+      1.53,
+      -1.25
+     ],
+     "fov": 42
+    },
+    "speaker": "earl",
+    "type": "medium-single"
+   }
+  ],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 9,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "hold"
+   },
+   "potatoes": "single",
+   "look": null
+  }
+ },
+ "ep01-s1-p10": {
+  "id": "ep01-s1-p10",
+  "title": "NNAMDI \u00b7 di\u00e1logo",
+  "description": "**NNAMDI (RADIO):** ...One of the ones by the door.",
+  "duration": 3.79,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [
+   {
+    "id": "ep01-line-22",
+    "character": "nnamdi",
+    "text": "...One of the ones by the door.",
+    "spokenText": "...One of the ones by the door.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 0.35,
+    "estimatedDuration": 2.942307692307692,
+    "browserTts": true,
+    "sourceText": "**NNAMDI (RADIO):** ...One of the ones by the door."
+   }
+  ],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "",
+  "detail": false,
+  "gravity": "changing",
+  "variant": "red",
+  "coverage": [
+   {
+    "start": 0.25,
+    "camera": {
+     "position": [
+      0.85,
+      1.7000000000000002,
+      2.35
+     ],
+     "target": [
+      1.5,
+      1.53,
+      0.5
+     ],
+     "fov": 42
+    },
+    "speaker": "nnamdi",
+    "type": "medium-single"
+   }
+  ],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 10,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "hold"
+   },
+   "potatoes": "single",
+   "look": null
+  }
+ },
+ "ep01-s1-p11": {
+  "id": "ep01-s1-p11",
+  "title": "Acci\u00f3n \u00b7 Everyone's beam goes to the door. The inboard door, the",
+  "description": "Everyone's beam goes to the door. The inboard door, the big round-cornered one to the corridor ring, is *open*: they've been running the rail through it all morning. In the doorway, a container with its latch bar swung wide and its lid lifted an inch, breathing potatoes.",
+  "duration": 3,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "Everyone's beam goes to the door. The inboard door, the big round-cornered one to the corridor ring, is *open*: they've been running the rail through it all morning. In the doorway, a container with its latch bar swung wide and its lid lifted an inch, breathing potatoes.",
+  "detail": false,
+  "gravity": "changing",
+  "variant": "red",
+  "coverage": [],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 11,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "hold"
+   },
+   "potatoes": "leak",
+   "look": "cargo",
+   "cut": true
+  }
+ },
+ "ep01-s1-p12": {
+  "id": "ep01-s1-p12",
+  "title": "EARL / ROZ / NNAMDI \u00b7 di\u00e1logo",
+  "description": "**EARL (RADIO):** Clutch dropped. She's coasting down.\n\n**ROZ (RADIO):** How long.\n\n**EARL (RADIO):** Half an hour to nothing. Unless it grabs.\n\n**NNAMDI (RADIO):** What happens if it grabs?",
+  "duration": 10.44,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [
+   {
+    "id": "ep01-line-23",
+    "character": "earl",
+    "text": "Clutch dropped. She's coasting down.",
+    "spokenText": "Clutch dropped. She's coasting down.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 0.35,
+    "estimatedDuration": 2.173076923076923,
+    "browserTts": true,
+    "sourceText": "**EARL (RADIO):** Clutch dropped. She's coasting down."
+   },
+   {
+    "id": "ep01-line-24",
+    "character": "roz",
+    "text": "How long.",
+    "spokenText": "How long.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 2.823076923076923,
+    "estimatedDuration": 1.0192307692307692,
+    "browserTts": true,
+    "sourceText": "**ROZ (RADIO):** How long."
+   },
+   {
+    "id": "ep01-line-25",
+    "character": "earl",
+    "text": "Half an hour to nothing. Unless it grabs.",
+    "spokenText": "Half an hour to nothing. Unless it grabs.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 4.142307692307692,
+    "estimatedDuration": 3.3269230769230766,
+    "browserTts": true,
+    "sourceText": "**EARL (RADIO):** Half an hour to nothing. Unless it grabs."
+   },
+   {
+    "id": "ep01-line-26",
+    "character": "nnamdi",
+    "text": "What happens if it grabs?",
+    "spokenText": "What happens if it grabs?",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 7.769230769230768,
+    "estimatedDuration": 2.173076923076923,
+    "browserTts": true,
+    "sourceText": "**NNAMDI (RADIO):** What happens if it grabs?"
+   }
+  ],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "",
+  "detail": false,
+  "gravity": "changing",
+  "variant": "red",
+  "coverage": [
+   {
+    "start": 0.25,
+    "camera": {
+     "position": [
+      -0.45,
+      1.7000000000000002,
+      0.6000000000000001
+     ],
+     "target": [
+      0.2,
+      1.53,
+      -1.25
+     ],
+     "fov": 42
+    },
+    "speaker": "earl",
+    "type": "medium-single"
+   },
+   {
+    "start": 2.7030769230769227,
+    "camera": {
+     "position": [
+      -0.85,
+      1.7000000000000002,
+      2.55
+     ],
+     "target": [
+      -1.5,
+      1.53,
+      0.7
+     ],
+     "fov": 42
+    },
+    "speaker": "roz",
+    "type": "medium-single"
+   },
+   {
+    "start": 4.022307692307692,
+    "camera": {
+     "position": [
+      -0.45,
+      1.7000000000000002,
+      0.6000000000000001
+     ],
+     "target": [
+      0.2,
+      1.53,
+      -1.25
+     ],
+     "fov": 42
+    },
+    "speaker": "earl",
+    "type": "medium-single"
+   },
+   {
+    "start": 7.649230769230768,
+    "camera": {
+     "position": [
+      0.85,
+      1.7000000000000002,
+      2.35
+     ],
+     "target": [
+      1.5,
+      1.53,
+      0.5
+     ],
+     "fov": 42
+    },
+    "speaker": "nnamdi",
+    "type": "medium-single"
+   }
+  ],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 12,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "hold"
+   },
+   "potatoes": "leak",
+   "look": null
+  }
+ },
+ "ep01-s1-p13": {
+  "id": "ep01-s1-p13",
+  "title": "Acci\u00f3n \u00b7 Nobody answers, because the answer arrives. The JOLT. C",
+  "description": "Nobody answers, because the answer arrives.\n\nThe JOLT. Cut to: a strap buckle snapping like a gunshot we can't hear. A wrench leaving Earl's chest pocket and crossing the frame. A container lid slamming *open* and a wall of potatoes coming out of it in a slow brown wave. A helmet \u2014 Nnamdi's \u2014 hitting the rail and rolling in the beam, empty (it's the spare, it was clipped to the cradle, it's fine, we'll learn that in a second). Captain Chilly on the mural, a potato bouncing off his visor.",
+  "duration": 3.75,
+  "camera": {
+   "position": [
+    1,
+    0.95,
+    1.5
+   ],
+   "target": [
+    0,
+    0.35,
+    0
+   ],
+   "fov": 43
+  },
+  "cameraEnd": {
+   "position": [
+    1,
+    0.95,
+    1.5
+   ],
+   "target": [
+    0,
+    0.35,
+    0
+   ],
+   "fov": 43
+  },
+  "lines": [],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "Nobody answers, because the answer arrives.\n\nThe JOLT. Cut to: a strap buckle snapping like a gunshot we can't hear. A wrench leaving Earl's chest pocket and crossing the frame. A container lid slamming *open* and a wall of potatoes coming out of it in a slow brown wave. A helmet \u2014 Nnamdi's \u2014 hitting the rail and rolling in the beam, empty (it's the spare, it was clipped to the cradle, it's fine, we'll learn that in a second). Captain Chilly on the mural, a potato bouncing off his visor.",
+  "detail": true,
+  "gravity": "zero",
+  "variant": "red",
+  "coverage": [],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 13,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "hold"
+   },
+   "potatoes": "cloud",
+   "look": null,
+   "insert": "cargo-release"
+  }
+ },
+ "ep01-s1-p14": {
+  "id": "ep01-s1-p14",
+  "title": "NNAMDI / ROZ / EARL \u00b7 di\u00e1logo",
+  "description": "**NNAMDI (RADIO):** (a little high) I'm okay. That's the spare. I'm okay.\n\n**ROZ (RADIO):** Nobody asked.\n\n**EARL (RADIO):** (long pause) Door.",
+  "duration": 6.41,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [
+   {
+    "id": "ep01-line-27",
+    "character": "nnamdi",
+    "text": "(a little high) I'm okay. That's the spare. I'm okay.",
+    "spokenText": "I'm okay. That's the spare. I'm okay.",
+    "direction": "(a little high)",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 0.35,
+    "estimatedDuration": 2.942307692307692,
+    "browserTts": true,
+    "sourceText": "**NNAMDI (RADIO):** (a little high) I'm okay. That's the spare. I'm okay."
+   },
+   {
+    "id": "ep01-line-28",
+    "character": "roz",
+    "text": "Nobody asked.",
+    "spokenText": "Nobody asked.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 3.592307692307692,
+    "estimatedDuration": 1.0192307692307692,
+    "browserTts": true,
+    "sourceText": "**ROZ (RADIO):** Nobody asked."
+   },
+   {
+    "id": "ep01-line-29",
+    "character": "earl",
+    "text": "(long pause) Door.",
+    "spokenText": "Door.",
+    "direction": "(long pause)",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 4.911538461538461,
+    "estimatedDuration": 1,
+    "browserTts": true,
+    "sourceText": "**EARL (RADIO):** (long pause) Door."
+   }
+  ],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "",
+  "detail": false,
+  "gravity": "zero",
+  "variant": "red",
+  "coverage": [
+   {
+    "start": 0.25,
+    "camera": {
+     "position": [
+      0.85,
+      1.7000000000000002,
+      2.35
+     ],
+     "target": [
+      1.5,
+      1.53,
+      0.5
+     ],
+     "fov": 42
+    },
+    "speaker": "nnamdi",
+    "type": "medium-single"
+   },
+   {
+    "start": 3.472307692307692,
+    "camera": {
+     "position": [
+      -0.85,
+      1.7000000000000002,
+      2.55
+     ],
+     "target": [
+      -1.5,
+      1.53,
+      0.7
+     ],
+     "fov": 42
+    },
+    "speaker": "roz",
+    "type": "medium-single"
+   },
+   {
+    "start": 4.791538461538461,
+    "camera": {
+     "position": [
+      -0.45,
+      1.7000000000000002,
+      0.6000000000000001
+     ],
+     "target": [
+      0.2,
+      1.53,
+      -1.25
+     ],
+     "fov": 42
+    },
+    "speaker": "earl",
+    "type": "medium-single"
+   }
+  ],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 14,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "hold"
+   },
+   "potatoes": "cloud",
+   "look": null
+  }
+ },
+ "ep01-s1-p15": {
+  "id": "ep01-s1-p15",
+  "title": "Acci\u00f3n \u00b7 Roz's beam swings back to the open door. Potatoes are g",
+  "description": "Roz's beam swings back to the open door. Potatoes are going through it. Not fast. In the way water goes over a weir: all of them, all the time, in no hurry.",
+  "duration": 3,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "Roz's beam swings back to the open door. Potatoes are going through it. Not fast. In the way water goes over a weir: all of them, all the time, in no hurry.",
+  "detail": false,
+  "gravity": "zero",
+  "variant": "red",
+  "coverage": [],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 15,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "hold"
+   },
+   "potatoes": "cloud",
+   "look": "cargo",
+   "cut": true
+  }
+ },
+ "ep01-s1-p16": {
+  "id": "ep01-s1-p16",
+  "title": "ROZ / EARL \u00b7 di\u00e1logo",
+  "description": "**ROZ (RADIO):** Close the door.\n\n**EARL (RADIO):** Door's the thing that's open, Roz.",
+  "duration": 5.11,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [
+   {
+    "id": "ep01-line-30",
+    "character": "roz",
+    "text": "Close the door.",
+    "spokenText": "Close the door.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 0.35,
+    "estimatedDuration": 1.4038461538461537,
+    "browserTts": true,
+    "sourceText": "**ROZ (RADIO):** Close the door."
+   },
+   {
+    "id": "ep01-line-31",
+    "character": "earl",
+    "text": "Door's the thing that's open, Roz.",
+    "spokenText": "Door's the thing that's open, Roz.",
+    "direction": "",
+    "channel": "radio",
+    "offscreen": false,
+    "start": 2.0538461538461537,
+    "estimatedDuration": 2.5576923076923075,
+    "browserTts": true,
+    "sourceText": "**EARL (RADIO):** Door's the thing that's open, Roz."
+   }
+  ],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "",
+  "detail": false,
+  "gravity": "zero",
+  "variant": "red",
+  "coverage": [
+   {
+    "start": 0.25,
+    "camera": {
+     "position": [
+      -0.85,
+      1.7000000000000002,
+      2.55
+     ],
+     "target": [
+      -1.5,
+      1.53,
+      0.7
+     ],
+     "fov": 42
+    },
+    "speaker": "roz",
+    "type": "medium-single"
+   },
+   {
+    "start": 1.9338461538461535,
+    "camera": {
+     "position": [
+      -0.45,
+      1.7000000000000002,
+      0.6000000000000001
+     ],
+     "target": [
+      0.2,
+      1.53,
+      -1.25
+     ],
+     "fov": 42
+    },
+    "speaker": "earl",
+    "type": "medium-single"
+   }
+  ],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 16,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "hold"
+   },
+   "potatoes": "cloud",
+   "look": null
+  }
+ },
+ "ep01-s1-p17": {
+  "id": "ep01-s1-p17",
+  "title": "Acci\u00f3n \u00b7 Title card, plain type on black, the ship's hum under i",
+  "description": "Title card, plain type on black, the ship's hum under it:\n\n**DEAD AIR**",
+  "duration": 3,
+  "camera": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "cameraEnd": {
+   "position": [
+    -3.8,
+    2.2,
+    -0.2
+   ],
+   "target": [
+    0.2,
+    1.2,
+    -0.8
+   ],
+   "fov": 50
+  },
+  "lines": [],
+  "history": [],
+  "rehearsal": true,
+  "sourceScene": 1,
+  "action": "Title card, plain type on black, the ship's hum under it:\n\n**DEAD AIR**",
+  "detail": false,
+  "gravity": "zero",
+  "variant": "red",
+  "coverage": [],
+  "blockingRevision": "ep01-coverage-v02",
+  "staging": {
+   "revision": 4,
+   "scene": 1,
+   "shot": 17,
+   "props": [
+    "cargo"
+   ],
+   "moves": {},
+   "tasks": {
+    "roz": "idle",
+    "earl": "idle",
+    "nnamdi": "hold"
+   },
+   "potatoes": "cloud",
+   "look": null,
+   "title": "DEAD AIR"
+  }
+ }
+}

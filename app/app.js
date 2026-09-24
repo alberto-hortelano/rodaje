@@ -28569,7 +28569,7 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { variants, zones, channels, storyboardShot, storyboardPrompt, storyboardToEpisode } from "./workflow.mjs";
+import { variants, zones, channels, storyboardShot, storyboardPrompt, storyboardToEpisode, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue } from "./workflow.mjs";
 import { createStage as createStage2 } from "./stage.js";
 var state;
 var p = null;
@@ -28780,8 +28780,12 @@ async function render() {
   const generation = ++renderGeneration;
   stage?.dispose();
   stage = null;
-  const nav2 = p ? [["overview", "Vista del proyecto"], ["ideas", "Historia e ideas"], ["characters", "Personajes y voces"], ["locations", "Ambientes"], ...p.shipModel ? [["ship", "Nave \xB7 modelo 3D"]] : [], ["storyboards", "Storyboards"], ["episodes", "Cap\xEDtulos"], ["jobs", "Generaciones"]] : [["library", "Mis proyectos"], ["jobs", "Generaciones"]];
+  const nav2 = p ? [["overview", "Vista del proyecto"], ["ideas", "Historia e ideas"], ["characters", "Personajes y voces"], ["locations", "Ambientes"], ...p.shipModel ? [["ship", "Nave \xB7 modelo 3D"]] : [], ["storyboards", "Storyboards"], ["outline", "Escaleta"], ["episodes", p?.type === "serie" ? "Cap\xEDtulos" : "Actos"], ["issues", "Pendientes"], ["jobs", "Generaciones"]] : [["library", "Mis proyectos"], ["jobs", "Generaciones"]];
   $2("#app").innerHTML = `<div class="shell"><aside class="sidebar"><div class="brand"><i class="logo"></i> rodaje<span style="font-size:10px;align-self:end">LOCAL</span></div><div class="eyebrow">Estudio de historias</div>${p ? `<div class="projectname">${esc(p.name)}</div>` : ""}${nav2.map(([v2, l3]) => btn(l3, "nav:" + v2, view === v2 ? "active" : "")).join("")}<div class="bottom">${p ? btn("\u2190 Todos los proyectos", "library") : ""}${btn("\u2699 Ajustes", "settings")}<small>De la primera idea<br>a la \xFAltima toma.</small></div></aside><main class="main"><header class="topbar"><span>${p ? esc(p.name) + " / " + esc(nav2.find((n) => n[0] === view)?.[1] || (view === "storyboard" ? "Storyboard" : "Estudio de plano")) : "TU ESPACIO DE PRODUCCI\xD3N"}</span><div class="row"><span class="pill">${state.settings.configured ? "\u25CF Generaci\xF3n conectada" : "\u25CB Generaci\xF3n sin configurar"}</span>${p ? btn("Actualizar", "refresh") + btn("Guardar cambios", "save") : ""}</div></header><div class="workspace" id="workspace"></div></main></div>`;
+  {
+    const a = $2(".sidebar button.active"), s = a?.parentElement;
+    if (s && s.scrollWidth > s.clientWidth) s.scrollLeft += a.getBoundingClientRect().left - s.getBoundingClientRect().left - (s.clientWidth - a.offsetWidth) / 2;
+  }
   let html3 = "";
   const heading2 = (title, desc, actions = "") => `<div class="heading"><div><div class="eyebrow">${p ? esc(p.type === "serie" ? "Serie \xB7 " + p.language : "Pel\xEDcula \xB7 " + p.language) : "Biblioteca"}</div><h1>${title}</h1><p>${desc}</p></div>${actions}</div>`;
   if (view === "library") {
@@ -28796,6 +28800,14 @@ async function render() {
   }
   if (view === "ideas") {
     html3 = heading2("Historia e ideas", "La biblia de la serie: premisa, arcos, reglas del mundo y notas de guion.", `<div class="row">${btn("Importar texto", "import-text")}${btn("+ Documento", "new-idea", "primary")}</div>`) + (p.ideas.length ? `<div class="grid">${p.ideas.map((i2) => `<article class="card"><div class="inner"><span class="pill">DOCUMENTO</span><h2 style="margin-top:16px">${esc(i2.title)}</h2><p>${esc(i2.text.slice(0, 220))}</p>${btn("Editar documento", "idea:" + i2.id)}</div></article>`).join("")}</div>` : '<div class="empty"><h2>La historia antes que los planos.</h2><p>Escribe el argumento general, las reglas del mundo o una idea suelta.</p></div>');
+  }
+  if (view === "issues") {
+    p.issues ||= [];
+    const board = issueBoard(p), sevLabel = Object.fromEntries(ISSUE_SEVERITIES), excerpt = (s) => {
+      const x2 = String(s || "").split("\n").find((l3) => l3.trim() && !/^\|/.test(l3)) || "";
+      return x2.length > 180 ? x2.slice(0, 180) + "\u2026" : x2;
+    };
+    html3 = heading2("Pendientes", "Fallos de guion, decisiones abiertas y tareas. Arrastra las tarjetas entre columnas; el orden dentro de cada columna tambi\xE9n se guarda.", btn("+ Pendiente", "issue", "primary")) + `<div class="kanban">${board.map((col) => `<section class="kanban-col" data-kanban-col="${col.key}"><h3>${esc(col.label)} <span class="tiny">${col.items.length}</span></h3>${col.items.map((i2) => `<article class="kanban-card" draggable="true" data-kanban-card="${i2.id}"><div class="row">${i2.code ? `<span class="pill">${esc(i2.code)}</span>` : ""}${i2.severity && i2.severity !== "nota" ? `<span class="pill sev-${esc(i2.severity)}">${esc(sevLabel[i2.severity] || i2.severity)}</span>` : ""}</div><h4>${esc(i2.title)}</h4><p>${esc(excerpt(i2.text))}</p><div class="actions">${btn("Abrir", "issue:" + i2.id)}${btn("Borrar", "delete-issue:" + i2.id)}</div></article>`).join("") || '<div class="kanban-empty">Nada aqu\xED.</div>'}</section>`).join("")}</div>`;
   }
   if (view === "characters" || view === "locations") {
     const chars = view === "characters", list = chars ? p.characters : p.locations;
@@ -28821,9 +28833,20 @@ async function render() {
     const shots = sbShots(b2), zoneName = Object.fromEntries(zones), chName = Object.fromEntries(channels.map(([v2, l3]) => [v2, l3.split(" \xB7")[0]]));
     html3 = heading2(esc(b2.title), esc(b2.subtitle || ""), `<div class="row">${btn("\u2190 Storyboards", "nav:storyboards")}${btn("Editar", "edit-storyboard:" + b2.id)}${btn("+ Secuencia", "new-sb-sequence:" + b2.id)}${btn("Exportar JSON", "sb-export:" + b2.id)}${btn("Eliminar", "delete-storyboard:" + b2.id)}${btn("Crear cap\xEDtulo", "sb-to-episode:" + b2.id, "primary")}</div>`) + `<div class="two"><section class="panel"><div class="eyebrow">Planteamiento</div><p style="white-space:pre-wrap">${esc(b2.description || "Sin descripci\xF3n todav\xEDa.")}</p>${b2.notes ? `<div class="note" style="margin-top:16px;white-space:pre-wrap">${esc(b2.notes)}</div>` : ""}</section><section class="panel"><div class="row between"><div><span class="stat">${b2.sequences.length}</span>Secuencias</div><div><span class="stat">${shots.length}</span>Vi\xF1etas</div><div><span class="stat">${shots.filter((t2) => t2.render).length}</span>Fotogramas</div><div><span class="stat" style="font-size:22px">${sbDur(shots.reduce((n, t2) => n + (Number(t2.duration) || 0), 0))}</span>Duraci\xF3n</div></div><p style="margin-top:22px">Cada vi\xF1eta guarda su boceto, el fotograma generado, las referencias y el prompt. \xABGenerar fotograma\xBB env\xEDa el boceto y las referencias al modelo de imagen; \xABCrear cap\xEDtulo\xBB convierte las vi\xF1etas en planos editables con su di\xE1logo. Arrastra una vi\xF1eta sobre otra (o sobre el hueco final de una secuencia) para reordenarla; las flechas \u25C0 \u25B6 hacen lo mismo con el teclado.</p></section></div>` + b2.sequences.map((s) => `<div class="panel"><div class="row between"><div><span class="eyebrow">SECUENCIA</span><h2>${esc(s.title)}</h2><p>${esc(s.note || "")}${s.location ? ` <span class="tiny">\xB7 ${esc(p.locations.find((l3) => l3.id === s.location)?.name || s.location)}</span>` : ""}</p></div><div class="row">${btn("Editar", "sb-sequence:" + b2.id + ":" + s.id)}${btn("+ Vi\xF1eta", "new-sb-shot:" + b2.id + ":" + s.id)}${btn("Eliminar", "delete-sb-sequence:" + b2.id + ":" + s.id)}</div></div><div class="sb-grid" data-sb-grid="${s.id}" style="margin-top:16px">${s.shots.map((t2) => `<article class="sb-card" draggable="true" data-sb-drag="${t2.id}">${sbFrame(t2)}<div class="inner"><div class="row between"><h3>${esc(t2.title)}</h3><span class="pill zone-${esc(t2.zone || "other")}">${esc(zoneName[t2.zone] || t2.zone || "")}</span></div>${t2.camera ? `<p class="tiny" style="margin:6px 0 0">${esc(t2.camera)}</p>` : ""}${t2.action ? `<p style="margin:8px 0 0">${esc(t2.action)}</p>` : ""}${t2.dialogue?.length ? `<ul class="sb-dial">${t2.dialogue.map((l3) => `<li class="${esc(l3.channel || "")}"><b>${esc(l3.who || p.characters.find((c) => c.id === l3.character)?.name || "")}</b>${l3.channel ? `<span class="tiny">(${esc(chName[l3.channel] || l3.channel)})</span> ` : ""}${esc(l3.text)}</li>`).join("")}</ul>` : ""}${t2.sound ? `<p class="tiny" style="margin-top:8px;font-style:italic">${esc(t2.sound)}</p>` : ""}${t2.cast?.length ? `<p class="tiny" style="margin-top:6px">Reparto: ${esc(t2.cast.map((c) => p.characters.find((x2) => x2.id === c)?.name || c).join(", "))}</p>` : ""}<div class="actions">${btn("Editar", "sb-shot:" + b2.id + ":" + s.id + ":" + t2.id)}${btn("Subir boceto", "upload-sb-sketch:" + t2.id)}${btn("Subir fotograma", "upload-sb-render:" + t2.id)}${btn("Generar fotograma", "gen-sb:" + t2.id, t2.render ? "" : "lime")}${btn("Prompt", "sb-prompt:" + t2.id)}${btn("\u25C0", "sb-move:" + t2.id + ":-1")}${btn("\u25B6", "sb-move:" + t2.id + ":1")}${btn("\u2715", "delete-sb-shot:" + t2.id)}${t2.renders?.length > 1 ? `<select data-sb-render="${t2.id}" aria-label="Versi\xF3n del fotograma">${opts(t2.renders.map((r, i2) => [r.file, "Fotograma " + (i2 + 1)]), t2.render)}</select>` : ""}</div></div></article>`).join("") || '<p class="tiny">Sin vi\xF1etas todav\xEDa.</p>'}</div></div>`).join("") + (b2.sequences.length ? "" : '<div class="empty"><h2>Empieza por una secuencia.</h2><p>Cada secuencia agrupa vi\xF1etas con su encuadre, acci\xF3n y di\xE1logo.</p></div>');
   }
+  if (view === "outline") {
+    const rows = outline(p);
+    html3 = heading2("Escaleta.", (p.type === "serie" ? "Cap\xEDtulos" : "Actos") + " y secuencias en orden, con una car\xE1tula por secuencia. El prompt de cada car\xE1tula se edita aqu\xED y se guarda con el proyecto.", `<div class="row">${btn("Generar car\xE1tulas que faltan", "gen-covers")}</div>`) + p.episodes.map((e) => {
+      const list = rows.filter((r) => r.episode === e);
+      return `<div class="panel"><div class="row between"><div><span class="eyebrow">${p.type === "serie" ? "CAP\xCDTULO" : "ACTO"}</span><h2>${esc(e.title)}</h2><p>${esc(e.synopsis || "")}</p></div><span class="pill">${list.reduce((n, r) => n + r.minutes, 0)} min \xB7 ${list.length} secuencias</span></div><div class="sb-grid" style="margin-top:16px">${list.map((r) => {
+        const s = r.sequence;
+        return `<article class="sb-card"><div class="sb-frame">${s.cover ? `<img src="${media(s.cover)}" alt="${esc(r.code + " \xB7 " + s.title)}">` : '<div class="sb-empty">Sin car\xE1tula \xB7 genera o sube una imagen</div>'}<span class="sb-code">${esc(r.code)}</span>${r.minutes ? `<span class="sb-dur">${esc(r.minutes)} min</span>` : ""}</div><div class="inner"><h3>${esc(s.title)}</h3><p style="margin:8px 0 0">${esc(s.text || "Sin texto de escaleta.")}</p><details style="margin-top:10px"><summary class="tiny">Prompt de car\xE1tula</summary><textarea data-cover-prompt="${s.id}" style="margin-top:8px;font-size:12px;min-height:120px" aria-label="Prompt de car\xE1tula de ${esc(s.title)}">${esc(s.coverPrompt || "")}</textarea><p class="tiny">Vac\xEDo: se compone con el estilo del proyecto y el texto de la secuencia.</p></details><div class="actions">${btn("Generar car\xE1tula", "gen-cover:" + s.id, s.cover ? "" : "lime")}${btn("Subir car\xE1tula", "upload-cover:" + s.id)}${btn("Prompt", "cover-prompt:" + s.id)}${btn("Editar", "edit-outline:" + s.id)}${s.covers?.length > 1 ? `<select data-cover-version="${s.id}" aria-label="Versi\xF3n de la car\xE1tula">${opts(s.covers.map((x2, i2) => [x2.file, "Car\xE1tula " + (i2 + 1)]), s.cover)}</select>` : ""}</div></div></article>`;
+      }).join("") || '<p class="tiny">Sin secuencias todav\xEDa.</p>'}</div></div>`;
+    }).join("");
+    if (!p.episodes.length) html3 += `<div class="empty"><h2>La escaleta se llena desde ${p.type === "serie" ? "los cap\xEDtulos" : "los actos"}.</h2><p>Crea el primero y sus secuencias aparecer\xE1n aqu\xED en orden, cada una con su car\xE1tula.</p></div>`;
+  }
   if (view === "episodes") {
-    html3 = heading2(p.type === "serie" ? "Cap\xEDtulos." : "Desglose de la pel\xEDcula.", "De la historia a secuencias y planos que puedes editar y previsualizar.", `<div class="row">${btn("Generar con IA", "outline")}${btn("+ Cap\xEDtulo", "new-episode", "primary")}</div>`) + p.episodes.map((e) => `<div class="panel"><div class="row between"><div><span class="eyebrow">CAP\xCDTULO</span><h2>${esc(e.title)}</h2><p>${esc(e.synopsis)}</p></div><div class="row">${e.rehearsal ? btn("\u25B6 Ensayar 3D \xB7 voz del navegador", "rehearsal:" + e.id, "primary") : ""}${btn("Editar", "episode:" + e.id)}${btn("+ Secuencia", "new-sequence:" + e.id)}${btn("Montar cap\xEDtulo", "export:" + e.id)}</div></div>${e.sequences.map((s) => `<div style="margin-top:24px"><div class="row between"><h3>${esc(s.title)} <span class="tiny">${s.shots.length} planos \xB7 ${esc(p.locations.find((l3) => l3.id === s.location)?.name || "Sin escenario")}</span></h3>${btn("+ Plano", "new-shot:" + e.id + ":" + s.id)}</div><div class="grid" style="margin-top:12px">${s.shots.map((t2, i2) => `<article class="card"><div class="inner"><div class="row between"><span class="pill">P${String(i2 + 1).padStart(2, "0")}</span><span class="tiny">${t2.duration}s \xB7 ${t2.lines.length} di\xE1logos</span></div><h3 style="margin-top:14px">${esc(t2.title)}</h3><p>${esc(t2.description.slice(0, 90) || "Define encuadre, acci\xF3n y conversaci\xF3n.")}</p>${btn("Abrir estudio \u2192", "shot:" + e.id + ":" + s.id + ":" + t2.id)}</div></article>`).join("")}</div></div>`).join("")}${e.exports?.length ? `<div class="actions">${e.exports.map((x2, i2) => `<a href="${media(x2.file)}" target="_blank">Montaje v${i2 + 1} \u2197</a>`).join(" \xB7 ")}</div>` : ""}</div>`).join("");
-    if (!p.episodes.length) html3 += '<div class="empty"><h2>El primer cap\xEDtulo toma forma aqu\xED.</h2><p>Cr\xE9alo manualmente o pide un desglose a partir de los documentos y referencias.</p></div>';
+    html3 = heading2(p.type === "serie" ? "Cap\xEDtulos." : "Desglose de la pel\xEDcula.", "De la historia a secuencias y planos que puedes editar y previsualizar.", `<div class="row">${btn("Generar con IA", "outline")}${btn(p.type === "serie" ? "+ Cap\xEDtulo" : "+ Acto", "new-episode", "primary")}</div>`) + p.episodes.map((e) => `<div class="panel"><div class="row between"><div><span class="eyebrow">${p.type === "serie" ? "CAP\xCDTULO" : "ACTO"}</span><h2>${esc(e.title)}</h2><p>${esc(e.synopsis)}</p></div><div class="row">${e.rehearsal ? btn("\u25B6 Ensayar 3D \xB7 voz del navegador", "rehearsal:" + e.id, "primary") : ""}${btn("Editar", "episode:" + e.id)}${btn("+ Secuencia", "new-sequence:" + e.id)}${btn(p.type === "serie" ? "Montar cap\xEDtulo" : "Montar acto", "export:" + e.id)}</div></div>${e.sequences.map((s) => `<div style="margin-top:24px"><div class="row between"><h3>${esc(s.title)} <span class="tiny">${s.shots.length} planos \xB7 ${esc(p.locations.find((l3) => l3.id === s.location)?.name || "Sin escenario")}</span></h3>${btn("+ Plano", "new-shot:" + e.id + ":" + s.id)}</div><div class="grid" style="margin-top:12px">${s.shots.map((t2, i2) => `<article class="card"><div class="inner"><div class="row between"><span class="pill">P${String(i2 + 1).padStart(2, "0")}</span><span class="tiny">${t2.duration}s \xB7 ${t2.lines.length} di\xE1logos</span></div><h3 style="margin-top:14px">${esc(t2.title)}</h3><p>${esc(t2.description.slice(0, 90) || "Define encuadre, acci\xF3n y conversaci\xF3n.")}</p>${btn("Abrir estudio \u2192", "shot:" + e.id + ":" + s.id + ":" + t2.id)}</div></article>`).join("")}</div></div>`).join("")}${e.exports?.length ? `<div class="actions">${e.exports.map((x2, i2) => `<a href="${media(x2.file)}" target="_blank">Montaje v${i2 + 1} \u2197</a>`).join(" \xB7 ")}</div>` : ""}</div>`).join("");
+    if (!p.episodes.length) html3 += `<div class="empty"><h2>${p.type === "serie" ? "El primer cap\xEDtulo" : "El primer acto"} toma forma aqu\xED.</h2><p>Cr\xE9alo manualmente o pide un desglose a partir de los documentos y referencias.</p></div>`;
   }
   if (view === "rehearsal") {
     const e = p.episodes.find((e2) => e2.id === episodeId);
@@ -28904,6 +28927,68 @@ async function render() {
       };
     });
   }
+  if (view === "issues") {
+    let dragging = null;
+    const clear = () => document.querySelectorAll(".drop-target,.dragging").forEach((x2) => x2.classList.remove("drop-target", "dragging"));
+    const drop = async (status2, before) => {
+      const id3 = dragging;
+      clear();
+      dragging = null;
+      if (id3 && moveIssue(p, id3, status2, before)) {
+        await save();
+        await render();
+      }
+    };
+    document.querySelectorAll("[data-kanban-card]").forEach((el) => {
+      el.ondragstart = (e) => {
+        dragging = el.dataset.kanbanCard;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", dragging);
+        el.classList.add("dragging");
+      };
+      el.ondragend = () => {
+        dragging = null;
+        clear();
+      };
+      el.ondragover = (e) => {
+        if (dragging && dragging !== el.dataset.kanbanCard) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+          el.classList.add("drop-target");
+        }
+      };
+      el.ondragleave = () => el.classList.remove("drop-target");
+      el.ondrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return drop(el.closest("[data-kanban-col]").dataset.kanbanCol, el.dataset.kanbanCard);
+      };
+    });
+    document.querySelectorAll("[data-kanban-col]").forEach((g) => {
+      g.ondragover = (e) => {
+        if (dragging) {
+          e.preventDefault();
+          g.classList.add("drop-target");
+        }
+      };
+      g.ondragleave = (e) => {
+        if (!g.contains(e.relatedTarget)) g.classList.remove("drop-target");
+      };
+      g.ondrop = (e) => {
+        e.preventDefault();
+        return drop(g.dataset.kanbanCol);
+      };
+    });
+  }
+  document.querySelectorAll("[data-cover-version]").forEach((el) => el.onchange = async () => {
+    outlineSequence(p, el.dataset.coverVersion).sequence.cover = el.value;
+    await save();
+    await render();
+  });
+  document.querySelectorAll("[data-cover-prompt]").forEach((el) => el.onchange = () => {
+    outlineSequence(p, el.dataset.coverPrompt).sequence.coverPrompt = el.value;
+    dirty = true;
+  });
   document.querySelectorAll("[data-sb-render]").forEach((el) => el.onchange = async () => {
     storyboardShot(p, el.dataset.sbRender).shot.render = el.value;
     await save();
@@ -29033,6 +29118,26 @@ async function act(action) {
     });
     mountMarkdown($2("#modal"), item.text);
     return;
+  }
+  if (a === "issue") {
+    const item = p.issues.find((i2) => i2.id === b2) || { id: id2(), title: "", text: "", status: "abierto", severity: "medio", created: (/* @__PURE__ */ new Date()).toISOString() };
+    modal("Pendiente", input("T\xEDtulo", "title", item.title) + `<div class="two">${select("Gravedad", "severity", ISSUE_SEVERITIES, item.severity)}${select("Estado", "status", ISSUE_STATES, item.status)}</div>` + input("C\xF3digo (opcional, p. ej. A2)", "code", item.code || "") + "<div data-md-editor></div>", async (f2) => {
+      if (!f2.title.trim()) throw Error("El pendiente necesita un t\xEDtulo");
+      const was = item.status;
+      Object.assign(item, f2, { code: f2.code.trim() || void 0, updated: (/* @__PURE__ */ new Date()).toISOString() });
+      if (item.status === "cerrado" && was !== "cerrado") item.closed = (/* @__PURE__ */ new Date()).toISOString();
+      if (item.status !== "cerrado") delete item.closed;
+      if (!b2) p.issues.push(item);
+      await save();
+    });
+    mountMarkdown($2("#modal"), item.text);
+    return;
+  }
+  if (a === "delete-issue") {
+    if (!confirm("\xBFBorrar este pendiente?")) return;
+    p.issues = p.issues.filter((i2) => i2.id !== b2);
+    await save();
+    return render();
   }
   if (a === "import-text") {
     const el = document.createElement("input");
@@ -29229,6 +29334,49 @@ async function act(action) {
       }
     });
   }
+  if (a === "gen-cover") {
+    await job("cover", b2);
+    return;
+  }
+  if (a === "gen-covers") {
+    const missing = outline(p).filter((r) => !r.sequence.cover);
+    if (!missing.length) throw Error("Todas las secuencias tienen car\xE1tula");
+    if (!confirm(`\xBFGenerar ${missing.length} car\xE1tulas? Cada una es una generaci\xF3n de imagen.`)) return;
+    await save();
+    for (const r of missing) await api("/api/job", { project: p.id, type: "cover", target: r.sequence.id });
+    toast(`${missing.length} car\xE1tulas en cola`);
+    state = await api("/api/state");
+    return render();
+  }
+  if (a === "upload-cover") {
+    const { sequence: s2 } = outlineSequence(p, b2);
+    return upload("image/png,image/jpeg,image/webp", (r) => {
+      s2.cover = r.file;
+      (s2.covers ??= []).push({ file: r.file, at: (/* @__PURE__ */ new Date()).toISOString(), uploaded: true });
+    });
+  }
+  if (a === "cover-prompt") {
+    const { episode: e0, sequence: s2 } = outlineSequence(p, b2);
+    const text2 = coverPrompt(p, e0, s2);
+    modal("Prompt de car\xE1tula \xB7 " + s2.title, `<textarea readonly style="min-height:300px;font-size:12px">${esc(text2)}</textarea><p class="tiny">Se env\xEDa sin im\xE1genes de referencia.</p>`, async () => {
+      await navigator.clipboard.writeText(text2);
+      toast("Prompt copiado al portapapeles");
+    }, "Copiar prompt");
+    return;
+  }
+  if (a === "edit-outline") {
+    const { sequence: s2 } = outlineSequence(p, b2);
+    modal("Secuencia en la escaleta", input("T\xEDtulo", "title", s2.title) + input("Minutos", "minutes", s2.minutes ?? "", "number") + area("Texto de escaleta", "text", s2.text || "") + area("Prompt de car\xE1tula (en ingl\xE9s; vac\xEDo para componerlo autom\xE1ticamente)", "coverPrompt", s2.coverPrompt || ""), async (f2) => {
+      if (!f2.title.trim()) throw Error("Escribe un t\xEDtulo");
+      s2.title = f2.title.trim();
+      if (f2.minutes === "") delete s2.minutes;
+      else s2.minutes = Number(f2.minutes);
+      s2.text = f2.text;
+      s2.coverPrompt = f2.coverPrompt;
+      await save();
+    });
+    return;
+  }
   if (a === "gen-sb") {
     await job("storyboard", b2);
     return;
@@ -29376,7 +29524,7 @@ try {
   const params = new URLSearchParams(location.search), project = params.get("project");
   if (project) {
     p = await api("/api/project?id=" + encodeURIComponent(project));
-    view = ["overview", "ideas", "characters", "locations", "episodes", "jobs", "shot", "ship", "rehearsal", "storyboards", "storyboard"].includes(params.get("view")) ? params.get("view") : "overview";
+    view = ["overview", "ideas", "characters", "locations", "episodes", "jobs", "shot", "ship", "rehearsal", "storyboards", "storyboard", "outline", "issues"].includes(params.get("view")) ? params.get("view") : "overview";
     episodeId = params.get("episode");
     storyboardId = params.get("storyboard");
     sequenceId = params.get("sequence");

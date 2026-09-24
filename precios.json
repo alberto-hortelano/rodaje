@@ -1,0 +1,8 @@
+{
+  "_nota": "Precios leídos en fal.ai el 2026-09-20. Revisar en la página de cada modelo antes de estimar un lote.",
+  "minimax/h3-max/reference-to-video": {"unit": "second", "price": 0.08, "byResolution": {"480P": 0.05, "768P": 0.08, "1080P": 0.16}, "references": "primeros 4096 tokens de referencias gratis; después 0,02 $ por 1000 tokens", "checked": "2026-09-20"},
+  "fal-ai/nano-banana-pro/edit": {"unit": "image", "price": 0.15, "note": "4K al doble", "checked": "2026-09-20"},
+  "fal-ai/nano-banana-pro": {"unit": "image", "price": 0.15, "note": "4K al doble", "checked": "2026-09-20"},
+  "fal-ai/elevenlabs/tts/eleven-v3": {"unit": "character", "price": null, "checked": null},
+  "fal-ai/elevenlabs/sound-effects/v2": {"unit": "generation", "price": null, "checked": null}
+}

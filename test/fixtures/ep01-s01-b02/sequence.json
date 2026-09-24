@@ -1,0 +1,60 @@
+{
+ "id": "ep01-s1",
+ "title": "1. INT. TOLEDO \u2014 HOLD 11 (DRUM B, DECK 12) \u2014 RED ZONE",
+ "location": "ep01-hold-11",
+ "variant": "red",
+ "cast": [
+  {
+   "character": "roz",
+   "x": -1.6,
+   "z": 1.1,
+   "yaw": 0,
+   "pose": "standing",
+   "task": "walk"
+  },
+  {
+   "character": "earl",
+   "x": -0.65,
+   "z": -1,
+   "yaw": 0,
+   "pose": "standing",
+   "task": "walk"
+  },
+  {
+   "character": "nnamdi",
+   "x": 1.2,
+   "z": -1,
+   "yaw": 0,
+   "pose": "standing",
+   "task": "walk"
+  }
+ ],
+ "props": [
+  {
+   "type": "potato-cloud",
+   "x": 0,
+   "y": 1.2,
+   "z": -2,
+   "size": 1,
+   "color": "#96815d"
+  }
+ ],
+ "silent": true,
+ "ambienceGain": 0,
+ "ambiencePrompt": "",
+ "rehearsal": true,
+ "gravity": "changing",
+ "sourceText": "\nBlack. Then a headlamp beam finds frost on a bulkhead, and a mural: a beach at sunset, and CAPTAIN CHILLY, a cartoon penguin in a space helmet, giving a thumbs-up to nobody.\n\nThe beam belongs to ROZ. Cream suit, the shipping line's logo half worn off, the penguin sticker on her helmet crossed out in marker. She walks. Actually walks: there's a floor tonight, the drum is spinning, and her boots land on rail tracks with a dull transmitted thud.\n\nBehind her a container the size of a garden shed rides the rail on a cradle, pushed by EARL (dark grey, weld patches, a lanyard of keys tapping his chest) and NNAMDI (tug-company orange, NNAMDI hand-lettered on a strip of tape over his old employer's name). Straps everywhere. Thirty-nine more containers in two long ranks down the bay.\n\n**PA (PA):** Good morning, passengers. Gravity is now available on all decks.\n\n**NNAMDI (RADIO):** Love a service you have to announce.\n\n**ROZ (RADIO):** Forty containers. Seed potatoes. Nobody opens anything.\n\n**EARL (RADIO):** They're strapped down.\n\n**ROZ (RADIO):** I meant the crew.\n\nEarl locks the cradle. Nnamdi hangs off the strap like it's a subway pole.\n\n**NNAMDI (RADIO):** One quick question. Are we being paid in money or pota\u2014\n\n**ROZ (RADIO):** Don't ask Brady that.\n\n**BRADY (RADIO):** (from somewhere else, instantly) I heard my name.\n\n**ROZ (RADIO):** You didn't.\n\n**BRADY (RADIO):** I heard it in the tone.\n\nEarl's helmet turns to the ceiling. Not at anything. At a sound.\n\n**EARL (RADIO):** Bearing's talking.\n\n**NNAMDI (RADIO):** What's it saying?\n\n**EARL (RADIO):** Same thing it always says.\n\n**PA (PA):** Please disregard the previous gravity advisory.\n\n**NNAMDI (RADIO):** That feels like a sentence with consequences.\n\n**EARL (RADIO):** Hold the rail.\n\nThey hold the rail. The floor doesn't leave. It gets *soft*. Roz's boots come off the deck by a finger's width and settle back. A strap goes slack and starts to drift in a slow curve.\n\nAnd on the deck, between the ranks of containers, one potato rises. Small, brown, ordinary, turning very slowly in Roz's beam.\n\nThree helmets follow it up.\n\n**ROZ (RADIO):** Who opened a container.\n\n**NNAMDI (RADIO):** Define opened.\n\n**ROZ (RADIO):** Nnamdi.\n\n**NNAMDI (RADIO):** I have been lied to by cargo before, Roz. I looked. I closed it. Mostly.\n\n**EARL (RADIO):** Which one.\n\n**NNAMDI (RADIO):** ...One of the ones by the door.\n\nEveryone's beam goes to the door. The inboard door, the big round-cornered one to the corridor ring, is *open*: they've been running the rail through it all morning. In the doorway, a container with its latch bar swung wide and its lid lifted an inch, breathing potatoes.\n\n**EARL (RADIO):** Clutch dropped. She's coasting down.\n\n**ROZ (RADIO):** How long.\n\n**EARL (RADIO):** Half an hour to nothing. Unless it grabs.\n\n**NNAMDI (RADIO):** What happens if it grabs?\n\nNobody answers, because the answer arrives.\n\nThe JOLT. Cut to: a strap buckle snapping like a gunshot we can't hear. A wrench leaving Earl's chest pocket and crossing the frame. A container lid slamming *open* and a wall of potatoes coming out of it in a slow brown wave. A helmet \u2014 Nnamdi's \u2014 hitting the rail and rolling in the beam, empty (it's the spare, it was clipped to the cradle, it's fine, we'll learn that in a second). Captain Chilly on the mural, a potato bouncing off his visor.\n\n**NNAMDI (RADIO):** (a little high) I'm okay. That's the spare. I'm okay.\n\n**ROZ (RADIO):** Nobody asked.\n\n**EARL (RADIO):** (long pause) Door.\n\nRoz's beam swings back to the open door. Potatoes are going through it. Not fast. In the way water goes over a weir: all of them, all the time, in no hurry.\n\n**ROZ (RADIO):** Close the door.\n\n**EARL (RADIO):** Door's the thing that's open, Roz.\n\nTitle card, plain type on black, the ship's hum under it:\n\n**DEAD AIR**\n\n---\n\n## ACT ONE\n\n",
+ "blockingNotes": "Staggered working positions and consistent screen geography; medium coverage tied to each utterance. Source dialogue unchanged.",
+ "videoReview": {
+  "file": "assets/ep01-s01-real-v01/scene01-real-en-v01.mp4",
+  "title": "Escena 1 \u00b7 Hold 11 \u00b7 v\u00eddeo realista en ingl\u00e9s",
+  "at": "2026-09-17T21:36:55.608Z",
+  "reviewStatus": "pending",
+  "duration": 92.644,
+  "source3d": "assets/ep01-s01-real-v01/scene01-reference-3d.mp4",
+  "audioMode": "native-generated-from-per-character-voice-references",
+  "sequence": "ep01-s1",
+  "status": "pending"
+ }
+}

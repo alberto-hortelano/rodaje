@@ -1,0 +1,28 @@
+subject_definitions:
+<Subject 1> ROZ is Image 1: older woman, worn cream sealed suit, crossed-out penguin sticker. Cream proxy in Video 1.
+<Subject 2> EARL is Image 2: heavy male mechanic, patched dark grey sealed suit, tools and keys. Dark grey proxy in Video 1.
+<Subject 3> NNAMDI is Image 3: thin Black man, orange tug-company sealed suit marked NNAMDI. Orange proxy in Video 1.
+<Subject 4> Image 4 is the cargo hold style: aged ivory metal, seed containers, rails and weathered Captain Chilly sunset mural. Match materials and identity throughout.
+<Video 1> is the approved 3D blocking, motion, camera and speaker-timing guide for this exact segment.
+<Audio 1> is the voice identity and accent reference for NNAMDI; use only for that speaker, not a recording to paste.
+<Audio 2> is the voice identity and accent reference for ROZ; use only for that speaker, not a recording to paste.
+<Audio 3> is the voice identity and accent reference for EARL; use only for that speaker, not a recording to paste.
+summary:
+[reference generation + audio reference] Photorealistic live-action science-fiction drama with dry understated comedy. Exactly three helmeted crew in Hold 11 of the Toledo. Native English dialogue and matching performance, not a silent clip. This is segment b02 of one continuous scene.
+retention_analysis:
+Images 1–3: fully preserve respective person and suit identity. Each sheet shows multiple views of ONE person, never duplicate those views as extra people. Image 4: environment material reference, not a frozen camera angle. Video 1: preserve actor locations, paths, prop contact, gravity state and motivated camera movement. Replace mannequin geometry with real human anatomy and practical props from the first frame. Remove all labels, black proxy mouths and chest markers. Keep only subtle realistic radio indicators on helmets. Closed helmets remain on, visors dark and reflective. Never expose a bare face or open a helmet. PA and BRADY are offscreen voices, not additional people. Use each separate Audio reference only for its assigned speaker's identity. Generate dialogue and physical delivery together; tiny timing adjustments allowed for natural speech, without omissions.
+detailed_description:
+Preserve the shot's 3D composition while correcting minor proxy hand mechanics into physically credible actions. No walking in place, no gliding boots under gravity, no moving a container without hands on it, no duplicates or teleporting people. No broad rhetorical gestures, mugging, repeated nodding, exaggerated reactions or posed smiles. Listeners stay occupied. Do not turn a smooth camera move into a cut for every line. Match the same desaturated cream/grey/orange costume palette and dim practical headlamp lighting across the scene. Cinematic textured materials and believable scale. Pots, food, kitchen equipment and other locations never appear. Keep potatoes absent until their scripted release; once gravity weakens they drift gently, not rain down. Injuries and jolts are inserts of OBJECTS, never falling bodies. All seed containers remain closed: NO floating or loose potatoes in this segment.
+[0.00s–8.53s] Continue the same scene and camera station.
+At approximately 0.15s, NNAMDI , restrained conversational helmet radio, says exactly: <d>[English] Love a service you have to announce.</d>
+At approximately 3.39s, ROZ , restrained conversational helmet radio, says exactly: <d>[English] Forty containers. Seed potatoes. Nobody opens anything.</d>
+At approximately 6.63s, EARL , restrained conversational helmet radio, says exactly: <d>[English] They're strapped down.</d>
+[8.53s–11.17s] Continue the same scene and camera station.
+At approximately 8.88s, ROZ , restrained conversational helmet radio, says exactly: <d>[English] I meant the crew.</d>
+[11.17s–14.17s] Earl locks the cradle. Nnamdi hangs off the strap like it's a subway pole.
+
+Finish all specified words within 15 seconds, allowing a short natural tail. Do not add any other words.
+overall_soundscape:
+Generate new native English dialogue with the assigned reference voices. Helmet radio voices intimate and intelligible, subtle radio filtering without loud clicks or microphone startup noise. PA warm, distinctly offscreen. Low continuous transmitted ship rumble and subtle suit handling below voices, no loud airborne impacts in the unpressurized hold. No dubbing over unrelated lip motion.
+non_diegetic_music:
+None.

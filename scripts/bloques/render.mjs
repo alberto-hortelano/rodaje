@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+// Guía 3D por bloque (PROCESO.md, paso 6): motion.mp4 sin rótulos, frame-start.png y frame-mid.png.
+//   node scripts/bloques/render.mjs <lote> [bloque] [--project dead-air] [--labels] [--force]
+// Necesita la app abierta (./abrir.sh) porque renderiza con /stage.js en Chrome headless. No genera nada de pago.
+import fs from 'node:fs';import path from 'node:path';import {spawn} from 'node:child_process';import {once} from 'node:events';
+import {chromium} from 'playwright';
+import {parseArgs,loadLote} from './lib.mjs';
+const {args:[lote,only],opts}=parseArgs(process.argv.slice(2));if(!lote){console.error('Uso: render.mjs <lote> [bloque] [--labels] [--force]');process.exit(2);}
+const L=loadLote(opts.project||'dead-air',lote);const port=process.env.PORT||4320,url=`http://127.0.0.1:${port}/`;
+try{await fetch(url);}catch{console.error(`La app no responde en ${url}. Arranca ./abrir.sh y repite.`);process.exit(1);}
+const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
+try{for(const block of L.plan){if(only&&block.id!==only)continue;const dir=path.join(L.paths.out,block.id);fs.mkdirSync(dir,{recursive:true});if(fs.existsSync(path.join(dir,'motion.mp4'))&&!opts.force){console.log('ya existe',block.id);continue;}
+ const page=await browser.newPage({viewport:{width:1280,height:720}});
+ if(!opts.labels)await page.route('**/stage.js',async route=>{const res=await route.fetch();await route.fulfill({response:res,body:(await res.text()).replace('group.add(label);','label.visible=false;group.add(label);')});});
+ await page.goto(url);await page.waitForTimeout(800);await page.evaluate(()=>{document.body.innerHTML='<div id="render"></div>';});
+ const total=block.length,frames=Math.ceil(total*12);const tmp=path.join(dir,'motion.tmp.mp4');
+ const enc=spawn('ffmpeg',['-y','-v','error','-f','image2pipe','-framerate','12','-i','pipe:0','-vf','scale=960:540,fps=24','-c:v','libx264','-crf','18','-pix_fmt','yuv420p','-an',tmp],{stdio:['pipe','ignore','pipe']});let err='';enc.stderr.on('data',d=>err+=d);const done=once(enc,'close');let last='';
+ for(let i=0;i<frames;i++){const time=i/12;const part=block.parts.find(a=>time>=a.at&&time<a.at+a.to-a.from)||block.parts.at(-1);const t=L.shots[part.shot];const local=Math.min(part.to-.001,part.from+time-part.at);
+  if(last!==t.id){await page.evaluate(async({p,s,t})=>{if(window.st&&!!window.detail===!!t.detail)st.updateShot(t);else{window.st?.dispose();window.st=await(await import('/stage.js')).createStage(document.querySelector('#render'),{project:p,sequence:s,shot:t});window.detail=t.detail;}},{p:L.project,s:L.sequence,t});last=t.id;}
+  const png=await page.evaluate(({t,local})=>{const l=t.lines.find(l=>local>=l.start&&local<l.start+(l.estimatedDuration||3));st.setSpeaker(l||null);return st.frame(local);},{t,local});const buf=Buffer.from(png.split(',')[1],'base64');
+  if(i===0)fs.writeFileSync(path.join(dir,'frame-start.png'),buf);if(i===Math.floor(frames/2))fs.writeFileSync(path.join(dir,'frame-mid.png'),buf);
+  if(!enc.stdin.write(buf))await once(enc.stdin,'drain');}
+ enc.stdin.end();const [code]=await done;if(code)throw Error(err);fs.renameSync(tmp,path.join(dir,'motion.mp4'));await page.close();console.log('guía lista',block.id,`${total.toFixed(2)} s`);}}
+finally{await browser.close();}

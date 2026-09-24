@@ -1,0 +1,87 @@
+{
+ "id": "b02",
+ "length": 14.170000000000002,
+ "voices": [
+  "nnamdi",
+  "roz",
+  "earl"
+ ],
+ "parts": [
+  {
+   "shot": "ep01-s1-p2",
+   "from": 4.6,
+   "to": 13.13,
+   "lines": [
+    {
+     "id": "ep01-line-2",
+     "character": "nnamdi",
+     "text": "Love a service you have to announce.",
+     "spokenText": "Love a service you have to announce.",
+     "direction": "",
+     "channel": "radio",
+     "offscreen": false,
+     "start": 0.14615384615384563,
+     "estimatedDuration": 2.942307692307692,
+     "browserTts": true,
+     "sourceText": "**NNAMDI (RADIO):** Love a service you have to announce."
+    },
+    {
+     "id": "ep01-line-3",
+     "character": "roz",
+     "text": "Forty containers. Seed potatoes. Nobody opens anything.",
+     "spokenText": "Forty containers. Seed potatoes. Nobody opens anything.",
+     "direction": "",
+     "channel": "radio",
+     "offscreen": false,
+     "start": 3.388461538461538,
+     "estimatedDuration": 2.942307692307692,
+     "browserTts": true,
+     "sourceText": "**ROZ (RADIO):** Forty containers. Seed potatoes. Nobody opens anything."
+    },
+    {
+     "id": "ep01-line-4",
+     "character": "earl",
+     "text": "They're strapped down.",
+     "spokenText": "They're strapped down.",
+     "direction": "",
+     "channel": "radio",
+     "offscreen": false,
+     "start": 6.63076923076923,
+     "estimatedDuration": 1.4038461538461537,
+     "browserTts": true,
+     "sourceText": "**EARL (RADIO):** They're strapped down."
+    }
+   ],
+   "at": 0
+  },
+  {
+   "shot": "ep01-s1-p3",
+   "from": 0,
+   "to": 2.64,
+   "lines": [
+    {
+     "id": "ep01-line-5",
+     "character": "roz",
+     "text": "I meant the crew.",
+     "spokenText": "I meant the crew.",
+     "direction": "",
+     "channel": "radio",
+     "offscreen": false,
+     "start": 0.35,
+     "estimatedDuration": 1.7884615384615383,
+     "browserTts": true,
+     "sourceText": "**ROZ (RADIO):** I meant the crew."
+    }
+   ],
+   "at": 8.530000000000001
+  },
+  {
+   "shot": "ep01-s1-p4",
+   "from": 0,
+   "to": 3,
+   "lines": [],
+   "at": 11.170000000000002
+  }
+ ],
+ "duration": 15
+}

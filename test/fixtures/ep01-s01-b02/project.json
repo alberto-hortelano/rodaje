@@ -1,0 +1,77 @@
+{
+ "name": "DEAD AIR",
+ "style": "Dirty documentary realism, practical headlamps and failing fluorescent tubes, amber emergency strips, faded budget-cruise murals, muted cream/grey/amber palette, high-ISO grain, 28\u201335 mm interior lenses. American English. Nobody looks at camera. No clean futuristic surfaces, neon blue, holograms, uniforms, captain throne or military ranks.",
+ "language": "en",
+ "characters": [
+  {
+   "id": "roz",
+   "name": "Roz Dekker",
+   "kind": "person",
+   "color": "#c6bc9f",
+   "age": 58
+  },
+  {
+   "id": "earl",
+   "name": "Earl Whitlock",
+   "kind": "person",
+   "color": "#55595a",
+   "age": 47
+  },
+  {
+   "id": "nnamdi",
+   "name": "Nnamdi Okoro",
+   "kind": "person",
+   "color": "#c47b3d",
+   "age": 34
+  },
+  {
+   "id": "jo",
+   "name": "Jo Lindqvist",
+   "kind": "person",
+   "color": "#b9b9af",
+   "age": 41
+  },
+  {
+   "id": "brady",
+   "name": "Brady Fitch",
+   "kind": "person",
+   "color": "#526f8e",
+   "age": 39
+  },
+  {
+   "id": "danny",
+   "name": "Danny Ochoa",
+   "kind": "person",
+   "color": "#8c8975",
+   "age": 22
+  },
+  {
+   "id": "ted",
+   "name": "Theodore \u201cTed\u201d Ambrose",
+   "kind": "person",
+   "color": "#aaa48a",
+   "age": null
+  },
+  {
+   "id": "pa",
+   "name": "Toledo PA",
+   "kind": "voice",
+   "color": "#d7b264",
+   "age": null
+  },
+  {
+   "id": "hutch",
+   "name": "Dockmaster Hutch",
+   "kind": "voice",
+   "color": "#8e9ca0",
+   "age": null
+  },
+  {
+   "id": "lorna",
+   "name": "Lorna Voss",
+   "kind": "person",
+   "color": "#79836f",
+   "age": null
+  }
+ ]
+}

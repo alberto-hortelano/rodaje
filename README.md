@@ -6,7 +6,23 @@ Aplicación local para crear series y películas desde su historia hasta la prev
 
 Ejecuta `./abrir.sh` desde esta carpeta. Abre http://127.0.0.1:4320.
 
-Necesita Node.js 24+, FFmpeg/FFprobe y Google Chrome. Las dependencias están instaladas; para reinstalarlas: `npm ci`. Puerto configurable con `PORT=4321 npm start`; Chrome con `CHROME_PATH=/ruta/chrome`. Guarda todo localmente en `proyectos/` (o en `RODAJE_DATA`).
+Necesita Node.js 24+, FFmpeg/FFprobe y Google Chrome. Las dependencias están instaladas; para reinstalarlas: `npm ci`. Puerto configurable con `PORT=4321 npm start`; Chrome con `CHROME_PATH=/ruta/chrome`. Para usarla desde el móvil en la misma wifi: `npm run start:lan` (o `RODAJE_LAN=1`), que escucha en todas las interfaces y muestra la dirección local al arrancar; cualquier dispositivo de esa red puede entonces usar la app entera, generaciones incluidas. Guarda todo localmente en `proyectos/` (o en `RODAJE_DATA`).
+
+## Copia en el móvil sin servidor
+
+La app se puede instalar en el móvil como PWA y guardar en él un proyecto entero (interfaz, datos, imágenes, audios, vídeos y el visor 3D) para verlo con el servidor apagado. La copia es de **solo lectura**: sin servidor, guardar o generar devuelve «Sin conexión con el servidor: la copia del móvil es de solo lectura».
+
+1. `npm run start:lan` y, en el móvil (misma wifi), abre la dirección que imprime como «Copia para el móvil» (`http://<ip>:4320/movil.html`).
+2. Pulsa **Guardar en este dispositivo** en el proyecto que quieras (Los conjurados ocupa unos 120 MB). La misma página permite actualizar la copia o quitarla.
+3. Añádela a la pantalla de inicio (Chrome: menú ⋮ → *Añadir a pantalla de inicio*; Safari: Compartir → *Añadir a pantalla de inicio*). Después abre esa app aunque el ordenador esté apagado.
+
+El navegador solo permite guardar la app sin conexión en una dirección segura, y `http://192.168…` no lo es. Hay que resolverlo una vez:
+
+- **Chrome en Android, sin tocar el servidor:** abre `chrome://flags/#unsafely-treat-insecure-origin-as-secure`, activa la opción, escribe `http://<ip>:4320` en su cuadro y relanza Chrome. Conviene que el router asigne siempre la misma IP al ordenador.
+- **HTTPS en la red local:** con un certificado (por ejemplo, de `mkcert`, cuya CA se instala en el móvil) arranca `RODAJE_LAN=1 RODAJE_TLS_CERT=cert.pem RODAJE_TLS_KEY=key.pem npm start`; se abre además `https://<ip>:4321` (puerto configurable con `RODAJE_TLS_PORT`). Vale también para iPhone.
+- **Tailscale:** `tailscale serve --bg 4320` publica la app con certificado válido en `https://<equipo>.<tailnet>.ts.net`, dentro y fuera de casa; añade ese host con `RODAJE_HOSTS=https://<equipo>.<tailnet>.ts.net`.
+
+Cómo funciona: `app/sw.js` (service worker) guarda la interfaz y todo lo que se pide al servidor; sin conexión sirve la copia, incluidos vídeos por rangos. `app/movil.html` descarga un proyecto completo (`projectRequests` en `app/workflow.mjs`). Con el servidor encendido el comportamiento no cambia: siempre se usa primero la red.
 
 ## Recorrido
 
@@ -15,11 +31,12 @@ Necesita Node.js 24+, FFmpeg/FFprobe y Google Chrome. Las dependencias están in
 3. Crea **Personajes y voces**. Describe apariencia y vestuario; genera una hoja o importa referencias. Asigna un nombre/ID de voz ElevenLabs y escucha muestras antes de producir diálogos.
 4. Crea **Ambientes** con referencias visuales. Elige una base 3D: bosque, interior, ciudad o espacio libre.
 5. Dibuja **Storyboards**: viñetas con código, duración, zona, cámara, acción, diálogo por canal y sonido. Sube un boceto o un fotograma, o genera el fotograma con el modelo de imagen a partir del boceto, las referencias y un prompt (explícito o compuesto). Un storyboard se exporta e importa en JSON y se convierte en capítulo con un clic.
-6. Crea capítulos y secuencias manualmente, o genera un borrador de desglose a partir de la biblia con IA. El borrador siempre es editable.
-7. Abre cada plano. Coloca al reparto de la secuencia, elige postura, añade volúmenes y define cámara inicial/final orbitando el visor. Ajusta duración e intervenciones con sus silencios. Genera/importa voz por intervención y ambiente por secuencia.
-8. Ensaya con audio, renderiza el vídeo 3D, revísalo y apruébalo. El servidor comprueba que las frases completas caben y que no se solapan.
-9. Genera y revisa el fotograma visual usando el snapshot 3D y las referencias. Convierte con **H3 Max Reference to Video**. Se envían movimiento 3D, referencias de personaje y ambiente y audio. Se recorta la cola de preparación y se monta la pista original, sin acelerar las voces.
-10. Revisa los resultados y monta el capítulo. Versiones anteriores y solicitudes remotas quedan guardadas.
+6. Mira la **Escaleta**: cada secuencia de los capítulos o actos en orden, con su número, minutos, texto y una carátula. El prompt de la carátula se edita en la propia tarjeta (o se compone con el estilo del proyecto y el texto), y la imagen se genera con el modelo de imagen o se sube; las versiones se conservan.
+7. Crea capítulos y secuencias manualmente, o genera un borrador de desglose a partir de la biblia con IA. El borrador siempre es editable.
+8. Abre cada plano. Coloca al reparto de la secuencia, elige postura, añade volúmenes y define cámara inicial/final orbitando el visor. Ajusta duración e intervenciones con sus silencios. Genera/importa voz por intervención y ambiente por secuencia.
+9. Ensaya con audio, renderiza el vídeo 3D, revísalo y apruébalo. El servidor comprueba que las frases completas caben y que no se solapan.
+10. Producción real: sigue `PROCESO.md` (bloques de 5–15 s con guía 3D y diálogo nativo de H3 Max, registro de assets, reglas con condición de fallo). Los botones **Generar fotograma** y **Convertir con H3 Max** de la app son el flujo antiguo (fotograma nano-banana + audio pregrabado remuxado); se conservan para pruebas y no se usan en producción.
+11. Revisa los resultados y monta el capítulo. Versiones anteriores y solicitudes remotas quedan guardadas.
 
 ## Generación
 
@@ -44,7 +61,11 @@ proyectos/<id>/
   trabajos/               solicitudes, estados y resultados
 ```
 
-El ejemplo Conjurados contiene copias locales de sus referencias y audios. No modifica ni depende del proyecto original. Importador opcional: `node scripts/import-conjurados.mjs /ruta/conjurados`.
+El ejemplo Conjurados contiene copias locales de sus referencias y audios. No modifica ni depende del proyecto original. Importador opcional: `node scripts/import-conjurados.mjs /ruta/conjurados` (crea la carpeta `proyectos/conjurados`; otro nombre con `RODAJE_PROJECT_ID`).
+
+## Proceso de producción
+
+El proceso canónico, las reglas y el registro de assets están en `PROCESO.md`, `proyectos/dead-air/REGLAS.md` y `proyectos/dead-air/REGISTRO.md`. Los agentes de IA leen `CLAUDE.md`.
 
 ## Alcance actual
 
