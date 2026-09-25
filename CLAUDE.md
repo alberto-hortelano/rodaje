@@ -28,7 +28,7 @@ Lógica nueva = funciones puras en `app/workflow.mjs` con test en `test/*.test.m
 
 ## Scripts de producción
 
-`scripts/registro.mjs` (sync · freeze · render · check), `scripts/perfil.mjs` (perfiles de interpretación y voice prompt), `scripts/mapa-espacial.mjs` (borrador de mapa por landmarks), `scripts/pendientes.mjs` (importar · listar el tablero de pendientes), `scripts/bloques/{masters,planificar,render,prompt,enviar,estado,montar,informe}.mjs`.
+`scripts/registro.mjs` (sync · freeze · render · check), `scripts/perfil.mjs` (perfiles de interpretación y voice prompt), `scripts/mapa-espacial.mjs` (borrador de mapa por landmarks), `scripts/pendientes.mjs` (importar · listar el tablero de pendientes), `scripts/entorno-glb.mjs` (exporta a GLB un entorno 3D con constructor), `scripts/bloques/{masters,planificar,render,prompt,enviar,estado,montar,informe}.mjs`.
 
 ## Git
 

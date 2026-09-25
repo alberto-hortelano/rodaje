@@ -28569,7 +28569,7 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { variants, zones, channels, storyboardShot, storyboardPrompt, storyboardToEpisode, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue } from "./workflow.mjs";
+import { variants, zones, channels, storyboardShot, storyboardPrompt, storyboardToEpisode, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, locationEnvironment, environmentChoice } from "./workflow.mjs";
 import { createStage as createStage2 } from "./stage.js";
 var state;
 var p = null;
@@ -28578,6 +28578,7 @@ var episodeId;
 var sequenceId;
 var shotId;
 var storyboardId;
+var environmentId;
 var stage;
 var shotState;
 var dirty = false;
@@ -28586,7 +28587,7 @@ var id2 = () => crypto.randomUUID();
 var esc = (v2) => String(v2 ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 var renderedRoute = null;
 var renderGeneration = 0;
-var routeKey = () => JSON.stringify([p?.id || "", view, ["shot", "rehearsal"].includes(view) ? episodeId || "" : "", view === "shot" ? sequenceId || "" : "", view === "shot" ? shotId || "" : "", view === "storyboard" ? storyboardId || "" : ""]);
+var routeKey = () => JSON.stringify([p?.id || "", view, ["shot", "rehearsal"].includes(view) ? episodeId || "" : "", view === "shot" ? sequenceId || "" : "", view === "shot" ? shotId || "" : "", view === "storyboard" ? storyboardId || "" : "", view === "environment" ? environmentId || "" : ""]);
 function rememberPosition() {
   if (renderedRoute) try {
     sessionStorage.setItem("rodaje:scroll:" + renderedRoute, JSON.stringify([scrollX, scrollY]));
@@ -28595,7 +28596,7 @@ function rememberPosition() {
 }
 function syncRoute() {
   const u = new URL(location.href);
-  for (const k of ["project", "view", "episode", "sequence", "shot", "storyboard"]) u.searchParams.delete(k);
+  for (const k of ["project", "view", "episode", "sequence", "shot", "storyboard", "environment"]) u.searchParams.delete(k);
   if (p) u.searchParams.set("project", p.id);
   u.searchParams.set("view", view);
   if (view === "shot") {
@@ -28605,6 +28606,7 @@ function syncRoute() {
   }
   if (view === "rehearsal") u.searchParams.set("episode", episodeId);
   if (view === "storyboard" && storyboardId) u.searchParams.set("storyboard", storyboardId);
+  if (view === "environment" && environmentId) u.searchParams.set("environment", environmentId);
   history.replaceState(null, "", u);
 }
 async function restorePosition(generation) {
@@ -28780,8 +28782,8 @@ async function render() {
   const generation = ++renderGeneration;
   stage?.dispose();
   stage = null;
-  const nav2 = p ? [["overview", "Vista del proyecto"], ["ideas", "Historia e ideas"], ["characters", "Personajes y voces"], ["locations", "Ambientes"], ...p.shipModel ? [["ship", "Nave \xB7 modelo 3D"]] : [], ["storyboards", "Storyboards"], ["outline", "Escaleta"], ["episodes", p?.type === "serie" ? "Cap\xEDtulos" : "Actos"], ["issues", "Pendientes"], ["jobs", "Generaciones"]] : [["library", "Mis proyectos"], ["jobs", "Generaciones"]];
-  $2("#app").innerHTML = `<div class="shell"><aside class="sidebar"><div class="brand"><i class="logo"></i> rodaje<span style="font-size:10px;align-self:end">LOCAL</span></div><div class="eyebrow">Estudio de historias</div>${p ? `<div class="projectname">${esc(p.name)}</div>` : ""}${nav2.map(([v2, l3]) => btn(l3, "nav:" + v2, view === v2 ? "active" : "")).join("")}<div class="bottom">${p ? btn("\u2190 Todos los proyectos", "library") : ""}${btn("\u2699 Ajustes", "settings")}<small>De la primera idea<br>a la \xFAltima toma.</small></div></aside><main class="main"><header class="topbar"><span>${p ? esc(p.name) + " / " + esc(nav2.find((n) => n[0] === view)?.[1] || (view === "storyboard" ? "Storyboard" : "Estudio de plano")) : "TU ESPACIO DE PRODUCCI\xD3N"}</span><div class="row"><span class="pill">${state.settings.configured ? "\u25CF Generaci\xF3n conectada" : "\u25CB Generaci\xF3n sin configurar"}</span>${p ? btn("Actualizar", "refresh") + btn("Guardar cambios", "save") : ""}</div></header><div class="workspace" id="workspace"></div></main></div>`;
+  const nav2 = p ? [["overview", "Vista del proyecto"], ["ideas", "Historia e ideas"], ["characters", "Personajes y voces"], ["locations", "Ambientes"], ["environments", "Entornos 3D"], ...p.shipModel ? [["ship", "Nave \xB7 modelo 3D"]] : [], ["storyboards", "Storyboards"], ["outline", "Escaleta"], ["episodes", p?.type === "serie" ? "Cap\xEDtulos" : "Actos"], ["issues", "Pendientes"], ["jobs", "Generaciones"]] : [["library", "Mis proyectos"], ["jobs", "Generaciones"]];
+  $2("#app").innerHTML = `<div class="shell"><aside class="sidebar"><div class="brand"><i class="logo"></i> rodaje<span style="font-size:10px;align-self:end">LOCAL</span></div><div class="eyebrow">Estudio de historias</div>${p ? `<div class="projectname">${esc(p.name)}</div>` : ""}${nav2.map(([v2, l3]) => btn(l3, "nav:" + v2, view === v2 || v2 === "environments" && view === "environment" ? "active" : "")).join("")}<div class="bottom">${p ? btn("\u2190 Todos los proyectos", "library") : ""}${btn("\u2699 Ajustes", "settings")}<small>De la primera idea<br>a la \xFAltima toma.</small></div></aside><main class="main"><header class="topbar"><span>${p ? esc(p.name) + " / " + esc(nav2.find((n) => n[0] === view)?.[1] || (view === "storyboard" ? "Storyboard" : view === "environment" ? "Entornos 3D" : "Estudio de plano")) : "TU ESPACIO DE PRODUCCI\xD3N"}</span><div class="row"><span class="pill">${state.settings.configured ? "\u25CF Generaci\xF3n conectada" : "\u25CB Generaci\xF3n sin configurar"}</span>${p ? btn("Actualizar", "refresh") + btn("Guardar cambios", "save") : ""}</div></header><div class="workspace" id="workspace"></div></main></div>`;
   {
     const a = $2(".sidebar button.active"), s = a?.parentElement;
     if (s && s.scrollWidth > s.clientWidth) s.scrollLeft += a.getBoundingClientRect().left - s.getBoundingClientRect().left - (s.clientWidth - a.offsetWidth) / 2;
@@ -28794,6 +28796,18 @@ async function render() {
   if (p && view === "overview") {
     const total = p.episodes.flatMap((e) => e.sequences.flatMap((s) => s.shots));
     html3 = heading2(esc(p.name), "La historia y sus referencias son el punto de partida. La previsualizaci\xF3n aprobada gu\xEDa cada generaci\xF3n.", btn("Editar proyecto", "edit-project")) + `<div class="stepper">${[["ideas", "Historia"], ["characters", "Reparto"], ["locations", "Mundo"], ["episodes", "Desglose"], ["episodes", "Previsualizar"], ["jobs", "Producir"]].map(([v2, l3], i2) => `<div class="step" data-action="nav:${v2}"><b>0${i2 + 1}</b>${l3}</div>`).join("")}</div><div class="two"><section class="panel"><div class="eyebrow">Premisa</div><h2>${esc(p.premise || "\xBFQu\xE9 historia quieres contar?")}</h2><p style="margin-top:20px">${esc(p.style)}</p>${btn("Escribir la historia", "nav:ideas")}</section><section class="panel"><div class="row between"><div><span class="stat">${p.characters.length}</span>Personajes</div><div><span class="stat">${p.locations.length}</span>Escenarios</div><div><span class="stat">${total.length}</span>Planos</div></div><p style="margin-top:25px">Cada proyecto guarda ideas, hojas de personajes, ambientes, cap\xEDtulos, previsualizaciones y generaciones en carpetas propias.</p></section></div><div class="panel"><h2>Actividad reciente</h2>${jobsHTML()}</div>`;
+  }
+  if (view === "environments") {
+    const list = environmentList(p);
+    html3 = heading2("Entornos 3D.", "Decorados en 3D con medidas reales: exterior, interior y piezas con nombre. Cada entorno se abre en su visor; los planos los usar\xE1n como decorado.", btn("+ Entorno GLB", "new-environment", "primary")) + (list.length ? `<div class="grid">${list.map((e) => `<article class="card">${image(e.image)}<div class="inner"><div class="row between"><h2>${esc(e.name)}</h2><span class="pill">${esc(e.kind === "visor" ? "VISOR PROPIO" : e.kind === "glb" ? "GLB" : "SIN MODELO")}</span></div><p>${esc(e.description.slice(0, 220))}</p>${e.glb ? `<small>${esc(e.glb)}</small>` : ""}<div class="actions">${btn("Abrir", e.action, "primary")}${e.id !== "ship" ? btn("Editar", "edit-environment:" + e.id) + btn("Subir GLB", "upload-environment:" + e.id) : ""}</div></div></article>`).join("")}</div>` : '<section class="panel"><p>Este proyecto a\xFAn no tiene entornos 3D. Sube un GLB (de Tripo, Meshy, Hunyuan3D\u2026) o a\xF1ade uno con visor propio en <code>environments</code>.</p></section>');
+  }
+  if (view === "environment") {
+    const e = (p.environments || []).find((x2) => x2.id === environmentId);
+    if (!e) {
+      view = "environments";
+      return render();
+    }
+    html3 = heading2(esc(e.name), esc(e.description || ""), `<div class="row">${btn("\u2190 Entornos 3D", "nav:environments")}${btn("Editar", "edit-environment:" + e.id)}${btn("Subir GLB", "upload-environment:" + e.id)}</div>`) + '<section class="panel" id="environment-model"></section>';
   }
   if (view === "ship") {
     html3 = heading2(p.shipModel.name || "Nave \xB7 modelo 3D", p.shipModel.version >= 2 ? "Explora los espacios conectados, elige un destino y recorre la nave. Guarda encuadres para preparar los planos." : "Exterior y distribuci\xF3n estable de escenarios. Selecciona un espacio para inspeccionarlo.") + '<section class="panel" id="ship-model"></section>';
@@ -28870,6 +28884,20 @@ async function render() {
       const module = await import(media(p.shipModel.viewer));
       stage = await module.mountShip($2("#ship-model"), { project: p, model: p.shipModel });
     } else $2("#ship-model").textContent = "Este proyecto no tiene modelo de nave.";
+  }
+  if (view === "environment") {
+    const e = (p.environments || []).find((x2) => x2.id === environmentId), el = $2("#environment-model");
+    try {
+      if (e.viewer) {
+        const module = await import(media(e.viewer));
+        stage = await module.mountEnvironment(el, { project: p, environment: e });
+      } else if (e.glb) {
+        const viewer = "/environment.js", module = await import(viewer);
+        stage = await module.mountGlb(el, { url: media(e.glb), name: e.name });
+      } else el.textContent = "Este entorno a\xFAn no tiene modelo. Sube un GLB.";
+    } catch (err) {
+      el.textContent = "No se pudo cargar el entorno 3D: " + err.message;
+    }
   }
   document.querySelectorAll("[data-action]").forEach((b2) => b2.onclick = () => act(b2.dataset.action).catch((e) => toast(e.message)));
   if (view === "storyboard") {
@@ -29076,6 +29104,37 @@ async function act(action) {
     state = await api("/api/state");
     return render();
   }
+  if (a === "env-open") {
+    if (dirty) await save();
+    environmentId = b2;
+    view = "environment";
+    return render();
+  }
+  if (a === "new-environment") {
+    return modal("Nuevo entorno 3D", input("Nombre", "name") + area("Descripci\xF3n", "description"), async (f2) => {
+      if (!f2.name.trim()) throw Error("Escribe un nombre");
+      p.environments = p.environments || [];
+      const e = { id: id2(), name: f2.name.trim(), description: f2.description.trim() };
+      p.environments.push(e);
+      await save();
+      toast("Entorno creado. Sube su GLB desde la tarjeta.");
+    });
+  }
+  if (a === "edit-environment") {
+    const e = (p.environments || []).find((x2) => x2.id === b2);
+    return modal("Editar entorno 3D", input("Nombre", "name", e.name) + area("Descripci\xF3n", "description", e.description || ""), async (f2) => {
+      if (!f2.name.trim()) throw Error("Escribe un nombre");
+      e.name = f2.name.trim();
+      e.description = f2.description.trim();
+      await save();
+    });
+  }
+  if (a === "upload-environment") {
+    const e = (p.environments || []).find((x2) => x2.id === b2);
+    return upload(".glb,model/gltf-binary", (r) => {
+      e.glb = r.file;
+    });
+  }
   if (a === "nav") {
     if (dirty) await save();
     view = b2;
@@ -29156,8 +29215,12 @@ async function act(action) {
   }
   if (["new-character", "character", "new-location", "location"].includes(a)) {
     const chars = a.includes("character"), list = chars ? p.characters : p.locations, item = list.find((c2) => c2.id === b2) || { id: id2(), name: "", description: "", voice: "", kind: "forest", color: "#88a899" };
-    modal(chars ? "Hoja de personaje" : "Escenario", input("Nombre", "name", item.name) + area(chars ? "Identidad, vestuario, personalidad y voz" : "Aspecto, iluminaci\xF3n y referencias de espacio", "description", item.description) + (chars ? area("Aspecto para prompts de imagen y v\xEDdeo (breve; si se deja vac\xEDo se deduce de la descripci\xF3n)", "look", item.look || "") + select("Presencia", "kind", [["person", "Personaje f\xEDsico"], ["voice", "Solo voz / megafon\xEDa"]], item.kind || "person") + input("Voz ElevenLabs \xB7 nombre o ID", "voice", item.voice) + input("Color del mu\xF1eco 3D", "color", item.color, "color") : select("Base de previsualizaci\xF3n", "kind", [["forest", "Exterior \xB7 bosque"], ["interior", "Interior"], ["city", "Exterior \xB7 ciudad"], ["empty", "Espacio libre"]], item.kind)), async (f2) => {
+    modal(chars ? "Hoja de personaje" : "Escenario", input("Nombre", "name", item.name) + area(chars ? "Identidad, vestuario, personalidad y voz" : "Aspecto, iluminaci\xF3n y referencias de espacio", "description", item.description) + (chars ? area("Aspecto para prompts de imagen y v\xEDdeo (breve; si se deja vac\xEDo se deduce de la descripci\xF3n)", "look", item.look || "") + select("Presencia", "kind", [["person", "Personaje f\xEDsico"], ["voice", "Solo voz / megafon\xEDa"]], item.kind || "person") + input("Voz ElevenLabs \xB7 nombre o ID", "voice", item.voice) + input("Color del mu\xF1eco 3D", "color", item.color, "color") : select("Base de previsualizaci\xF3n", "kind", [["forest", "Exterior \xB7 bosque"], ["interior", "Interior"], ["city", "Exterior \xB7 ciudad"], ["empty", "Espacio libre"]], item.kind) + select("Entorno 3D (sustituye la base en los planos)", "environment", [["", "Ninguno"], ...(p.environments || []).filter((e) => e.builder && e.data).map((e) => [e.id, e.name])], item.environment || "")), async (f2) => {
       if (!f2.name.trim()) throw Error("Escribe un nombre");
+      if (!chars && !f2.environment) {
+        delete f2.environment;
+        delete item.environment;
+      }
       Object.assign(item, f2);
       if (!b2) list.push(item);
       await save();
@@ -29416,7 +29479,21 @@ async function act(action) {
   if (a === "new-sequence" || a === "sequence") {
     const e = a === "new-sequence" ? p.episodes.find((e2) => e2.id === b2) : current().e;
     const s2 = a === "sequence" ? e.sequences.find((s3) => s3.id === b2) : { id: id2(), title: "", location: p.locations[0]?.id || "", ambiencePrompt: "", ambienceGain: 0.18, silent: false, cast: p.characters.filter((c2) => c2.kind !== "voice").map((c2, i2) => ({ character: c2.id, x: (i2 - (p.characters.length - 1) / 2) * 1.4, z: 0, yaw: 0, pose: "seated" })), shots: [], props: [] };
-    modal("Secuencia", input("T\xEDtulo", "title", s2.title) + select("Escenario", "location", [["", "Sin escenario"], ...p.locations.map((l3) => [l3.id, l3.name])], s2.location) + select("Variante visual del reparto", "variant", variants, s2.variant || "") + area("Sonido ambiente", "ambiencePrompt", s2.ambiencePrompt), async (f2) => {
+    const env = locationEnvironment(p, s2.location);
+    let envFields = "";
+    if (env) {
+      const envData = await (await fetch(media(env.data))).json(), c2 = s2.environment || {};
+      envFields = select("Lugar del entorno 3D (queda en el centro del reparto)", "envSpot", [["", "Origen del modelo"], ...(envData.landmarks || []).map((l3) => [l3.id, l3.name])], c2.spot || "") + select("Estado del entorno", "envPreset", [["", "Estado por defecto"], ...(envData.presets || []).map((x2) => [x2.id, x2.name])], c2.preset || "") + input("Giro del entorno (grados)", "envRotation", String(c2.rotation || 0), "number");
+    }
+    modal("Secuencia", input("T\xEDtulo", "title", s2.title) + select("Escenario", "location", [["", "Sin escenario"], ...p.locations.map((l3) => [l3.id, l3.name])], s2.location) + envFields + select("Variante visual del reparto", "variant", variants, s2.variant || "") + area("Sonido ambiente", "ambiencePrompt", s2.ambiencePrompt), async (f2) => {
+      if (env) {
+        const choice = environmentChoice(f2);
+        if (choice) s2.environment = choice;
+        else delete s2.environment;
+      }
+      delete f2.envSpot;
+      delete f2.envPreset;
+      delete f2.envRotation;
       Object.assign(s2, f2);
       if (a === "new-sequence") {
         s2.shots.push(newShot("Plano 1"));
@@ -29524,9 +29601,10 @@ try {
   const params = new URLSearchParams(location.search), project = params.get("project");
   if (project) {
     p = await api("/api/project?id=" + encodeURIComponent(project));
-    view = ["overview", "ideas", "characters", "locations", "episodes", "jobs", "shot", "ship", "rehearsal", "storyboards", "storyboard", "outline", "issues"].includes(params.get("view")) ? params.get("view") : "overview";
+    view = ["overview", "ideas", "characters", "locations", "episodes", "jobs", "shot", "ship", "rehearsal", "storyboards", "storyboard", "outline", "issues", "environments", "environment"].includes(params.get("view")) ? params.get("view") : "overview";
     episodeId = params.get("episode");
     storyboardId = params.get("storyboard");
+    environmentId = params.get("environment");
     sequenceId = params.get("sequence");
     shotId = params.get("shot");
     if (view === "shot") current();
@@ -29556,6 +29634,8 @@ window.addEventListener("beforeunload", (e) => {
 });
 window.rodaje = { get ship() {
   return view === "ship" ? stage : null;
+}, get environment() {
+  return view === "environment" ? stage : null;
 }, get project() {
   return p;
 }, act, api, reload, render };
