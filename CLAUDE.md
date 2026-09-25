@@ -22,13 +22,17 @@ Nunca lances una generación (fal.ai, ElevenLabs, H3 Max, nano-banana) sin aprob
 
 15 s por bloque · 8 imágenes de referencia · 768P · mínimo 5 s pedidos · devuelve 0,15–0,7 s de más · ~4 palabras por segundo de diálogo más 1 s de cola.
 
+## Entornos 3D
+
+Para crear o corregir un escenario 3D, seguir `ENTORNOS-3D.md` (constructor en código, cámara calibrada con la referencia, bucle de comparación, planta editable por el usuario).
+
 ## Cambios en la app
 
 Lógica nueva = funciones puras en `app/workflow.mjs` con test en `test/*.test.mjs`. `npm test` antes de cerrar. No tocar `app/app.source.js` ni `app/stage.js` salvo petición expresa (`npm run build:ui` tras editar la UI).
 
 ## Scripts de producción
 
-`scripts/registro.mjs` (sync · freeze · render · check), `scripts/perfil.mjs` (perfiles de interpretación y voice prompt), `scripts/mapa-espacial.mjs` (borrador de mapa por landmarks), `scripts/pendientes.mjs` (importar · listar el tablero de pendientes), `scripts/entorno-glb.mjs` (exporta a GLB un entorno 3D con constructor), `scripts/bloques/{masters,planificar,render,prompt,enviar,estado,montar,informe}.mjs`.
+`scripts/registro.mjs` (sync · freeze · render · check), `scripts/perfil.mjs` (perfiles de interpretación y voice prompt), `scripts/mapa-espacial.mjs` (borrador de mapa por landmarks), `scripts/pendientes.mjs` (importar · listar el tablero de pendientes), `scripts/entorno-glb.mjs` (exporta a GLB un entorno 3D con constructor), `scripts/entorno-coplanares.mjs` (detecta caras coplanarias que parpadean; pasarlo tras tocar un constructor), `scripts/bloques/{masters,planificar,render,prompt,enviar,estado,montar,informe}.mjs`.
 
 ## Git
 

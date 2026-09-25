@@ -1,0 +1,26 @@
+// Recorrido a pie automático por el caserón (adaptar lugares a cada entorno). Servidor de prueba en :4399.
+import {chromium} from 'playwright';
+const SP=process.argv[2];
+const b=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+const pg=await b.newPage({viewport:{width:1500,height:1100}});const errs=[];pg.on('pageerror',e=>errs.push(e.message));
+await pg.goto('http://127.0.0.1:4399/?project=conjurados&view=environment&environment=caseron');
+await pg.waitForFunction(()=>window.rodaje?.environment,null,{timeout:30000});await pg.waitForTimeout(2500);
+const r=a=>a.map(v=>Math.round(v*100)/100);
+const log=async(label,fn)=>{const p=await pg.evaluate(fn);console.log(label.padEnd(34),JSON.stringify(r(p)));};
+const snap=async n=>{await pg.waitForTimeout(700);const el=await pg.$('.env3d-view');await el.screenshot({path:SP+'/'+n+'.png'});};
+await log('inicio (camino)',()=>{const e=window.rodaje.environment;e.setWalk(true);e.setView('puerta-fuera');return e.camera.position.toArray();});
+await snap('walk-1-camino');
+await log('W 6 s hacia la puerta',()=>window.rodaje.environment.walk(['w'],6));
+await snap('walk-2-patio');
+const tp=(x,y,z,yaw)=>{const e=window.rodaje.environment;e.setView('patio');e.camera.position.set(x,y,z);e.camera.rotation.set(0,yaw,0,'YXZ');};
+await log('portón: W 4 s desde el patio',()=>{const e=window.rodaje.environment;e.setView('porton');return e.walk(['w'],4);});
+await snap('walk-3-sala');
+await log('escalera: W 5 s desde el pie',()=>{const e=window.rodaje.environment;e.setView('sala');e.camera.position.set(5.8,1.62,1.1);e.camera.rotation.set(0,0,0,'YXZ');return e.walk(['w'],4);});
+await snap('walk-4-camara');
+await log('bodega: W 5 s desde la caja',()=>{const e=window.rodaje.environment;e.setView('sala');e.camera.position.set(1.4,1.62,-4.8);e.camera.rotation.set(0,-Math.PI/2,0,'YXZ');return e.walk(['w'],4);});
+await snap('walk-5-bodega');
+await log('cocina: W 4 s desde el patio',()=>{const e=window.rodaje.environment;e.setView('puerta-cocina');return e.walk(['w'],4);});
+await snap('walk-6-cocina');
+await log('muro: W 8 s hacia el oeste',()=>{const e=window.rodaje.environment;e.setView('patio');e.camera.position.set(-5,1.62,7);e.camera.rotation.set(0,Math.PI/2,0,'YXZ');return e.walk(['w'],8);});
+await log('no clip: E 2 s',()=>{const e=window.rodaje.environment;[...document.querySelectorAll('[data-a=noclip]')][0].click();return e.walk(['e'],2);});
+console.log(errs.join('\n')||'sin errores');await b.close();
