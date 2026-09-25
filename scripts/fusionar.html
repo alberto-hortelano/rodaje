@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Fusionar ediciones</title>
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --bg:#16191c; --panel:#1f2327; --line:#30363c; --text:#e4e7ea; --muted:#8d969e; --accent:#d9a441; --ok:#6fae7b; --warn:#c9855a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.4 system-ui, sans-serif; display:grid; grid-template-columns:320px 1fr; height:100vh; overflow:hidden; }
+  aside { background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
+  aside header { padding:12px 14px; border-bottom:1px solid var(--line); }
+  aside h1 { font-size:15px; margin:0 0 4px; }
+  .muted { color:var(--muted); font-size:12px; }
+  #pares { overflow:auto; flex:1; }
+  .par { padding:9px 14px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .par:hover { background:#262b30; }
+  .par.activo { background:#2d3339; box-shadow:inset 3px 0 var(--accent); }
+  .par b { display:block; font-weight:600; word-break:break-all; }
+  .par .ruta { color:var(--muted); font-size:11px; word-break:break-all; }
+  .tag { display:inline-block; font-size:11px; padding:0 6px; border-radius:8px; margin-right:4px; }
+  .tag.ok { background:#2f4a35; color:#bfe3c6; } .tag.duda { background:#4d3527; color:#f0c7a8; } .tag.hecha { background:#3d3a26; color:#f0dea0; }
+  main { display:grid; grid-template-rows:auto 1fr auto; min-width:0; min-height:0; }
+  .barra { display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; padding:8px 12px; background:var(--panel); border-bottom:1px solid var(--line); }
+  .barra.abajo { border-top:1px solid var(--line); border-bottom:0; }
+  .grupo { display:flex; gap:6px; align-items:center; }
+  button { background:#2b3136; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; font:inherit; }
+  button:hover { border-color:#4a535b; }
+  button.on { background:var(--accent); color:#1b1b1b; border-color:var(--accent); }
+  button.primario { background:var(--ok); color:#10170f; border-color:var(--ok); font-weight:600; }
+  button:disabled { opacity:.45; cursor:default; }
+  input[type=range] { width:110px; }
+  label { color:var(--muted); font-size:12px; }
+  #lienzo { position:relative; overflow:hidden; background:repeating-conic-gradient(#202428 0 25%, #1a1d20 0 50%) 0 0/24px 24px; cursor:none; touch-action:none; }
+  #capas { position:absolute; left:0; top:0; transform-origin:0 0; }
+  #capas canvas { position:absolute; left:0; top:0; image-rendering:auto; }
+  #cursor { position:absolute; pointer-events:none; border:1px solid #fff; border-radius:50%; box-shadow:0 0 0 1px #000; transform:translate(-50%,-50%); }
+  #cursor::after { content:""; position:absolute; inset:var(--duro); border:1px dashed rgba(255,255,255,.6); border-radius:50%; }
+  #vacio { position:absolute; inset:0; display:grid; place-items:center; color:var(--muted); cursor:default; }
+  #estado { margin-left:auto; color:var(--muted); font-size:12px; }
+  kbd { background:#2b3136; border:1px solid var(--line); border-radius:4px; padding:0 4px; font-size:11px; }
+</style>
+</head>
+<body>
+<aside>
+  <header>
+    <h1>Fusionar ediciones</h1>
+    <div class="muted">La original va encima; borrar descubre la edición de debajo. <span class="tag ok">segura</span> = casi idénticas; <span class="tag duda">dudosa</span> = puede ser otra generación, no una edición.</div>
+    <div style="margin-top:8px"><button id="recargar">Volver a buscar</button></div>
+  </header>
+  <div id="pares"><p class="muted" style="padding:14px">Buscando pares…</p></div>
+</aside>
+<main>
+  <div class="barra">
+    <div class="grupo">
+      <button id="mBorrar" class="on" title="Descubre la edición (B)">Borrar</button>
+      <button id="mRestaurar" title="Vuelve a la original (R, o botón derecho)">Restaurar</button>
+    </div>
+    <div class="grupo"><label>Tamaño</label><input id="tam" type="range" min="4" max="600" value="80"><span id="tamV" class="muted">80</span></div>
+    <div class="grupo"><label>Dureza</label><input id="dureza" type="range" min="0" max="100" value="20"><span id="durezaV" class="muted">20 %</span></div>
+    <div class="grupo"><label>Flujo</label><input id="flujo" type="range" min="5" max="100" value="100"><span id="flujoV" class="muted">100 %</span></div>
+    <div class="grupo">
+      <button id="deshacer" title="Ctrl+Z">Deshacer</button>
+      <button id="rehacer" title="Ctrl+Shift+Z">Rehacer</button>
+    </div>
+    <div class="grupo">
+      <label>Umbral</label><input id="umbral" type="range" min="4" max="80" value="18"><span id="umbralV" class="muted">18</span>
+      <label>Difuminado</label><input id="difum" type="range" min="0" max="60" value="14"><span id="difumV" class="muted">14</span>
+      <button id="auto" title="Crea la máscara desde las diferencias entre las dos imágenes">Máscara automática</button>
+      <button id="limpiar" title="Todo original">Vaciar máscara</button>
+    </div>
+  </div>
+  <div id="lienzo">
+    <div id="capas"><canvas id="cEdit"></canvas><canvas id="cTop"></canvas><canvas id="cVista"></canvas></div>
+    <div id="cursor"></div>
+    <div id="vacio">Elige un par de la lista.</div>
+  </div>
+  <div class="barra abajo">
+    <div class="grupo">
+      <label>Vista</label>
+      <button data-vista="resultado" class="on" title="1">Resultado</button>
+      <button data-vista="original" title="2">Original</button>
+      <button data-vista="editada" title="3">Edición</button>
+      <button data-vista="mascara" title="4">Máscara</button>
+      <button data-vista="diferencia" title="5">Diferencias</button>
+    </div>
+    <div class="grupo"><button id="ajustar" title="F">Ajustar</button><button id="real" title="Tamaño real (0)">1:1</button></div>
+    <span class="muted"><kbd>[</kbd> <kbd>]</kbd> tamaño · <kbd>Espacio</kbd>+arrastrar o botón central: mover · rueda: zoom · <kbd>Alt</kbd> mantenido: restaurar</span>
+    <span id="estado"></span>
+    <button id="guardar" class="primario" disabled>Guardar fusión</button>
+  </div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const lienzo = $('#lienzo'), capas = $('#capas'), cEdit = $('#cEdit'), cTop = $('#cTop'), cVista = $('#cVista'), cursorEl = $('#cursor');
+const xEdit = cEdit.getContext('2d'), xTop = cTop.getContext('2d'), xVista = cVista.getContext('2d');
+let par = null, imgO = null, imgE = null, W = 0, H = 0, mask = null, xMask = null, diff = null;
+let modo = 'borrar', vista = 'resultado', zoom = 1, ox = 0, oy = 0, pintando = false, ultimo = null, sucio = false, cambios = false;
+const hist = [], rehist = [];
+const opt = {tam: 80, dureza: .2, flujo: 1, umbral: 18, difum: 14};
+
+function estado(t) { $('#estado').textContent = t; }
+async function cargarPares(recargar) {
+  $('#pares').innerHTML = '<p class="muted" style="padding:14px">Buscando pares…</p>';
+  const lista = await (await fetch('/api/pares' + (recargar ? '?recargar' : ''))).json();
+  if (lista.error) { $('#pares').innerHTML = `<p class="muted" style="padding:14px">${lista.error}</p>`; return; }
+  $('#pares').innerHTML = lista.length ? '' : '<p class="muted" style="padding:14px">No hay pares.</p>';
+  lista.sort((a, b) => (b.segura - a.segura) || a.editada.localeCompare(b.editada));
+  for (const p of lista) {
+    const d = document.createElement('div');
+    d.className = 'par' + (par && par.editada === p.editada ? ' activo' : '');
+    d.innerHTML = `<b>${p.editada.split('/').pop()}</b><div class="ruta">${p.editada.split('/').slice(0, -1).join('/')}</div>
+      <div class="ruta">original: ${p.original.split('/').pop()}</div>
+      <span class="tag ${p.segura ? 'ok' : 'duda'}">${p.segura ? 'segura' : 'dudosa'}</span>${p.fusionada ? '<span class="tag hecha">fusionada</span>' : ''}
+      <span class="muted">dif. ${p.media} · ${p.cambiado} % cambiado · ${p.tamano.join('×')}</span>`;
+    d.onclick = () => abrir(p, d);
+    $('#pares').append(d);
+  }
+}
+const cargarImg = src => new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ko(Error('No se pudo cargar ' + src)); i.src = src; });
+
+async function abrir(p, el) {
+  if (cambios && !confirmarSalida()) return;
+  document.querySelectorAll('.par').forEach(x => x.classList.remove('activo')); el?.classList.add('activo');
+  par = p; estado('Cargando…');
+  const q = f => '/img?f=' + encodeURIComponent(f) + '&t=' + Date.now();
+  [imgO, imgE] = await Promise.all([cargarImg(q(p.original)), cargarImg(q(p.editada) + '&cruda')]);
+  W = imgO.naturalWidth; H = imgO.naturalHeight;
+  for (const c of [cEdit, cTop, cVista]) { c.width = W; c.height = H; }
+  mask = document.createElement('canvas'); mask.width = W; mask.height = H; xMask = mask.getContext('2d');
+  xMask.fillStyle = '#000'; xMask.fillRect(0, 0, W, H);
+  if (p.mascara) { try { const m = await cargarImg('/img?f=' + encodeURIComponent(p.editada.replace(/\.png$/, '.mascara.png')) + '&t=' + Date.now()); xMask.clearRect(0, 0, W, H); xMask.drawImage(m, 0, 0, W, H); } catch {} }
+  xEdit.drawImage(imgE, 0, 0, W, H);
+  diff = null; hist.length = rehist.length = 0; cambios = false;
+  $('#vacio').style.display = 'none'; $('#guardar').disabled = false;
+  ajustar(); pintar();
+  estado(`${W}×${H}${p.mascara ? ' · máscara anterior cargada' : ''}`);
+}
+function confirmarSalida() { return confirmacion('Hay cambios sin guardar en este par. ¿Descartarlos?'); }
+// Sin diálogos del navegador: segundo clic en 3 s confirma.
+let pendiente = 0;
+function confirmacion(texto) { if (Date.now() - pendiente < 3000) { pendiente = 0; return true; } pendiente = Date.now(); estado(texto + ' Vuelve a pulsar para confirmar.'); return false; }
+
+function pintar() {
+  if (!mask) return;
+  xTop.globalCompositeOperation = 'source-over'; xTop.clearRect(0, 0, W, H); xTop.drawImage(imgO, 0, 0, W, H);
+  xTop.globalCompositeOperation = 'destination-in'; xTop.drawImage(mask, 0, 0); xTop.globalCompositeOperation = 'source-over';
+  xVista.clearRect(0, 0, W, H);
+  cEdit.style.visibility = vista === 'original' || vista === 'diferencia' ? 'hidden' : 'visible';
+  cTop.style.visibility = vista === 'editada' || vista === 'diferencia' ? 'hidden' : 'visible';
+  if (vista === 'original') { xTop.clearRect(0, 0, W, H); xTop.drawImage(imgO, 0, 0, W, H); }
+  if (vista === 'mascara') {
+    xVista.fillStyle = 'rgba(230,60,40,.55)'; xVista.fillRect(0, 0, W, H);
+    xVista.globalCompositeOperation = 'destination-out'; xVista.drawImage(mask, 0, 0); xVista.globalCompositeOperation = 'source-over';
+  }
+  if (vista === 'diferencia') { calcularDiff(); xVista.putImageData(diff.vista, 0, 0); }
+}
+function calcularDiff() {
+  if (diff) return;
+  const t = document.createElement('canvas'); t.width = W; t.height = H; const x = t.getContext('2d');
+  x.drawImage(imgO, 0, 0, W, H); const a = x.getImageData(0, 0, W, H).data;
+  x.clearRect(0, 0, W, H); x.drawImage(imgE, 0, 0, W, H); const b = x.getImageData(0, 0, W, H).data;
+  const lum = new Uint8Array(W * H), vista = x.createImageData(W, H);
+  for (let i = 0, j = 0; i < a.length; i += 4, j++) {
+    const d = (Math.abs(a[i] - b[i]) * 3 + Math.abs(a[i + 1] - b[i + 1]) * 5 + Math.abs(a[i + 2] - b[i + 2]) * 2) / 10;
+    lum[j] = d; const v = Math.min(255, d * 4);
+    vista.data[i] = v; vista.data[i + 1] = v * .8; vista.data[i + 2] = v * .3; vista.data[i + 3] = 255;
+  }
+  diff = {lum, vista};
+}
+function mascaraAuto() {
+  if (!mask) return;
+  calcularDiff(); guardarHist();
+  const t = document.createElement('canvas'); t.width = W; t.height = H; const x = t.getContext('2d');
+  const id = x.createImageData(W, H);
+  for (let j = 0; j < diff.lum.length; j++) if (diff.lum[j] > opt.umbral) id.data[j * 4 + 3] = 255;
+  x.putImageData(id, 0, 0);
+  // Quita el ruido de compresión (motas sueltas) y ensancha lo que sí cambió; luego difumina el borde.
+  const s = document.createElement('canvas'); s.width = W; s.height = H; const y = s.getContext('2d');
+  y.filter = 'blur(3px)'; y.drawImage(t, 0, 0); y.filter = 'none';
+  const sd = y.getImageData(0, 0, W, H); for (let k = 3; k < sd.data.length; k += 4) sd.data[k] = sd.data[k] > 70 ? 255 : 0; y.putImageData(sd, 0, 0);
+  // Ensancha la zona el ancho del difuminado y luego difumina: el centro queda entero y solo el borde es gradual.
+  const r = Math.max(1, opt.difum);
+  const g = document.createElement('canvas'); g.width = W; g.height = H; const z = g.getContext('2d');
+  z.filter = `blur(${r / 2}px)`; z.drawImage(s, 0, 0); z.filter = 'none';
+  const gd = z.getImageData(0, 0, W, H); for (let k = 3; k < gd.data.length; k += 4) gd.data[k] = gd.data[k] > 6 ? 255 : 0; z.putImageData(gd, 0, 0);
+  xMask.globalCompositeOperation = 'source-over'; xMask.fillStyle = '#000'; xMask.fillRect(0, 0, W, H);
+  xMask.globalCompositeOperation = 'destination-out';
+  xMask.filter = `blur(${r / 2}px)`; xMask.drawImage(g, 0, 0); xMask.filter = 'none';
+  xMask.globalCompositeOperation = 'source-over';
+  cambios = true; pintar(); estado('Máscara creada desde las diferencias. Repásala con el pincel.');
+}
+
+function guardarHist() { hist.push(xMask.getImageData(0, 0, W, H)); if (hist.length > 30) hist.shift(); rehist.length = 0; }
+function deshacer() { if (!hist.length) return; rehist.push(xMask.getImageData(0, 0, W, H)); xMask.putImageData(hist.pop(), 0, 0); pintar(); }
+function rehacer() { if (!rehist.length) return; hist.push(xMask.getImageData(0, 0, W, H)); xMask.putImageData(rehist.pop(), 0, 0); pintar(); }
+
+function sello(x, y, restaurar) {
+  const r = opt.tam / 2, g = xMask.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, `rgba(0,0,0,${opt.flujo})`); g.addColorStop(Math.min(.99, opt.dureza), `rgba(0,0,0,${opt.flujo})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+  xMask.globalCompositeOperation = restaurar ? 'source-over' : 'destination-out';
+  xMask.fillStyle = g; xMask.beginPath(); xMask.arc(x, y, r, 0, Math.PI * 2); xMask.fill();
+  xMask.globalCompositeOperation = 'source-over';
+}
+function trazo(a, b, restaurar) {
+  const d = Math.hypot(b.x - a.x, b.y - a.y), paso = Math.max(1, opt.tam * .12), n = Math.max(1, Math.ceil(d / paso));
+  for (let i = 1; i <= n; i++) sello(a.x + (b.x - a.x) * i / n, a.y + (b.y - a.y) * i / n, restaurar);
+  if (!sucio) { sucio = true; requestAnimationFrame(() => { sucio = false; pintar(); }); }
+}
+const aImagen = e => { const r = lienzo.getBoundingClientRect(); return {x: (e.clientX - r.left - ox) / zoom, y: (e.clientY - r.top - oy) / zoom}; };
+function aplicarVista() { capas.style.transform = `translate(${ox}px,${oy}px) scale(${zoom})`; actualizarCursor(); }
+function ajustar() { const r = lienzo.getBoundingClientRect(); zoom = Math.min(r.width / W, r.height / H) * .96; ox = (r.width - W * zoom) / 2; oy = (r.height - H * zoom) / 2; aplicarVista(); }
+function real() { const r = lienzo.getBoundingClientRect(); zoom = 1; ox = (r.width - W) / 2; oy = (r.height - H) / 2; aplicarVista(); }
+let ultimoRaton = null;
+function actualizarCursor(e) {
+  if (e) ultimoRaton = e; if (!ultimoRaton) return;
+  const r = lienzo.getBoundingClientRect(), d = opt.tam * zoom;
+  cursorEl.style.left = (ultimoRaton.clientX - r.left) + 'px'; cursorEl.style.top = (ultimoRaton.clientY - r.top) + 'px';
+  cursorEl.style.width = cursorEl.style.height = d + 'px';
+  cursorEl.style.setProperty('--duro', (d / 2 * (1 - opt.dureza)) + 'px');
+  cursorEl.style.borderColor = (modo === 'restaurar' || altPulsado) ? '#7fd1ff' : '#fff';
+}
+
+let moviendo = null, espacio = false, altPulsado = false;
+lienzo.addEventListener('contextmenu', e => e.preventDefault());
+lienzo.addEventListener('pointerdown', e => {
+  if (!mask) return;
+  lienzo.setPointerCapture(e.pointerId);
+  if (e.button === 1 || espacio) { moviendo = {x: e.clientX - ox, y: e.clientY - oy}; return; }
+  if (vista === 'diferencia' || vista === 'original' || vista === 'editada') setVista('resultado');
+  guardarHist(); pintando = e.button === 2 || e.altKey || modo === 'restaurar' ? 'restaurar' : 'borrar';
+  ultimo = aImagen(e); sello(ultimo.x, ultimo.y, pintando === 'restaurar'); cambios = true; pintar();
+});
+lienzo.addEventListener('pointermove', e => {
+  actualizarCursor(e);
+  if (moviendo) { ox = e.clientX - moviendo.x; oy = e.clientY - moviendo.y; aplicarVista(); return; }
+  if (!pintando) return;
+  const p = aImagen(e); trazo(ultimo, p, pintando === 'restaurar'); ultimo = p;
+});
+const soltar = () => { pintando = false; moviendo = null; };
+lienzo.addEventListener('pointerup', soltar); lienzo.addEventListener('pointercancel', soltar);
+lienzo.addEventListener('pointerleave', () => { cursorEl.style.display = 'none'; });
+lienzo.addEventListener('pointerenter', () => { cursorEl.style.display = mask ? 'block' : 'none'; });
+lienzo.addEventListener('wheel', e => {
+  if (!mask) return; e.preventDefault();
+  const r = lienzo.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, f = Math.exp(-e.deltaY * .0015);
+  const nz = Math.min(16, Math.max(.05, zoom * f)); ox = mx - (mx - ox) * nz / zoom; oy = my - (my - oy) * nz / zoom; zoom = nz; aplicarVista();
+}, {passive: false});
+
+function setModo(m) { modo = m; $('#mBorrar').classList.toggle('on', m === 'borrar'); $('#mRestaurar').classList.toggle('on', m === 'restaurar'); actualizarCursor(); }
+function setVista(v) { vista = v; document.querySelectorAll('[data-vista]').forEach(b => b.classList.toggle('on', b.dataset.vista === v)); pintar(); }
+$('#mBorrar').onclick = () => setModo('borrar'); $('#mRestaurar').onclick = () => setModo('restaurar');
+document.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => setVista(b.dataset.vista));
+function rango(id, clave, fmt, escala = 1) { const el = $('#' + id), out = $('#' + id + 'V'); const upd = () => { opt[clave] = el.value * escala; out.textContent = fmt(el.value); actualizarCursor(); }; el.oninput = upd; upd(); return el; }
+const tam = rango('tam', 'tam', v => v); rango('dureza', 'dureza', v => v + ' %', .01); rango('flujo', 'flujo', v => v + ' %', .01); rango('umbral', 'umbral', v => v); rango('difum', 'difum', v => v);
+$('#deshacer').onclick = deshacer; $('#rehacer').onclick = rehacer; $('#auto').onclick = mascaraAuto;
+$('#limpiar').onclick = () => { if (!mask) return; guardarHist(); xMask.fillStyle = '#000'; xMask.fillRect(0, 0, W, H); cambios = true; pintar(); };
+$('#ajustar').onclick = ajustar; $('#real').onclick = real; $('#recargar').onclick = () => cargarPares(true);
+addEventListener('resize', () => mask && ajustar());
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === ' ') { espacio = true; e.preventDefault(); }
+  if (e.key === 'Alt') { altPulsado = true; actualizarCursor(); e.preventDefault(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? rehacer() : deshacer(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); guardar(); return; }
+  if (e.key === '[' || e.key === ']') { tam.value = Math.max(4, Math.min(600, Math.round(opt.tam * (e.key === ']' ? 1.2 : 1 / 1.2)))); tam.oninput(); }
+  const k = {b: () => setModo('borrar'), r: () => setModo('restaurar'), f: ajustar, 0: real, 1: () => setVista('resultado'), 2: () => setVista('original'), 3: () => setVista('editada'), 4: () => setVista('mascara'), 5: () => setVista('diferencia')}[e.key.toLowerCase()];
+  if (k && !e.ctrlKey && !e.metaKey) k();
+});
+addEventListener('keyup', e => { if (e.key === ' ') espacio = false; if (e.key === 'Alt') { altPulsado = false; actualizarCursor(); } });
+addEventListener('beforeunload', e => { if (cambios) e.preventDefault(); });
+
+async function guardar() {
+  if (!mask || !par) return;
+  const out = document.createElement('canvas'); out.width = W; out.height = H; const x = out.getContext('2d');
+  x.drawImage(imgE, 0, 0, W, H);
+  const top = document.createElement('canvas'); top.width = W; top.height = H; const y = top.getContext('2d');
+  y.drawImage(imgO, 0, 0, W, H); y.globalCompositeOperation = 'destination-in'; y.drawImage(mask, 0, 0);
+  x.drawImage(top, 0, 0);
+  const blob = c => new Promise(ok => c.toBlob(ok, 'image/png'));
+  const q = t => `/api/guardar?tipo=${t}&editada=${encodeURIComponent(par.editada)}&original=${encodeURIComponent(par.original)}`;
+  estado('Guardando…');
+  const r1 = await (await fetch(q('fusion'), {method: 'POST', body: await blob(out)})).json();
+  if (r1.error) { estado('Error: ' + r1.error); return; }
+  const r2 = await (await fetch(q('mascara'), {method: 'POST', body: await blob(mask)})).json();
+  if (r2.error) { estado('Error al guardar la máscara: ' + r2.error); return; }
+  cambios = false; estado(`Guardado. La edición original de ChatGPT queda en ${r1.cruda.split('/').pop()}.`);
+  par.fusionada = new Date().toISOString(); par.mascara = true;
+  cargarPares();
+}
+$('#guardar').onclick = guardar;
+cargarPares();
+</script>
+</body>
+</html>
