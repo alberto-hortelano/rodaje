@@ -1,8 +1,8 @@
 // Ruta /viewer/ del servidor: sirve viewer/ con safe(), sin /environment.js; la UI importa el visor GLB y el genérico sin empaquetarlos (issues #9 y #10).
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import http from 'node:http';import {spawn} from 'node:child_process';import * as T from 'three';
-import {exportGlb} from '../lib/entorno3d.mjs';
+import {exportGlb} from '../lib/entorno3d.mjs';import {withChrome,newRenderContext,chromePath,VIEWPORTS} from '../lib/chrome.mjs';
 const ROOT=path.resolve(import.meta.dirname,'..'),DATA=fs.mkdtempSync(path.join(os.tmpdir(),'rodaje-viewer-')),id='humo-'+process.pid;
-const CHROME=process.env.CHROME_PATH||'/usr/bin/google-chrome';
+const SIN_CHROME=!fs.existsSync(chromePath())&&'sin Chrome';
 const port=await new Promise(r=>{const s=net.createServer().listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>r(p));});});
 // Proyecto de humo: un entorno solo con GLB (tres cajas).
 const g=new T.Group();for(const x of [0,2,4]){const m=new T.Mesh(new T.BoxGeometry(1,1,1),new T.MeshStandardMaterial());m.name='caja'+x;m.position.x=x;g.add(m);}
@@ -41,16 +41,11 @@ test('app.js importa /viewer/glb.mjs y /viewer/mount.mjs sin empaquetarlos',()=>
 test('los constructores siempre reciben un kit',async()=>{const {moduleImports,resolveModule}=await import('../app/workflow.mjs');
  for(const f of ['app/stage.js','viewer/mount.mjs','lib/entorno3d.mjs']){const src=fs.readFileSync(path.join(ROOT,f),'utf8'),calls=src.match(/\.build\(T,[^\n]{0,40}/g)||[];assert.ok(calls.length>=1,f);for(const c of calls)assert.match(c,/\.build\(T,\s*[\w.]+,\s*createKit\(T,/,`${f}: ${c}`);}
  const stage=fs.readFileSync(path.join(ROOT,'app/stage.js'),'utf8');assert.ok(stage.includes("import {createKit} from '/viewer/kit.mjs'"));assert.ok(moduleImports(stage).includes('/viewer/kit.mjs'));assert.equal(resolveModule('/viewer/kit.mjs','/stage.js'),'/viewer/kit.mjs');});
-test('humo: un entorno solo con GLB se abre en la vista environment',{skip:!fs.existsSync(CHROME)&&'sin Chrome'},async()=>{const {chromium}=await import('playwright');
- const browser=await chromium.launch({executablePath:CHROME,headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-sandbox']});
- try{const page=await (await browser.newContext({viewport:{width:1280,height:800},serviceWorkers:'block'})).newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+test('humo: un entorno solo con GLB se abre en la vista environment',{skip:SIN_CHROME},()=>withChrome(async browser=>{const page=await (await newRenderContext(browser,VIEWPORTS.lineaBase)).newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`http://127.0.0.1:${port}/?project=${id}&view=environment&environment=solo-glb`);
   await page.waitForFunction('window.rodaje?.environment',null,{timeout:30000});
-  assert.match(await page.textContent('#environment-model p'),/^Humo · .* · 3 mallas$/);assert.deepEqual(errors,[]);}
- finally{await browser.close();}});
-test('humo: el visor genérico monta un entorno con constructor y plugin, y otro sin plugin',{skip:!fs.existsSync(CHROME)&&'sin Chrome'},async()=>{const {chromium}=await import('playwright');
- const browser=await chromium.launch({executablePath:CHROME,headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-sandbox']});
- try{const page=await (await browser.newContext({viewport:{width:1280,height:800},serviceWorkers:'block'})).newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  assert.match(await page.textContent('#environment-model p'),/^Humo · .* · 3 mallas$/);assert.deepEqual(errors,[]);}));
+test('humo: el visor genérico monta un entorno con constructor y plugin, y otro sin plugin',{skip:SIN_CHROME},()=>withChrome(async browser=>{const page=await (await newRenderContext(browser,VIEWPORTS.lineaBase)).newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`http://127.0.0.1:${port}/?project=${id}&view=environment&environment=con-plugin`);
   await page.waitForFunction('window.rodaje?.environment',null,{timeout:30000});
   assert.deepEqual(await page.$$eval('.env3d-bar button',l=>l.map(b=>[b.dataset.a,b.textContent,b.getAttribute('aria-pressed')])).then(l=>l.slice(0,3)),[['overview','Vista general',null],['humo','Humo','false'],['walk','Recorrer a pie','false']]);
@@ -67,5 +62,4 @@ test('humo: el visor genérico monta un entorno con constructor y plugin, y otro
   await page.goto(`http://127.0.0.1:${port}/?project=${id}&view=environment&environment=plugin-roto`);
   await page.waitForFunction(()=>/No se pudo/.test(document.querySelector('#environment-model')?.textContent||''),null,{timeout:30000});
   assert.equal(await page.textContent('#environment-model'),'No se pudo cargar el entorno 3D: El plugin ambientes/humo/3d/roto.js no exporta plugin(api)');
-  assert.deepEqual(errors,[]);}
- finally{await browser.close();}});
+  assert.deepEqual(errors,[]);}));

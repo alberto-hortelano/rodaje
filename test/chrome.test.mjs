@@ -45,8 +45,8 @@ test('pinClock fija performance.now en FIXED_NOW (o el valor dado)',async()=>{
 });
 test('solo lib/chrome.mjs lanza Chrome; playwright se importa al lanzar; check-ui.mjs no existe; stage.js sin performance.now',()=>{
  const re=/chromium\.launch|google-chrome|swiftshader|from ['"]playwright['"]|import\(['"]playwright['"]\)/,hits=[];
- for(const d of ['app','lib','scripts','viewer'])for(const f of fs.readdirSync(path.join(ROOT,d),{recursive:true})){
-  const rel=d+'/'+f.split(path.sep).join('/');if(rel==='lib/chrome.mjs'||!/\.(mjs|js|html)$/.test(rel)||!fs.statSync(path.join(ROOT,rel)).isFile())continue;
+ for(const d of ['app','lib','scripts','viewer','test'])for(const f of fs.readdirSync(path.join(ROOT,d),{recursive:true})){
+  const rel=d+'/'+f.split(path.sep).join('/');if(rel==='lib/chrome.mjs'||rel==='test/chrome.test.mjs'||!/\.(mjs|js|html)$/.test(rel)||!fs.statSync(path.join(ROOT,rel)).isFile())continue;
   if(re.test(src(rel)))hits.push(rel);}
  assert.deepEqual(hits,[]);
  const lib=src('lib/chrome.mjs');assert.doesNotMatch(lib,/from ['"]playwright['"]/);assert.match(lib,/await import\(['"]playwright['"]\)/);assert.doesNotMatch(lib,/from ['"][^'"]*app\//);
