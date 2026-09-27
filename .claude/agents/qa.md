@@ -20,6 +20,8 @@ Desconfía del informe del ingeniero y compruébalo todo tú:
 5. Si hay UI: `npm run build:ui` y después `git diff --stat app/app.js`, para comprobar que el bundle está al día.
 6. Pasa `node scripts/proyecto-check.mjs --all --report` si existe.
 
+Los scripts que escriben en un proyecto se prueban sobre una copia con `RODAJE_DATA=<copia en scratchpad>`, nunca sobre `proyectos/`.
+
 No corrijas código ni lances generaciones de pago.
 
 Informe, en español (España):
