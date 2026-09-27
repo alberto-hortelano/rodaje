@@ -8,10 +8,10 @@ test('pluginPaths y viewerOptions',()=>{
  assert.deepEqual(viewerOptions({viewer:'a/explore.js'}),{});assert.deepEqual(viewerOptions({}),{});
  assert.deepEqual(viewerOptions({viewer:{plugins:['a.js'],fov:40,walk:{eye:1.5}}}),{fov:40,walk:{eye:1.5}});});
 
-test('initialState: defaultState de los datos, luego DEFAULT_STATE del constructor; siempre copia',()=>{
+test('initialState: copia de defaultState de los datos, sin respaldo del constructor',()=>{
  const data={defaultState:{a:1}},mod={DEFAULT_STATE:{b:2}};
- assert.deepEqual(initialState(data,mod),{a:1});assert.deepEqual(initialState({},mod),{b:2});assert.deepEqual(initialState({},{}),{});assert.deepEqual(initialState(undefined,undefined),{});
- const s=initialState(data,mod);s.a=9;assert.equal(data.defaultState.a,1);const t=initialState({},mod);t.b=9;assert.equal(mod.DEFAULT_STATE.b,2);});
+ assert.deepEqual(initialState(data,mod),{a:1});assert.deepEqual(initialState({},mod),{});assert.deepEqual(initialState({}),{});assert.deepEqual(initialState(undefined),{});
+ const s=initialState(data);s.a=9;assert.equal(data.defaultState.a,1);});
 
 test('buttonHTML escapa y pone aria-pressed solo si es booleano',()=>{
  assert.equal(buttonHTML({a:'cut',text:'Corte: sin tejados',pressed:false}),'<button data-a="cut" aria-pressed="false">Corte: sin tejados</button>');

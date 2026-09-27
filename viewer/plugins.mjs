@@ -11,8 +11,8 @@ export const HOOKS = ['onBuild', 'onSky', 'onOverview', 'overview', 'spawn', 'on
 const isObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 export function pluginPaths(env) { const v = env?.viewer; return isObject(v) && Array.isArray(v.plugins) ? v.plugins.filter(p => typeof p === 'string' && p) : []; }
 export function viewerOptions(env) { if (!isObject(env?.viewer)) return {}; const {plugins, ...options} = env.viewer; return options; }
-// Transitorio hasta #11: el estado por defecto vive en model.json (defaultState) o, si falta, en el constructor.
-export function initialState(data, builderModule) { return {...(data?.defaultState ?? builderModule?.DEFAULT_STATE ?? {})}; }
+// Estado inicial del visor: copia de data.defaultState; el constructor lo vuelve a mezclar con kit.state.
+export function initialState(data) { return {...(data?.defaultState ?? {})}; }
 export function buttonHTML({a, text, pressed, primary}) { return `<button data-a="${esc(a)}"${primary ? ' class="primary"' : ''}${typeof pressed === 'boolean' ? ` aria-pressed="${pressed}"` : ''}>${esc(text)}</button>`; }
 
 // Une los hooks de varios plugins: los eventos llaman a todos en orden; overview, spawn y collision los da el primero

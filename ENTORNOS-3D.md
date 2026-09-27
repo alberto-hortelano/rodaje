@@ -26,8 +26,8 @@ Carpeta `ambientes/<id>/3d/`:
   - `landmarks`: `at`, `view` y `floor` en interiores;
   - `states` y `presets`;
   - `textures`.
-- **Constructor** (`<id>.js`): `export function build(T, data, kit)`, sin imports. Trabaja en metros, con piezas con nombre y una marca por lugar.
-- **Visor:** lo da la app (`/viewer/mount.mjs`): orbitar, lugares, estados, recorrido a pie con colisiones y escaleras, «no clip», pantalla completa, captura y GLB. Lo propio del escenario (luces y niebla, cortes, piezas atravesables, entrada del paseo, vista general) va en un plugin `ambientes/<id>/3d/visor.js` con `export function plugin(api)` (modelo: el `visor.js` del caserón, que entra con #11; contrato en `docs/ARQUITECTURA.md`).
+- **Constructor** (`<id>.js`): `export function build(T, data, kit)`, sin imports. Trabaja en metros, con piezas con nombre y una marca por lugar. El estado por defecto va en `model.json` → `defaultState` y el constructor lo mezcla: `{...data.defaultState, ...kit.state}`.
+- **Visor:** lo da la app (`/viewer/mount.mjs`): orbitar, lugares, estados, recorrido a pie con colisiones y escaleras, «no clip», pantalla completa, captura y GLB. Lo propio del escenario (luces y niebla, cortes, piezas atravesables, entrada del paseo, vista general) va en un plugin `ambientes/<id>/3d/visor.js` con `export function plugin(api)` (modelo: el `visor.js` del caserón; contrato en `docs/ARQUITECTURA.md`).
 - **Registro:** en `proyecto.json`, `environments[]` con `data`, `builder`, `viewer: {plugins: ["ambientes/<id>/3d/visor.js"]}` y `glb`, y el ambiente con `environment: <id>` para usarlo en los planos. Tras escribirlo, `node scripts/proyecto-check.mjs <proyecto>`.
 
 Reglas que costó aprender:

@@ -17,7 +17,7 @@ export async function mountEnvironment(container, {project, environment: env}) {
   const builder = await import(asset(env.builder));
   const plugins = [];
   for (const file of pluginPaths(env)) { const m = await import(asset(file)); if (typeof m.plugin !== 'function') throw Error(`El plugin ${file} no exporta plugin(api)`); plugins.push({file, plugin: m.plugin}); }
-  let state = initialState(data, builder);
+  let state = initialState(data);
   const marks = data.landmarks || [];
   // 1 · DOM, renderer, escena vacía, cámara y controles.
   container.innerHTML = `<style>${CSS}</style><div class="env3d-bar">

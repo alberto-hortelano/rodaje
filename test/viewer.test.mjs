@@ -36,6 +36,9 @@ test('/viewer/ no sale de viewer/',async()=>{for(const p of ['/viewer/../app/ser
  assert.equal((await get('/viewer/nada.mjs')).status,404);});
 test('/environment.js ya no existe',async()=>{assert.equal((await get('/environment.js')).status,404);assert.ok(!fs.existsSync(path.join(ROOT,'app/environment.js')));});
 test('app.js importa /viewer/glb.mjs y /viewer/mount.mjs sin empaquetarlos',()=>{const src=fs.readFileSync(path.join(ROOT,'app/app.js'),'utf8');assert.match(src,/["']\/viewer\/glb\.mjs["']/);assert.match(src,/["']\/viewer\/mount\.mjs["']/);assert.ok(!src.includes('class OrbitControls'));assert.ok(!src.includes('function createWalker'));assert.ok(!src.includes('/environment.js'));assert.ok(!src.includes('class GLTFLoader'));});
+test('los constructores siempre reciben un kit',async()=>{const {moduleImports,resolveModule}=await import('../app/workflow.mjs');
+ for(const f of ['app/stage.js','viewer/mount.mjs','lib/entorno3d.mjs']){const src=fs.readFileSync(path.join(ROOT,f),'utf8'),calls=src.match(/\.build\(T,[^\n]{0,40}/g)||[];assert.ok(calls.length>=1,f);for(const c of calls)assert.match(c,/\.build\(T,\s*[\w.]+,\s*createKit\(T,/,`${f}: ${c}`);}
+ const stage=fs.readFileSync(path.join(ROOT,'app/stage.js'),'utf8');assert.ok(stage.includes("import {createKit} from '/viewer/kit.mjs'"));assert.ok(moduleImports(stage).includes('/viewer/kit.mjs'));assert.equal(resolveModule('/viewer/kit.mjs','/stage.js'),'/viewer/kit.mjs');});
 test('humo: un entorno solo con GLB se abre en la vista environment',{skip:!fs.existsSync(CHROME)&&'sin Chrome'},async()=>{const {chromium}=await import('playwright');
  const browser=await chromium.launch({executablePath:CHROME,headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-sandbox']});
  try{const page=await (await browser.newContext({viewport:{width:1280,height:800},serviceWorkers:'block'})).newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
