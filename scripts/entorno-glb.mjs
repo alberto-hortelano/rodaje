@@ -3,7 +3,7 @@
 // Sin preset usa el estado por defecto del constructor. La salida por defecto es environment.glb.
 import fs from 'node:fs';
 import path from 'node:path';
-import {safe} from '../app/store.mjs';
+import {safe} from '../lib/paths.mjs';
 import {loadEnvironment, buildEnvironment, exportGlb} from '../lib/entorno3d.mjs';
 
 const args = process.argv.slice(2);

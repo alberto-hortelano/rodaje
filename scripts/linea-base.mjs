@@ -7,6 +7,7 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {load, digest} from '../app/store.mjs';
 import {sortKeys} from '../app/workflow.mjs';
+import {writeJSON} from '../lib/json.mjs';
 import {projectIds, environmentsWithBuilder, loadEnvironment, buildEnvironment, exportGlb, coplanarReport} from '../lib/entorno3d.mjs';
 
 const args = process.argv.slice(2);
@@ -69,7 +70,7 @@ if (shots) {
 }
 
 fs.mkdirSync(out, {recursive: true});
-fs.writeFileSync(path.join(out, 'linea-base.json'), JSON.stringify(sortKeys(result), null, 2) + '\n');
+writeJSON(path.join(out, 'linea-base.json'), sortKeys(result));
 for (const p of projects) console.log(`${p.id}: ${Object.keys(result.digests[p.id]).length} digests de planos`);
 for (const [k, g] of Object.entries(result.glb)) console.log(`${k}: GLB ${g.mallas} mallas · ${(g.bytes / 1024).toFixed(0)} KB · ${g.sha256.slice(0, 12)} · ${result.coplanares[k].total} pares coplanarios`);
 if (result.capturas) console.log(`${Object.keys(result.capturas).length} capturas (${result.chrome})`);

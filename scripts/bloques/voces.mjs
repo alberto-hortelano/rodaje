@@ -16,7 +16,7 @@
 //     "modelo": "minimax" en la entrada del idioma del casting.json.
 import fs from 'node:fs';import path from 'node:path';import {execFileSync} from 'node:child_process';
 import {load,save,dir} from '../../app/store.mjs';
-import {parseArgs,falClient,ffprobeDuration} from './lib.mjs';
+import {parseArgs,falClient,ffprobeDuration,writeJSON} from './lib.mjs';
 const {args:[cmd,...rest],opts}=parseArgs(process.argv.slice(2));
 const usage='Uso: voces.mjs lineas <episodio> <secuencia> | prueba --voz <id> --texto "…" [--modelo minimax] | disenar --personaje <id> --descripcion "…" --texto "…" | cambiar <episodio> <secuencia> <línea> <grabación>  [--project id] [--yes]';
 if(!['lineas','prueba','cambiar','disenar'].includes(cmd)){console.error(usage);process.exit(2);}
@@ -52,7 +52,7 @@ if(cmd==='disenar'){
  const out=path.join(base,'assets','voces','disenos');fs.mkdirSync(out,{recursive:true});const wav=url?toWav(writeMp3(await fetchBuf(url),path.join(out,`${c.id}-${id}.mp3`))):null;
  fs.mkdirSync(path.dirname(castFile),{recursive:true});const cast=fs.existsSync(castFile)?JSON.parse(fs.readFileSync(castFile,'utf8')):{};
  (cast.candidatas??=[]).push({modelo:'minimax',voice:id,descripcion:opts.descripcion,muestra:wav&&path.relative(base,wav),texto:opts.texto,fecha:new Date().toISOString().slice(0,10),caduca:'se borra si no se usa en una generación antes de 7 días'});
- fs.writeFileSync(castFile,JSON.stringify(cast,null,2)+'\n');console.log('✓ voz',id,'· muestra',wav&&path.relative(base,wav));process.exit(0);}
+ writeJSON(castFile,cast);console.log('✓ voz',id,'· muestra',wav&&path.relative(base,wav));process.exit(0);}
 const [episodeId,sequenceId]=rest;const seq=p.episodes.find(e=>e.id===episodeId)?.sequences.find(s=>s.id===sequenceId);if(!seq)throw Error('Secuencia desconocida. '+usage);
 const out=path.join(base,'assets','voces',seq.id);
 

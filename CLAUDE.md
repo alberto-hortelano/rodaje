@@ -28,7 +28,7 @@ Para crear o corregir un escenario 3D, seguir `ENTORNOS-3D.md` (constructor en c
 
 ## Cambios en la app
 
-Lógica nueva = funciones puras en `app/workflow.mjs` con test en `test/*.test.mjs`. `npm test` antes de cerrar. No tocar `app/app.source.js` ni `app/stage.js` salvo petición expresa (`npm run build:ui` tras editar la UI).
+Lógica nueva = funciones puras en `app/workflow.mjs` con test en `test/*.test.mjs`. `npm test` antes de cerrar. No tocar `app/app.source.js` ni `app/stage.js` salvo petición expresa (`npm run build:ui` tras editar la UI). Rutas y proyecto activo en `lib/paths.mjs`, JSON atómico en `lib/json.mjs`, argumentos en `lib/args.mjs`; `lib/` no importa de `app/`.
 
 ## Scripts de producción
 

@@ -5,11 +5,11 @@
 //   node scripts/registro.mjs render [proyecto]       escribe REGISTRO.md
 //   node scripts/registro.mjs check  [proyecto]       falla si un prompt usa tags no aprobados, o un MAPA.md mide en metros
 import fs from 'node:fs';import path from 'node:path';import {createHash} from 'node:crypto';
-import {dir,load} from '../app/store.mjs';import {tagFor} from '../app/workflow.mjs';
+import {dir,load} from '../app/store.mjs';import {readJSON,writeJSON} from '../lib/json.mjs';import {tagFor} from '../app/workflow.mjs';
 const [cmd,...rest]=process.argv.slice(2);const project=rest[0]&&!/^[A-Z0-9_]+$/.test(rest[0])?rest.shift():'dead-air';
 const base=dir(project),file=path.join(base,'registro.json');
-const reg=fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):{version:1,summary:'',lighting:{},assets:{}};
-const save=()=>fs.writeFileSync(file,JSON.stringify(reg,null,2)+'\n');
+const reg=fs.existsSync(file)?readJSON(file):{version:1,summary:'',lighting:{},assets:{}};
+const save=()=>writeJSON(file,reg);
 const sha=f=>fs.existsSync(path.join(base,f))?createHash('sha256').update(fs.readFileSync(path.join(base,f))).digest('hex'):null;
 const today=()=>new Date().toISOString().slice(0,10);
 function sync(){const p=load(project);let added=0;const add=(tag,a)=>{if(!reg.assets[tag]){reg.assets[tag]={...a,descriptor:a.descriptor||'',status:'draft'};added++;}};

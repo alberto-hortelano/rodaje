@@ -4,12 +4,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {dir} from '../app/store.mjs';
+import {ROOT} from '../lib/paths.mjs';
 
 const args = process.argv.slice(2);
 const all = args.includes('--todos');
 const [projectId, filter = ''] = args.filter(a => a !== '--todos');
 if (!projectId) throw Error('Uso: node scripts/prompts-pendientes.mjs <proyecto> [filtro] [--todos]');
-const base = dir(projectId), root = path.resolve(base, '../..');
+const base = dir(projectId), root = ROOT;
 const walk = d => fs.readdirSync(d, {withFileTypes: true}).flatMap(e => e.name.startsWith('.') ? [] : e.isDirectory() ? walk(path.join(d, e.name)) : e.name.endsWith('.prompt.txt') ? [path.join(d, e.name)] : []);
 let pending = 0, done = 0;
 const groups = new Map();

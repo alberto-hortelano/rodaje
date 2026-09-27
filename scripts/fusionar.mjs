@@ -4,15 +4,14 @@
 //   <editada>.png            ← la fusión (sustituye a la editada, así las rutas del proyecto siguen valiendo)
 //   <editada>.chatgpt.png    ← la edición tal como salió de ChatGPT (solo la primera vez)
 //   <editada>.mascara.png    ← la máscara, para retomar la fusión
-// Registro de fusiones en proyectos/fusiones.json.
+// Registro de fusiones en <DATA>/fusiones.json. Respeta RODAJE_DATA y usa safe de lib/paths (rechaza "..", absolutas y enlaces fuera de proyectos).
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import {execFileSync} from 'node:child_process';
-import {fileURLToPath} from 'node:url';
+import {ROOT, DATA, safe} from '../lib/paths.mjs';
+import {writeJSON} from '../lib/json.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DATA = path.join(ROOT, 'proyectos');
 const args = process.argv.slice(2);
 const port = Number(args.includes('--puerto') ? args.splice(args.indexOf('--puerto'), 2)[1] : 4398);
 const only = args[0];
@@ -20,7 +19,7 @@ const LOG = path.join(DATA, 'fusiones.json');
 const SKIP = /\.(chatgpt|mascara)\.png$/;
 const SKIP_DIR = /^(node_modules|versiones|trabajos|capturas|texturas|\.git)$|^sample-|^p\d+$|^b\d+$/;
 
-const safe = rel => { const f = path.resolve(DATA, rel); if (!f.startsWith(DATA + path.sep)) throw Error('Ruta fuera de proyectos'); return f; };
+const inData = rel => safe(DATA, rel);
 const pngSize = f => { const b = Buffer.alloc(24); const fd = fs.openSync(f, 'r'); fs.readSync(fd, b, 0, 24, 0); fs.closeSync(fd); return b.toString('ascii', 1, 4) === 'PNG' ? [b.readUInt32BE(16), b.readUInt32BE(20)] : null; };
 const thumbs = new Map();
 const thumb = f => { if (!thumbs.has(f)) thumbs.set(f, execFileSync('ffmpeg', ['-v', 'error', '-i', f, '-vf', 'scale=96:64,format=gray', '-f', 'rawvideo', '-'])); return thumbs.get(f); };
@@ -88,7 +87,7 @@ http.createServer(async (req, res) => {
     if (u.pathname === '/') return send(res, 200, fs.readFileSync(path.join(ROOT, 'scripts/fusionar.html')), 'text/html; charset=utf-8');
     if (u.pathname === '/api/pares') { if (!cache || u.searchParams.has('recargar')) cache = findPairs(); return send(res, 200, cache); }
     if (u.pathname === '/img') {
-      let f = safe(u.searchParams.get('f'));
+      let f = inData(u.searchParams.get('f'));
       // La editada se pinta siempre desde la salida de ChatGPT si existe (la .png ya puede ser una fusión).
       if (u.searchParams.has('cruda') && fs.existsSync(f.replace(/\.png$/, '.chatgpt.png'))) f = f.replace(/\.png$/, '.chatgpt.png');
       if (!fs.existsSync(f)) return send(res, 404, {error: 'No existe'});
@@ -96,7 +95,7 @@ http.createServer(async (req, res) => {
     }
     if (u.pathname === '/api/guardar' && req.method === 'POST') {
       if (req.headers.origin && req.headers.origin !== `http://127.0.0.1:${port}` && req.headers.origin !== `http://localhost:${port}`) return send(res, 403, {error: 'Origen no permitido'});
-      const edit = safe(u.searchParams.get('editada')), orig = safe(u.searchParams.get('original')), kind = u.searchParams.get('tipo');
+      const edit = inData(u.searchParams.get('editada')), orig = inData(u.searchParams.get('original')), kind = u.searchParams.get('tipo');
       const data = await body(req);
       if (data.toString('ascii', 1, 4) !== 'PNG') return send(res, 400, {error: 'No es un PNG'});
       if (kind === 'mascara') { fs.writeFileSync(edit.replace(/\.png$/, '.mascara.png'), data); return send(res, 200, {ok: true}); }
@@ -104,7 +103,7 @@ http.createServer(async (req, res) => {
       if (!fs.existsSync(raw)) fs.copyFileSync(edit, raw);
       fs.writeFileSync(edit, data);
       const log = readLog(); log[path.relative(DATA, edit)] = {original: path.relative(DATA, orig), cruda: path.relative(DATA, raw), fecha: new Date().toISOString()};
-      fs.writeFileSync(LOG, JSON.stringify(log, null, 2) + '\n');
+      writeJSON(LOG, log);
       cache = null;
       return send(res, 200, {ok: true, cruda: path.relative(DATA, raw)});
     }

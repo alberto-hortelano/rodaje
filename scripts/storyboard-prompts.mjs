@@ -7,12 +7,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {load, save, dir} from '../app/store.mjs';
+import {ROOT} from '../lib/paths.mjs';
 
 const args = process.argv.slice(2);
 const link = args.includes('--enlazar');
 const [projectId, sbId] = args.filter(a => !a.startsWith('--'));
 if (!projectId || !sbId) throw Error('Uso: node scripts/storyboard-prompts.mjs <proyecto> <storyboard> [--enlazar]');
-const p = load(projectId), base = dir(projectId), rel = path.relative(path.resolve(base, '../..'), base);
+const p = load(projectId), base = dir(projectId), rel = path.relative(ROOT, base);
 const sb = (p.storyboards || []).find(b => b.id === sbId);
 if (!sb) throw Error('Storyboard no encontrado: ' + sbId);
 const out = path.join(base, 'storyboards', sb.id, 'prompts');
