@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 // Informe del lote (docs/PROCESO.md, paso 7): intentos, aceptación, reglas más violadas, segundos y coste.
 //   node scripts/bloques/informe.mjs <lote> [--project id]
-// Falla si un intento rechazado no cita reglas o si un reintento no declara su línea cambiada (R26).
+// Falla si un intento rechazado no cita reglas, si un reintento no declara su línea cambiada (R26) o si un bloque tiene varias tomas aceptadas.
+// La toma aceptada de cada bloque es la misma que usa montar.mjs (acceptedAttempt).
 import fs from 'node:fs';import path from 'node:path';
-import {parseArgs,prices,cliProject,usageExit} from './lib.mjs';import {loadLote,loadAttempts} from '../../lib/lotes.mjs';
+import {parseArgs,prices,cliProject,usageExit} from './lib.mjs';import {loadLote,loadAttempts} from '../../lib/lotes.mjs';import {acceptedAttempt} from '../../app/workflow.mjs';
 const USAGE='Uso: informe.mjs <lote> [--project id]';
 const {args:[lote],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
 const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);const price=prices();const rate=e=>price[e]?.price||0;
 const rows=[],rules={},errors=[];let attempts=0,accepted=0,first=0,seconds=0,cost=0,inference=0;
-for(const b of L.plan){const list=loadAttempts(L.paths.out,b.id);attempts+=list.length;const ok=list.find(a=>a.verdict==='accepted');if(ok){accepted++;if(ok.n===1)first++;}
+for(const b of L.plan){const list=loadAttempts(L.paths.out,b.id);attempts+=list.length;const ok=acceptedAttempt(list);if(ok){accepted++;if(ok.n===1)first++;}
+ const many=list.filter(a=>a.verdict==='accepted');if(many.length>1)errors.push(`${b.id}: varias tomas aceptadas (${many.map(a=>'v'+a.n).join(', ')}); deja una con estado.mjs --verdict`);
  for(const a of list){seconds+=a.durationRequested||0;cost+=(a.durationRequested||0)*rate(a.endpoint||'minimax/h3-max/reference-to-video');inference+=a.inferenceSeconds||0;for(const r of a.failedRules||[])rules[r]=(rules[r]||0)+1;
   if(a.verdict==='rejected'&&!(a.failedRules||[]).length)errors.push(`${b.id} intento ${a.n}: rechazado sin regla`);if(a.n>=2&&!a.changedLine)errors.push(`${b.id} intento ${a.n}: sin changedLine (R26)`);if(a.n>6)errors.push(`${b.id}: más de 6 intentos (R26)`);}
  rows.push(`| ${b.id} | ${b.length.toFixed(1)} | ${list.length} | ${ok?'✓ v'+ok.n:list.length?'—':'sin enviar'} | ${list.flatMap(a=>a.failedRules||[]).join(', ')} | ${list.map(a=>a.changedLine?`v${a.n}: ${a.changedLine.slice(0,70)}`:'').filter(Boolean).join('<br>')} |`);}

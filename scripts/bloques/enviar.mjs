@@ -6,8 +6,10 @@
 //   node scripts/bloques/enviar.mjs <lote> <bloque> [--project id] [--changed "línea nueva"] [--changed-ref "…"] [--modelo h3] [--yes]
 // Sin --yes es un ensayo: muestra lo que enviaría y no gasta créditos. Cada envío crea prompt-vNN.txt, request-vNN.json
 // y una entrada en attempts.json. A partir del segundo intento exige --changed (una línea); rechaza el séptimo.
+// El intento se registra en attempts.json antes de enviar: si otro proceso ya registró ese número, aborta sin gastar.
+// Tras el envío, el requestId queda primero en request-vNN.json y luego se parchea solo este intento (estado.mjs lo recupera si falta).
 import fs from 'node:fs';import path from 'node:path';import {ffmpeg} from '../../lib/media.mjs';import {uploadFile,submit} from '../../lib/fal.mjs';
-import {parseArgs,readJSON,writeJSON,falClient,cliProject,usageExit} from './lib.mjs';import {loadLote,loadAttempts,saveAttempts} from '../../lib/lotes.mjs';
+import {parseArgs,readJSON,writeJSON,falClient,cliProject,usageExit,fail} from './lib.mjs';import {loadLote,loadAttempts,registerAttempt,patchAttempt} from '../../lib/lotes.mjs';
 const USAGE='Uso: enviar.mjs <lote> <bloque> [--project id] [--changed "línea"] [--changed-ref "…"] [--modelo h3] [--yes]';
 const {args:[lote,blockId],opts}=parseArgs(process.argv.slice(2));if(!lote||!blockId)usageExit(USAGE);
 const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);const block=L.plan.find(b=>b.id===blockId);if(!block)throw Error('Bloque desconocido: '+blockId);
@@ -36,9 +38,12 @@ async function upload(rel,type){const abs=path.join(L.paths.base,rel);const key=
 if(frameMode){input.image_url=await upload(refs.image,'image/png');if(refs.endImage)input.end_image_url=await upload(refs.endImage,'image/png');if(voiceTrack)input.target_audio_url=await upload(path.relative(L.paths.base,voiceTrack),'audio/wav');}
 else{const motionRel=path.relative(L.paths.base,motion);
 input.reference_image_urls=await Promise.all(refs.images.map(i=>upload(i.file,'image/png')));input.reference_video_urls=[await upload(motionRel,'video/mp4')];if(refs.audios.length)input.reference_audio_urls=await Promise.all(refs.audios.map(a=>upload(a.file,'audio/wav')));}
-const promptName=`prompt-v${String(n).padStart(2,'0')}.txt`,requestName=`request-v${String(n).padStart(2,'0')}.json`;fs.copyFileSync(promptFile,path.join(dir,promptName));
+const promptName=`prompt-v${String(n).padStart(2,'0')}.txt`,requestName=`request-v${String(n).padStart(2,'0')}.json`;
 // --modelo h3: el H3 original (image-to-video) en lugar de H3 Max; mismos parámetros, 0,06 $/s a 768P.
 const endpoint=frameMode?(opts.modelo==='h3'?'minimax/h3/image-to-video':'minimax/h3-max/image-to-video'):'minimax/h3-max/reference-to-video';const attempt={n,at:new Date().toISOString(),endpoint,prompt:promptName,request:requestName,refs:frameMode?[refs.image,...(refs.endImage?['fin:'+refs.endImage]:[]),...(voiceTrack?['voz.wav']:[])]:[...refs.images.map(i=>i.tag),...refs.audios.map(a=>a.tag)],durationRequested:input.duration,resolution:'768P',changedLine:opts.changed||(opts['changed-ref']?'[referencias] '+opts['changed-ref']:null),status:'submitting'};
-writeJSON(path.join(dir,requestName),{status:'submitting',endpoint,input});attempts.push(attempt);saveAttempts(L.paths.out,blockId,attempts);
-const q=await submit(client,endpoint,input);attempt.requestId=q.request_id;attempt.status='submitted';writeJSON(path.join(dir,requestName),{status:'submitted',endpoint,input,requestId:q.request_id});saveAttempts(L.paths.out,blockId,attempts);
+try{registerAttempt(L.paths.out,blockId,attempt);}catch(e){fail(e.message+'. No se ha enviado nada; vuelve a lanzar enviar.mjs.');}
+fs.copyFileSync(promptFile,path.join(dir,promptName));writeJSON(path.join(dir,requestName),{status:'submitting',endpoint,input});
+const q=await submit(client,endpoint,input);writeJSON(path.join(dir,requestName),{status:'submitted',endpoint,input,requestId:q.request_id});
+try{patchAttempt(L.paths.out,blockId,n,a=>({requestId:q.request_id,...(a.status==='submitting'?{status:'submitted'}:{})}));}
+catch(e){fail(`Intento ${n} enviado (${q.request_id}), pero attempts.json no se pudo actualizar: ${e.message}. El requestId queda en ${requestName}; estado.mjs lo recupera si el intento sigue en attempts.json.`);}
 console.log('ENVIADO',blockId,'intento',n,q.request_id,'→ node scripts/bloques/estado.mjs',lote,blockId);

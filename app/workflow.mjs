@@ -147,26 +147,37 @@ export function locationEnvironment(p,locationId){const l=(p?.locations||[]).fin
 // Elección de entorno de una secuencia a partir del formulario: lugar, estado por secuencia y giro en grados. Vacío → sin elección.
 export function environmentChoice(f){const spot=String(f.envSpot||'').trim(),preset=String(f.envPreset||'').trim(),rotation=Number(f.envRotation)||0;return spot||preset||rotation?{...(spot?{spot}:{}),...(preset?{preset}:{}),...(rotation?{rotation:((rotation%360)+360)%360}:{})}:undefined;}
 // Montaje de un lote (vista Montaje y scripts/bloques/montar.mjs).
-// Toma que usa el montaje en un bloque: la última aceptada; si no hay, la última generada sin rechazar, pendiente de revisión.
-export function chosenAttempt(list,has=()=>true){const ok=a=>a.video&&has(a);const accepted=[...list].reverse().find(a=>a.verdict==='accepted'&&ok(a));if(accepted)return {attempt:accepted,pending:false};const last=[...list].reverse().find(a=>ok(a)&&a.verdict!=='rejected');return last?{attempt:last,pending:true}:{attempt:null,pending:false};}
+// Toma que usa el montaje en un bloque: la aceptada (acceptedAttempt); si no hay, la última descargada sin rechazar, pendiente de revisión.
+export const isDownloaded=a=>a?.status==='done'&&!!a.video;
+// Una sola aceptada por bloque (#24); si un attempts.json antiguo tiene varias, manda la última (informe.mjs lo marca).
+export function acceptedAttempt(list,has=()=>true){return [...list].reverse().find(a=>a.verdict==='accepted'&&isDownloaded(a)&&has(a))||null;}
+export function chosenAttempt(list,has=()=>true){const accepted=acceptedAttempt(list,has);if(accepted)return {attempt:accepted,pending:false};const last=[...list].reverse().find(a=>isDownloaded(a)&&has(a)&&a.verdict!=='rejected');return last?{attempt:last,pending:true}:{attempt:null,pending:false};}
 // Tramo de cada bloque en el vídeo montado: `at`/`length` del cut.json o, en cortes antiguos, la suma de usedRange (o la duración del plan).
 export function cutTimeline(cut,plan=[]){let at=0;return (cut?.blocks||[]).map(b=>{const length=b.length??(b.usedRange?.length?b.usedRange.reduce((n,[s,e])=>n+e-s,0):plan.find(x=>x.id===b.block)?.length||0);const start=b.at??at;at=start+length;return {...b,start,end:at};});}
 export const blockAt=(timeline,t)=>timeline.find(b=>t>=b.start&&t<b.end)||(t>=(timeline.at(-1)?.end??0)?timeline.at(-1):timeline[0])||null;
 // Reglas de REGLAS.md: «### R04 · Nadie mira a cámara».
 export function parseRules(md){return [...String(md||'').matchAll(/^###\s+([A-Z]\d+)\s*·\s*(.+)$/gm)].map(m=>({id:m[1],title:m[2].trim()}));}
-// Veredicto de un intento (como estado.mjs --verdict). accepted deja de aceptar las demás tomas del bloque; null borra la revisión.
-// Un rechazo cita al menos una regla conocida. Rango: tramos [inicio, fin] en segundos del vídeo generado.
+// Veredicto de un intento: estado.mjs --verdict y la vista Montaje, ambos vía reviewBlock (lib/lotes.mjs). No muta la lista.
+// Solo intentos descargados. Una sola aceptada por bloque: aceptar quita el veredicto a las demás aceptadas (replacedBy: n) y la
+// aceptada pierde su replacedBy; al aceptar failedRules queda [] (las reglas citadas se validan igual). Un rechazo cita al menos
+// una regla conocida. Rango: tramos [inicio, fin] en segundos del vídeo generado; sin rango se conserva usedRange o, al aceptar,
+// el bloque entero. null quita la revisión del intento sin tocar las demás.
 export function reviewAttempt(list,{attempt,verdict,rules=[],notes='',range,length,known=[]},now=new Date().toISOString()){
- const out=structuredClone(list),a=out.find(x=>x.n===Number(attempt));if(!a)throw Error(`No existe el intento ${attempt}`);if(!a.video)throw Error(`El intento ${a.n} no tiene vídeo descargado`);
+ const out=structuredClone(list),a=out.find(x=>x.n===Number(attempt));if(!a)throw Error(`No existe el intento ${attempt}`);if(!isDownloaded(a))throw Error(`El intento ${a.n} no está descargado (estado ${a.status??'—'})`);
  if(![null,'accepted','rejected'].includes(verdict))throw Error('Veredicto: accepted, rejected o null');rules=rules.map(r=>String(r).trim()).filter(Boolean);
- if(verdict==='rejected'&&!rules.length)throw Error('Un rechazo cita al menos una regla de REGLAS.md');for(const r of rules)if(known.length&&!known.includes(r))throw Error(`Regla desconocida ${r}`);
+ if(verdict==='rejected'&&!rules.length)throw Error('Un rechazo cita al menos una regla de REGLAS.md');for(const r of rules)if(!known.includes(r))throw Error(`Regla desconocida ${r}: añádela al REGLAS.md del proyecto antes de citarla`);
  const max=a.durationReturned||a.durationRequested||Infinity;
  if(range){if(!Array.isArray(range)||!range.length||range.some(x=>!Array.isArray(x)||x.length!==2||!x.every(Number.isFinite)||x[0]<0||x[1]<=x[0]||x[1]>max+.05))throw Error('Rango no válido: tramos [inicio, fin] dentro del vídeo');}
  if(verdict===null){for(const k of ['verdict','failedRules','notes','reviewedAt','usedRange'])delete a[k];a.verdict=null;return out;}
- if(verdict==='accepted')for(const x of out)if(x!==a&&x.verdict==='accepted'){x.verdict=null;x.replacedBy=a.n;}
+ if(verdict==='accepted'){for(const x of out)if(x!==a&&x.verdict==='accepted'){x.verdict=null;x.replacedBy=a.n;}delete a.replacedBy;}
  Object.assign(a,{verdict,failedRules:verdict==='rejected'?rules:[],notes,reviewedAt:now});
  if(range)a.usedRange=range.map(([s,e])=>[Math.round(s*100)/100,Math.round(e*100)/100]);else if(verdict==='accepted'&&!a.usedRange)a.usedRange=[[0,Math.min(max,length||max)]];
  return out;}
+// --range de la línea de órdenes: «0-9.6,11-14» → [[0,9.6],[11,14]]. No valida contra la duración (eso lo hace reviewAttempt).
+export function parseRange(text){const bad=()=>Error(`Rango no válido: ${text} (usa inicio-fin, p. ej. 0-9.6,11-14)`);const s=String(text??'').trim();if(!s)throw bad();
+ return s.split(',').map(p=>{const m=p.trim().match(/^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$/);if(!m)throw bad();return [Number(m[1]),Number(m[2])];});}
+// --verdict: accepted|rejected tal cual; none → null (quita la revisión).
+export function parseVerdict(v){if(v==='accepted'||v==='rejected')return v;if(v==='none')return null;throw Error('--verdict accepted|rejected|none');}
 // Copia con las claves de los objetos ordenadas en todos los niveles; los arrays conservan su orden.
 export const sortKeys=v=>Array.isArray(v)?v.map(sortKeys):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,sortKeys(v[k])])):v;
 

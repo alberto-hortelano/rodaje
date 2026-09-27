@@ -15,9 +15,12 @@ export const RECORD_BLOCKED=RECORD&&refactored?`RODAJE_GOLDEN=grabar: existe lib
 export const tmp=prefix=>fs.mkdtempSync(path.join(os.tmpdir(),prefix));
 
 // Entorno de un subproceso: nunca la clave real ni el proyecto del entorno; ffmpeg/ffprobe falsos solo aquí.
-export function mockEnv({data,log,extra={}}){const base={...process.env};delete base.RODAJE_PROJECT;delete base.RODAJE_MOCK_FFMPEG_FAIL;
+export function mockEnv({data,log,extra={}}){const base={...process.env};delete base.RODAJE_PROJECT;delete base.RODAJE_MOCK_FFMPEG_FAIL;delete base.RODAJE_MOCK_HOOK;
  const env={...base,RODAJE_DATA:data,RODAJE_MOCK_LOG:log,FAL_KEY:'test:dummy',RODAJE_CONFIG_DIR:tmp('rodaje-config-'),PATH:[BIN,path.dirname(process.execPath),process.env.PATH].join(path.delimiter),...extra};
  for(const [k,v] of Object.entries(extra))if(v===undefined)delete env[k];return env;}
+
+// Gancho del grabador (RODAJE_MOCK_HOOK): escribe code en un .mjs temporal con ROOT_URL (file:// de la raíz) y devuelve la ruta.
+export function hookModule(code){const f=path.join(tmp('rodaje-hook-'),'hook.mjs');fs.writeFileSync(f,`const ROOT_URL=${JSON.stringify(pathToFileURL(ROOT).href)};\n${code}\n`);return f;}
 
 export const normalize=(text,data)=>text.replaceAll(fs.realpathSync(data),'<DATA>').replaceAll(data,'<DATA>').replaceAll(ROOT,'<ROOT>').replace(/\b\d{13}\b/g,'<TS>');
 export const readLog=(file,data)=>fs.existsSync(file)?normalize(fs.readFileSync(file,'utf8'),data).split('\n').filter(Boolean):[];

@@ -2,11 +2,14 @@
 // conservar el original: ninguna llamada sale de la máquina. Registra cada llamada en RODAJE_MOCK_LOG (JSONL, leído en cada
 // llamada) y responde en falso como fal.ai: subida (initiate + PUT), cola (submit, status COMPLETED, result) y descargas.
 // Lanza con cualquier host no simulado o con una clave que no sea de prueba («Key test:…»).
-import fs from 'node:fs';import {createHash} from 'node:crypto';
+// RODAJE_MOCK_HOOK (opcional): módulo con export default async ({method, url}) => {}, llamado tras registrar cada petición
+// y antes de responderla (simula a otro proceso escribiendo mientras tanto). No escribe en el registro.
+import fs from 'node:fs';import {createHash} from 'node:crypto';import {pathToFileURL} from 'node:url';
 if(!process.env.RODAJE_MOCK_LOG)throw Error('fal-fetch-mock: falta RODAJE_MOCK_LOG');
 if(process.env.FAL_KEY&&!process.env.FAL_KEY.startsWith('test:'))throw Error('fal-fetch-mock: FAL_KEY debe ser de prueba (test:…)');
 const FAL_HOSTS=['rest.fal.ai','queue.fal.run'],MOCK_HOSTS=['upload.mock.invalid','files.mock.invalid'];
 let n=0,seq=0,next=0;const ready=new Map();
+const hook=process.env.RODAJE_MOCK_HOOK?(await import(pathToFileURL(process.env.RODAJE_MOCK_HOOK).href)).default:null;
 // Las entradas se escriben en el orden de llamada aunque el cuerpo (Blob) se resuelva después.
 function flush(){while(ready.has(next)){const line=ready.get(next);ready.delete(next);next++;fs.appendFileSync(process.env.RODAJE_MOCK_LOG,line+'\n');}}
 const slug=s=>s.replace(/[^A-Za-z0-9]+/g,'_');
@@ -35,5 +38,6 @@ globalThis.fetch=async function mockFetch(input,init={}){
   else if(method==='GET'&&(m=url.pathname.match(/\/requests\/([^/]+)$/)))res=json(resultFor(m[1]),{'x-fal-request-id':m[1]});
   else if(method==='POST'){const endpoint=url.pathname.slice(1),id=`mock-${++n}-${slug(endpoint)}`,base=`https://queue.fal.run/${endpoint.split('/').slice(0,2).join('/')}/requests/${id}`;res=json({request_id:id,status:'IN_QUEUE',status_url:base+'/status',response_url:base});}}
  const line=await pending;ready.set(mine,line);flush();
+ if(hook)await hook({method,url:url.href});
  if(!res)throw Error(`fal-fetch-mock: ruta no simulada ${method} ${url.href}`);
  return res;};
