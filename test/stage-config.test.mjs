@@ -34,3 +34,22 @@ test('check: avisos de staging sin cambiar el código de salida; ids de gear con
  let r=run(data,'check','demo');assert.equal(r.status,0,r.stderr);assert.match(r.stderr,/aviso: p1: clave heredada potatoes/);assert.match(r.stderr,/aviso: p2: look «mug»/);
  const p=read(path.join(dir,'proyecto.json'));p.stage.rehearsal.gear={red:{kind:'helmet',except:['zoe']}};p.episodes[0].sequences[0].shots[0].staging.carrier='zoe';fs.writeFileSync(path.join(dir,'proyecto.json'),JSON.stringify(p));
  r=run(data,'check','demo');assert.equal(r.status,1);assert.match(r.stderr,/gear\.red\.except: «zoe»/);assert.match(r.stderr,/p1: carrier «zoe»/);});
+
+// catalogo (#41): variantes, zonas y canales del proyecto en proyecto.stage.
+const catalogo=(data,v)=>{const f=path.join(data,'catalogo.json');fs.writeFileSync(f,JSON.stringify(v));return f;};
+const CAT={variants:[{id:'day',label:'Día'}],defaultVariant:'day',zones:[{id:'sea',label:'Mar',color:'#123456',variant:'day'}],channels:[{id:'tv',label:'TV',offscreen:true}]};
+test('catalogo sin --desde imprime las cuatro claves, null si faltan',()=>{const {data}=setup();const r=run(data,'catalogo','demo');assert.equal(r.status,0,r.stderr);assert.deepEqual(JSON.parse(r.stdout),{variants:null,zones:null,channels:null,defaultVariant:null});});
+test('catalogo --desde válido guarda con store.save, conserva rehearsal y sube la revisión; --simular no escribe',()=>{const {data,dir}=setup(),f=path.join(dir,'proyecto.json'),before=fs.readFileSync(f,'utf8');
+ let r=run(data,'catalogo','demo','--desde',catalogo(data,CAT),'--simular');assert.equal(r.status,0,r.stderr);assert.match(r.stdout,/4 claves del catálogo cambiarían/);assert.equal(fs.readFileSync(f,'utf8'),before);
+ r=run(data,'catalogo','demo','--desde',catalogo(data,CAT));assert.equal(r.status,0,r.stderr);const p=read(f);assert.equal(p.revision,4);assert.deepEqual(p.stage.rehearsal,{lookTargets:{box:[0,1,0]}});for(const k of Object.keys(CAT))assert.deepEqual(p.stage[k],CAT[k]);
+ r=run(data,'catalogo','demo');assert.deepEqual(JSON.parse(r.stdout),CAT);
+ r=run(data,'catalogo','demo','--desde',catalogo(data,{channels:null,defaultVariant:null}));assert.equal(r.status,0,r.stderr);const q=read(f);assert.equal(q.revision,5);assert.equal(q.stage.channels,undefined);assert.equal(q.stage.defaultVariant,undefined);assert.deepEqual(q.stage.zones,CAT.zones);
+ r=run(data,'catalogo','demo','--desde',catalogo(data,{zones:CAT.zones}));assert.match(r.stdout,/sin cambios/);assert.equal(read(f).revision,5);});
+test('catalogo --desde inválido o con claves ajenas sale con 1 sin escribir',()=>{const {data,dir}=setup(),f=path.join(dir,'proyecto.json'),before=fs.readFileSync(f,'utf8');
+ for(const [v,msg] of [[{channels:[{id:'tv-2',label:'TV'}]},/channels\[0\]\.id/],[{zones:[{id:'sea',label:'Mar',variant:'night'}]},/zones\[0\]\.variant/],[{rehearsal:{}},/clave «rehearsal» fuera del catálogo/],[[1],/necesita/]]){
+  const r=run(data,'catalogo','demo','--desde',catalogo(data,v));assert.equal(r.status,1,JSON.stringify(v));assert.match(r.stderr,msg);}
+ assert.equal(fs.readFileSync(f,'utf8'),before);});
+test('check avisa de un canal fuera del catálogo sin cambiar el código de salida y da error con un catálogo mal formado',()=>{const {data,dir}=setup(),f=path.join(dir,'proyecto.json'),p=read(f);
+ p.episodes[0].sequences[0].shots[2].lines=[{id:'l1',character:'ana',text:'Hola.',start:0,channel:'phone'}];fs.writeFileSync(f,JSON.stringify(p));
+ let r=run(data,'check','demo');assert.equal(r.status,0,r.stderr);assert.match(r.stderr,/aviso: canal de línea «phone» fuera del catálogo \(1\)/);
+ p.stage.channels=[{id:'phone',label:'Teléfono',speakLight:'sí'}];fs.writeFileSync(f,JSON.stringify(p));r=run(data,'check','demo');assert.equal(r.status,1);assert.match(r.stderr,/channels\[0\]\.speakLight debe ser true o false/);assert.doesNotMatch(r.stderr,/«phone» fuera/);});

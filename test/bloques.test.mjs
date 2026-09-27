@@ -41,3 +41,19 @@ assert.match(r.prompt,/\[\[CAMERA\]\]/);assert.match(r.prompt,/\[\[ACTION\]\]/);
 assert.match(r.prompt,/\[\[LOCAL\]\]/);assert.match(r.prompt,/Shot A23\. The supplied/);assert.doesNotMatch(r.prompt,/@ODILA|«/);assert.doesNotMatch(r.prompt,/No birds\.|horses? shift/);assert.doesNotMatch(r.prompt,/helmet|gravity|Video 1/i);assert.deepEqual(r.warnings,[]);assert.deepEqual(r.names,['ODILA']);
 const noFrame=framePrompt({project,sequence:{title:'x'},shots:{s1:{...shots.s1,storyboardRender:undefined,cameraEn:'Static.',actionEn:'She speaks.'}},block,registry,map:null,scene:null,cast:['odila','ancel']});
 assert.ok(noFrame.warnings.some(w=>/fotograma/.test(w)));assert.ok(noFrame.warnings.some(w=>/ancel/.test(w)));assert.doesNotMatch(noFrame.prompt,/\[\[CAMERA\]\]|\[\[ACTION\]\]/);});
+
+// #41: el catálogo de canales y variantes sale del proyecto. Las referencias se capturaron con el código anterior a #41.
+const CATALOGO={variants:[{id:'green',label:'Verde · ropa normal'},{id:'yellow',label:'Amarilla · respirador'},{id:'red',label:'Roja · traje espacial'}],defaultVariant:'green',
+ zones:[{id:'space',label:'Espacio',color:'#364973'},{id:'green',label:'Zona verde · caras',color:'#487432',variant:'green'},{id:'yellow',label:'Zona amarilla · respirador',color:'#887116',variant:'yellow'},{id:'red',label:'Zona roja · cascos',color:'#983b2a',variant:'red'},{id:'other',label:'Otro'}],
+ channels:[{id:'direct',label:'Directo · caras'},{id:'radio',label:'RADIO · casco',speakLight:true,color:'#4b6a63'},{id:'muffled',label:'MUFFLED · respirador',color:'#a08a3a'},{id:'ext',label:'EXT · canal externo',offscreen:true,color:'#7a5a2c'},{id:'external',label:'EXTERNAL · canal externo en cuadro',color:'#7a5a2c'},{id:'pa',label:'PA · megafonía',color:'#8a4d7a'}]};
+const ref=f=>fs.readFileSync(path.join(fx,f),'utf8');
+const withExt=()=>{const b=structuredClone(block);b.parts[0].lines.push({id:'ext-1',character:'brady',text:'Hold eleven, confirm the seal.',channel:'ext',offscreen:false,start:5});return b;};
+test('blockPrompt de b02 es byte a byte el de antes de #41, con y sin catálogo (#41)',()=>{const dead={...project,stage:CATALOGO};
+ assert.equal(w.blockPrompt({project,sequence,shots,block,registry,map,scene}).prompt,ref('prompt-ref-41.txt'));
+ assert.equal(w.blockPrompt({project:dead,sequence,shots,block,registry,map,scene}).prompt,ref('prompt-ref-41.txt'));
+ assert.equal(w.blockPrompt({project:dead,sequence,shots,block:withExt(),registry,map,scene}).prompt,ref('prompt-ref-41-ext.txt'));});
+test('una línea ext es fuera de campo con el catálogo de dead-air y hablada en un proyecto sin catálogo (#41)',()=>{const b=withExt(),dead={...project,stage:CATALOGO};
+ const neutral=w.blockPrompt({project,sequence,shots,block:b,registry,map,scene});assert.match(neutral.prompt,/BRADY, [^<]*says exactly: <d>\[English\] Hold eleven, confirm the seal\.<\/d>/);assert.ok(neutral.refs.errors.includes('Falta en el registro: BRADY_VOICE'));
+ const r=w.blockPrompt({project:dead,sequence,shots,block:b,registry,map,scene});assert.doesNotMatch(r.prompt,/Hold eleven/);assert.deepEqual(r.refs.errors,[]);});
+test('la variante del prompt: la de la secuencia, si no la variante por defecto del catálogo, si no green (#41)',()=>{const summary=(p,s)=>/\(ep01-hold-11, (\w+) zone/.exec(w.blockPrompt({project:p,sequence:s,shots,block,registry,map,scene}).prompt)?.[1];const s0={...sequence,variant:''};
+ assert.equal(summary(project,sequence),sequence.variant);assert.equal(summary(project,s0),'green');assert.equal(summary({...project,stage:{...CATALOGO,defaultVariant:'yellow'}},s0),'yellow');assert.equal(summary({...project,stage:{...CATALOGO,defaultVariant:'nope'}},s0),'green');});

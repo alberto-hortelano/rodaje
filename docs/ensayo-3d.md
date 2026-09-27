@@ -43,3 +43,34 @@ Se valida con `stage-config check` (errores y avisos por plano) y se cambia con 
 - `cut`: al cambiar a este plano la cámara salta a su posición inicial.
 
 Los rótulos `scene` y `shot` que tienen algunos planos son informativos: el motor no los lee.
+
+## Catálogo: variantes, zonas y canales
+
+Junto a `rehearsal`, `proyecto.stage` guarda el catálogo del proyecto: las variantes visuales del reparto, las zonas de las viñetas del storyboard y los canales de voz. La app, el ensayo, la validación y los scripts de bloques lo leen con las funciones puras del tramo «Catálogo del proyecto» de `app/workflow.mjs` (`projectVariants`, `projectZones`, `projectChannels`, `projectDefaultVariant`). Se muestra con `node scripts/stage-config.mjs catalogo [proyecto]` y se cambia con `catalogo [proyecto] --desde fichero.json [--simular]`: cada clave presente reemplaza la actual, `null` la borra y una clave ausente no se toca. Si hay errores no escribe nada; `check` los cuenta como errores y avisa de los datos que usan ids fuera del catálogo.
+
+- `variants`: `[{id, label}]`. `id` en minúsculas, dígitos y guiones, empezando por letra. Siempre existe la variante `''` («Diseño base»); una entrada con `id: ""` solo cambia su etiqueta. Con más de una variante, cada personaje tiene su botón «Variantes por zona».
+- `defaultVariant`: id de una variante. Es la del prompt de vídeo cuando la secuencia no tiene variante.
+- `zones`: `[{id, label, color?, variant?}]`. `color` es `#rrggbb` y tiñe la pastilla de la viñeta; `variant` es la variante que toma la secuencia al convertir el storyboard en capítulo. Siempre existe `other` («Sin zona»), al final si el catálogo no la coloca; solo admite `label` y `color`.
+- `channels`: `[{id, label, color?, offscreen?, speakLight?}]`. `id` solo con letras minúsculas (el diálogo del storyboard se escribe `Nombre (canal): texto`). `color` es el borde de la línea en el storyboard. `offscreen: true` hace del canal una voz sin cuerpo: no se genera en el vídeo del bloque (va como evento en ACTION TIMING y se monta en post), no cuenta en el presupuesto de diálogo ni pide voz de referencia, no mueve la boca en el ensayo, no obliga a que el hablante esté en el reparto, se marca «fuera de campo» al elegirlo y el montaje lo rotula «(OFF)». `speakLight: true` enciende la luz de habla del casco en el ensayo. Siempre existen `direct` («Directo», primero) y `pa` («Voz en off», fuera de campo, al final); el catálogo solo cambia su `label` y su `color`. Una línea sin canal va por `direct`; un canal que no está en el catálogo se muestra y se conserva, sin comportamiento.
+
+Un proyecto sin catálogo ve «Diseño base», «Sin zona», «Directo» y «Voz en off». Las instantáneas de lote y de trabajo que no traen catálogo lo toman del proyecto vivo (`stageFallback`).
+
+Ejemplo:
+
+```json
+{
+  "variants": [{"id": "day", "label": "Día · ropa de calle"}, {"id": "storm", "label": "Tormenta · impermeable"}],
+  "defaultVariant": "day",
+  "zones": [
+    {"id": "street", "label": "Calle", "color": "#487432", "variant": "day"},
+    {"id": "harbour", "label": "Puerto · temporal", "color": "#364973", "variant": "storm"},
+    {"id": "other", "label": "Otro"}
+  ],
+  "channels": [
+    {"id": "direct", "label": "Directo · caras"},
+    {"id": "phone", "label": "TELÉFONO · auricular", "color": "#4b6a63", "speakLight": true},
+    {"id": "tv", "label": "TV · fuera de campo", "color": "#7a5a2c", "offscreen": true},
+    {"id": "pa", "label": "Megafonía", "color": "#8a4d7a"}
+  ]
+}
+```

@@ -1,0 +1,40 @@
+subject_definitions:
+<Subject 1> ROZ is Image 1 (@ROZ_RED): Older woman in the oldest sealed suit aboard, yellowed cream, shipping-line logo half worn off, helmet sticker crossed out; visor dark and reflective. 100% matches the reference. Cream proxy in Video 1.
+<Subject 2> EARL is Image 2 (@EARL_RED): Heavy male mechanic in a patched dark grey sealed suit, tools and keys at the belt; visor dark and reflective. 100% matches the reference. Dark grey proxy in Video 1.
+<Subject 3> NNAMDI is Image 3 (@NNAMDI_RED): Thin Black man in a newer orange tug-company sealed suit marked NNAMDI; visor down, dark and reflective. 100% matches the reference. Orange proxy in Video 1.
+<Subject 4> Image 4 (@HOLD11_PLATE): Depressurised cargo hold: aged ivory metal, seed containers strapped to floor rails, weathered sunset mural, amber emergency strips. Controls geometry, materials, light and atmosphere ONLY — not framing.
+<Video 1> is the approved 3D guide for this exact segment: framing, camera path, actor positions, paths, prop contact, gravity state and speech timing. Each proxy becomes exactly one person from the first frame.
+<Audio 1> is the voice identity reference for NNAMDI only; not a recording to paste.
+<Audio 2> is the voice identity reference for ROZ only; not a recording to paste.
+<Audio 3> is the voice identity reference for EARL only; not a recording to paste.
+summary:
+[reference generation + audio reference] Photorealistic live-action science-fiction drama with dry understated comedy. Segment b02 of scene 1 (ep01-hold-11, red zone, gravity normal). SINGLE CONTINUOUS TAKE matching Video 1. Exactly 3 people visible; every offscreen voice stays offscreen.
+retention_analysis:
+Character images: fully preserve each person's identity, suit and helmet state; each sheet shows several views of ONE person, never duplicate those views as extra people. Location image: geometry, materials, light and atmosphere only, never a frozen camera angle. Video 1: preserve actor locations, paths, prop contact, gravity state and every camera move; replace mannequin geometry with real human anatomy from the first frame; the guide's labels, proxy mouths and chest markers are absent, helmets carry only a small amber talk light. Audio references: each one only for its assigned speaker's timbre. Generate dialogue and physical delivery together, tiny timing adjustments allowed for natural speech, without omissions.
+detailed_description:
+LOCATION MAP: The camera is on the rail side. The MURAL fills the aft bulkhead at frame-left; the two RANKS of strapped containers run away from camera along the rails; the CRADLE sits on the centre rail in the midground; the DOOR is in the far wall at frame-right. Camera side: rail side (local z < 0). The 180° line is the centre rail; the camera stays on its side of that line for the whole take.
+FIRST FRAME: The first visible frame already contains ROZ frame-right, foreground, at the port rank of containers; EARL frame-centre, midground, behind the cradle; NNAMDI frame-centre, background, at the strap of the cradle, in the positions of Video 1 frame 0. Exactly 3 people visible. No empty establishing frame.
+OPTICS: 79° horizontal field of view (about 24 mm full-frame equivalent), wide: immediate foreground large and close, deep focus, the set spreads to every edge, verticals stay rectilinear. One lens for the whole take; no zoom or focal drift.
+CAMERA: Video 1 cuts between 4 locked-off camera stations (cuts at 4.6s, 7.9s, 11.1s); follow every cut and every station exactly. Every camera move stays one continuous move.
+ACTION TIMING:
+[0.00s–8.53s] ROZ keeps working at the same spot, hands on the nearest strap or latch; EARL keeps working at the same spot, hands on the nearest strap or latch; NNAMDI keeps working at the same spot, hands on the nearest strap or latch.
+At approximately 0.15s, NNAMDI, restrained helmet radio voice, says exactly: <d>[English] Love a service you have to announce.</d>
+At approximately 3.39s, ROZ, restrained helmet radio voice, says exactly: <d>[English] Forty containers. Seed potatoes. Nobody opens anything.</d>
+At approximately 6.63s, EARL, restrained helmet radio voice, says exactly: <d>[English] They're strapped down.</d>
+5.00s: an offscreen radio line from BRADY plays over the helmets (audio laid in post, not generated here); the crew hear it and keep working, nobody mouths it.
+[8.53s–11.17s] ROZ keeps working at the same spot, hands on the nearest strap or latch; EARL keeps working at the same spot, hands on the nearest strap or latch; NNAMDI keeps working at the same spot, hands on the nearest strap or latch.
+At approximately 8.88s, ROZ, restrained helmet radio voice, says exactly: <d>[English] I meant the crew.</d>
+[11.17s–14.17s] Earl locks the cradle. Nnamdi hangs off the strap like it's a subway pole.
+Finish all words by 14.0s; the last second is clean tail. Do not add any other words.
+CHARACTER ACTING: ROZ wants the containers locked before anyone spends the money; she checks strap tension with a gloved tug and gives the radio nothing but short orders.
+EARL wants to finish the latch; his hands stay on the cradle, he answers late and flat.
+NNAMDI wants an audience; he hangs off the strap and narrates, helmet turning to whoever last spoke.
+PHYSICS: Gravity normal: boots land with weight, straps and cables hang straight down, a container only moves with hands on it, dropped objects fall. Seed potatoes: all containers sealed, none visible.
+LIGHTING: Practical helmet headlamps and amber emergency strips are the only sources; each face-plate is lit by the nearest lamp on the camera side and falls off fast into deep shadow; high-ISO grain.
+STYLE: Dirty documentary realism, practical headlamps and failing fluorescent tubes, amber emergency strips, faded budget-cruise murals, muted cream/grey/amber palette, high-ISO grain, 28–35 mm interior lenses. American English. Nobody looks at camera. No clean futuristic surfaces, neon blue, holograms, uniforms, captain throne or military ranks.
+QUALITY: Photorealistic from frame zero; identities, suits and set consistent across the whole take; textured materials at believable scale; clean rendering of visors, straps and practical lights.
+POSITIVE CONSTRAINTS: Visors stay closed, dark and reflective in every frame; only the speaking character keys the radio, shown by a small amber light. Listeners keep their hands on their task. Eyes lead the head and settle on people, props or landmarks; nobody looks at the lens. Every person 100% matches their reference in every frame. Any container that opens = failed take.
+overall_soundscape:
+Native dialogue with the assigned reference voices, intimate helmet-radio intelligibility with subtle radio filtering. Under it, a low continuous ship rumble transmitted through the structure and quiet suit handling. Vacuum outside the helmets: every sound arrives through the suit or the structure. NNAMDI's voice: High, very fast. ROZ's voice: Low, gravelly, fast. EARL's voice: Bass, slow.
+non_diegetic_music:
+None.

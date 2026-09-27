@@ -31,8 +31,8 @@ input[type="color"]::-moz-color-swatch{border:0;border-radius:3px}
 .sb-code{position:absolute;top:8px;left:10px;background:var(--ink);color:#eff9d5;font-weight:800;font-size:12px;padding:2px 7px;border-radius:4px;letter-spacing:.5px}
 .sb-dur{position:absolute;top:8px;right:10px;background:#fffd;color:#222;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px}
 .sb-frame .sb-sketch{position:absolute;bottom:8px;right:8px;width:22%;height:auto;min-width:72px;aspect-ratio:16/9;object-fit:cover;border:1px solid #fff9;border-radius:4px;background:#f7f4ec}
-.sb-dial{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:5px}.sb-dial li{font-size:12px;line-height:1.5;padding-left:9px;border-left:3px solid var(--line)}.sb-dial li b{font-size:10px;letter-spacing:.6px;text-transform:uppercase;margin-right:5px}.sb-dial li.radio{border-color:#4b6a63}.sb-dial li.ext{border-color:#7a5a2c}.sb-dial li.pa{border-color:#8a4d7a}.sb-dial li.muffled{border-color:#a08a3a}
-.pill.zone-space{background:#e2e7f2;color:#2b3a5c}.pill.zone-green{background:#dcecc7;color:#3a5d28}.pill.zone-yellow{background:#f3e9bf;color:#6d5a12}.pill.zone-red{background:#f2d9d4;color:#7a2f22}
+.sb-dial{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:5px}.sb-dial li{font-size:12px;line-height:1.5;padding-left:9px;border-left:3px solid var(--line)}.sb-dial li b{font-size:10px;letter-spacing:.6px;text-transform:uppercase;margin-right:5px}.sb-dial li{border-left-color:var(--ch,var(--line))}
+.pill.zone[style*="--zone"]{background:color-mix(in srgb,var(--zone) 20%,#fff);color:color-mix(in srgb,var(--zone) 80%,#000)}
 .sb-card .actions{margin-top:12px;gap:6px}.sb-card .actions button{padding:7px 10px;font-size:12px}.sb-card .actions select{width:auto;padding:6px}
 dialog .two label{margin:12px 0}
 
@@ -61,7 +61,7 @@ dialog{background:#171f1d;color:var(--ink);border-color:#34423e}dialog::backdrop
 .shot-strip{background:#1c2624}.stagefoot{background:#151d1b}
 .md-source .cm-editor{background:#151d1b;color:#e3ebe0}.md-source .cm-gutters{background:#131a19;color:#7d8f85}.md-preview{background:#171f1d;color:var(--ink)}.md-preview pre{background:#1c2624}.md-modes button[aria-pressed=true]{background:#dcf390;color:#162b28}
 .sb-frame{border-color:var(--line)}.sb-empty{color:#7d8f85}.sb-code{background:#0b1211;color:#eff9d5}.sb-dur{background:#0b1211dd;color:#e6efe4}.sb-frame .sb-sketch{border-color:#ffffff55}
-.pill.zone-space{background:#1f2a3d;color:#b9c9ea}.pill.zone-green{background:#25401f;color:#c9efb0}.pill.zone-yellow{background:#4a3f16;color:#f1e3a3}.pill.zone-red{background:#4a2420;color:#f1c2b8}
+.pill.zone[style*="--zone"]{background:color-mix(in srgb,var(--zone) 32%,#101514);color:color-mix(in srgb,var(--zone) 35%,#fff)}
 .sb-card .inner>p{color:#c4cfc6}.sb-dial li{color:#dfe4dc}
 
 

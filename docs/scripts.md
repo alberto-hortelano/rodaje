@@ -20,7 +20,7 @@
 - `scripts/registro.mjs`: registro de assets con descriptores congelados: sync · freeze · render · check · describe `id@estado`.
 - `scripts/perfil.mjs`: perfil maestro de interpretación y voice prompt por personaje (skill `interpretacion`).
 - `scripts/mapa-espacial.mjs`: borrador de `MAPA.md` por landmarks para un ambiente.
-- `scripts/stage-config.mjs`: show · check · set · staging de la configuración del ensayo 3D, `proyecto.stage.rehearsal`, y del staging de los planos (formato en `docs/ensayo-3d.md`; animaciones en `docs/mixamo.md`).
+- `scripts/stage-config.mjs`: show · check · set · staging · catalogo de la configuración del ensayo 3D, `proyecto.stage.rehearsal`, del staging de los planos y del catálogo de variantes, zonas y canales (formato en `docs/ensayo-3d.md`; animaciones en `docs/mixamo.md`).
 
 ## Storyboards e imágenes (`GENERAR-IMAGENES.md`)
 

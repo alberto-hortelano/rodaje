@@ -7,10 +7,10 @@
 // Un bloque sin entrada y con prompt.txt (dirigido a mano) no se toca salvo que se nombre. refs.json conserva endImage.
 import fs from 'node:fs';import path from 'node:path';
 import {blockPrompt,framePrompt,applyDireccion,direccionErrors,direccionBlock,promptTargets,mergeRefs} from '../../app/workflow.mjs';
-import {parseArgs,writeJSON,readJSON,cliProject,usageExit} from './lib.mjs';import {loadLote,direccionFor} from '../../lib/lotes.mjs';
+import {parseArgs,writeJSON,readJSON,cliProject,usageExit,loteProject} from './lib.mjs';import {loadLote,direccionFor} from '../../lib/lotes.mjs';
 const USAGE='Uso: prompt.mjs <lote> [bloque] [--project id] [--force]';
 const {args:[lote,only],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
-const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);let gaps=0;
+const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);L.project=loteProject(L);let gaps=0;
 let D=null;try{D=direccionFor(L.paths.out);}catch(e){console.error(`direccion.json: ${e.message}`);process.exit(1);}
 if(D){const errs=direccionErrors(D);if(errs.length){console.error(errs.map(e=>'direccion.json: '+e).join('\n'));process.exit(1);}}
 const undirected=[];
