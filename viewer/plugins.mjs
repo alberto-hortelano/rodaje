@@ -1,5 +1,5 @@
 // Plugins del visor de entornos (viewer/mount.mjs): funciones puras sin imports. Un plugin es un fichero del proyecto,
-// declarado en environments[].viewer.plugins, que exporta plugin(api) y devuelve hooks (docs/ARQUITECTURA.md).
+// declarado en environments[].viewer.plugins, que exporta plugin(api) y devuelve hooks (docs/visor-3d.md).
 
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 // data-a de la barra que son del visor; un plugin no puede reutilizarlos.

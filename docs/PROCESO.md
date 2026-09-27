@@ -84,5 +84,6 @@ Migrar a Seedance 2.5 (hasta 50 referencias, voz nativa) **solo** si, tras repet
 - `.claude/skills/director-h3/SKILL.md` y `.claude/skills/interpretacion/SKILL.md`.
 - `docs/mixamo.md`: figuras del ensayo 3D y limpieza de voces.
 - `docs/ENTORNOS-3D.md`: cómo se hace un escenario 3D.
+- `docs/visor-3d.md`: visor 3D, plugins, recorrido y kit.
 - `docs/scripts.md`: catálogo de scripts.
 - `GENERAR-IMAGENES.md`: imágenes que genera el usuario con ChatGPT.

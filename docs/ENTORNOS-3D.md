@@ -27,7 +27,7 @@ Carpeta `ambientes/<id>/3d/`:
   - `states` y `presets`;
   - `textures`.
 - **Constructor** (`<id>.js`): `export function build(T, data, kit)`, sin imports. Trabaja en metros, con piezas con nombre y una marca por lugar. El estado por defecto va en `model.json` → `defaultState` y el constructor lo mezcla: `{...data.defaultState, ...kit.state}`.
-- **Visor:** lo da la app (`/viewer/mount.mjs`): orbitar, lugares, estados, recorrido a pie con colisiones y escaleras, «no clip», pantalla completa, captura y GLB. Lo propio del escenario (luces y niebla, cortes, piezas atravesables, entrada del paseo, vista general) va en un plugin `ambientes/<id>/3d/visor.js` con `export function plugin(api)` (modelo: el `visor.js` de cualquier entorno existente; contrato en `docs/ARQUITECTURA.md`).
+- **Visor:** lo da la app (`/viewer/mount.mjs`): orbitar, lugares, estados, recorrido a pie con colisiones y escaleras, «no clip», pantalla completa, captura y GLB. Lo propio del escenario (luces y niebla, cortes, piezas atravesables, entrada del paseo, vista general) va en un plugin `ambientes/<id>/3d/visor.js` con `export function plugin(api)` (modelo: el `visor.js` de cualquier entorno existente; contrato de plugins, `api` y hooks en `docs/visor-3d.md`).
 - **Registro:** en `proyecto.json`, `environments[]` con `data`, `builder`, `viewer: {plugins: ["ambientes/<id>/3d/visor.js"]}` y `glb`, y el ambiente con `environment: <id>` para usarlo en los planos. Tras escribirlo, `node scripts/proyecto-check.mjs <proyecto>`.
 
 Reglas que costó aprender:
@@ -50,7 +50,7 @@ Reglas que costó aprender:
    - comparar y repetir.
 
    Se prueban varias variantes en paralelo y se decide por la imagen, no por la intuición.
-4. **Recorrido a pie automático** (`scripts/entornos/recorrer.mjs <carpeta> --entorno <id> [--project id] [--url …]`): entrar por la puerta, cruzar, subir y bajar escaleras, chocar con un muro. Los pasos van en `walkthrough` dentro de los datos del entorno (`model.json`): `label` y, opcionales, `walk`, `view`, `position` + `yawDeg`, `noclip`, `keys` + `seconds` y `snapshot` (nombre de la captura). Un paso también puede comprobar algo: `call` es un método o getter de `window.rodaje.environment` (los del visor y los que expone un plugin, p. ej. una auditoría o una ruta), `args` sus argumentos (solo si es un método), `expect` el valor esperado (objetos parciales, listas elemento a elemento) y `tolerance` el margen de los números (por defecto 1e-6). Sin `call`, `expect` se compara con la posición de la cámara tras `keys`. El script marca cada paso `OK` o `FALLO` y sale con 1 si falla alguno o hay errores en la página. El bucle de la app sigue corriendo entre pasos: no se comprueban tiempos, solo estados (una ruta ha llegado cuando su índice iguala su longitud). Se repite tras cada cambio de planta.
+4. **Recorrido a pie automático** (`scripts/entornos/recorrer.mjs <carpeta> --entorno <id> [--project id] [--url …]`): entrar por la puerta, cruzar, subir y bajar escaleras, chocar con un muro. Los pasos van en `walkthrough` dentro de los datos del entorno (`model.json`); cada uno puede mover la cámara o andar, sacar una captura y comprobar un estado del visor o de un plugin. El script marca cada paso `OK` o `FALLO` y sale con 1 si falla alguno. Formato de los pasos, orden y validación: `docs/visor-3d.md`. Se repite tras cada cambio de planta.
 
 ## 5. La planta la corrige el usuario
 

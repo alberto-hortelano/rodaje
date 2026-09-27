@@ -70,7 +70,7 @@ Cada proyecto guarda copias locales de sus referencias y audios; no depende de l
 
 ## Proceso de producción
 
-El proceso canónico está en `docs/PROCESO.md`; las reglas generales, en `docs/REGLAS.md`, y las de cada proyecto, en `proyectos/<id>/REGLAS.md`, que las hereda; el registro de assets, en `proyectos/<id>/REGISTRO.md` (generado). Más documentación: `docs/ARQUITECTURA.md`, `docs/FLUJO-ISSUES.md`, `docs/ENTORNOS-3D.md`, `docs/mixamo.md`, `docs/UI.md`, `docs/scripts.md` y `GENERAR-IMAGENES.md`. Los agentes de IA leen `CLAUDE.md`.
+El proceso canónico está en `docs/PROCESO.md`; las reglas generales, en `docs/REGLAS.md`, y las de cada proyecto, en `proyectos/<id>/REGLAS.md`, que las hereda; el registro de assets, en `proyectos/<id>/REGISTRO.md` (generado). Más documentación: `docs/ARQUITECTURA.md`, `docs/FLUJO-ISSUES.md`, `docs/ENTORNOS-3D.md`, `docs/visor-3d.md`, `docs/mixamo.md`, `docs/UI.md`, `docs/scripts.md` y `GENERAR-IMAGENES.md`. Los agentes de IA leen `CLAUDE.md`.
 
 ## Alcance actual
 

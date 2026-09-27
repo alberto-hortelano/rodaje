@@ -24,7 +24,7 @@ Nunca lances una generación (fal.ai, ElevenLabs, H3, nano-banana) sin aprobaci�
 - Arquitectura y contratos: `docs/ARQUITECTURA.md`. `app/` es servidor e interfaz; `lib/`, el núcleo de Node (no importa de `app/`); `viewer/`, el visor 3D del navegador; `scripts/`, órdenes finas sobre `lib/`. El único código de un proyecto son sus constructores de escenario y sus plugins del visor, declarados en `environments[]`.
 - Lógica nueva: funciones puras con test en `test/*.test.mjs`. `npm test` en verde antes de cerrar.
 - Interfaz: se editan los `app/*.source.js`, nunca `app/app.js`; después, `npm run build:ui` y commit también de `app/app.js` (`docs/UI.md`). `app/stage.js` (ensayo 3D, `docs/mixamo.md`) solo cuando la issue lo pida.
-- Escenarios 3D: `docs/ENTORNOS-3D.md`.
+- Escenarios 3D: `docs/ENTORNOS-3D.md`; visor, plugins y kit: `docs/visor-3d.md`.
 
 ## Scripts
 
