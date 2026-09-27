@@ -66,7 +66,7 @@ proyectos/<id>/
   trabajos/               solicitudes, estados y resultados
 ```
 
-El ejemplo Conjurados contiene copias locales de sus referencias y audios. No modifica ni depende del proyecto original. Importador opcional: `node scripts/import-conjurados.mjs /ruta/conjurados` (crea la carpeta `proyectos/conjurados`; otro nombre con `RODAJE_PROJECT_ID`).
+El ejemplo Conjurados contiene copias locales de sus referencias y audios. No modifica ni depende del proyecto original.
 
 ## Proceso de producción
 

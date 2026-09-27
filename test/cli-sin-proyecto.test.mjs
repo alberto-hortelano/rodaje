@@ -37,7 +37,6 @@ const EXCLUIDOS={
  'fusionar.mjs':'sin proyecto recorre todos (no es un proyecto por defecto)',
  'proyecto-check.mjs':'valida uno o todos los proyectos (--all)',
  'linea-base.mjs':'recorre todos los proyectos',
- 'prepare-dead-air.mjs':'issue #17','import-conjurados.mjs':'issue #17','conjurados-pelicula.mjs':'issue #17',
  'entornos/calibrar.mjs':'herramienta de calibración fuera de esta issue','entornos/retroproyectar.mjs':'herramienta de calibración fuera de esta issue',
 };
 const cases=Object.entries(TABLE).flatMap(([s,list])=>[...list,[]].filter((a,i,all)=>all.findIndex(b=>b.join('\0')===a.join('\0'))===i).map(args=>[s,args]));
@@ -111,11 +110,10 @@ test('compatibilidad: cada fuente del proyecto y su línea «Proyecto: X (fuente
 });
 
 test('app/, lib/, scripts/ y viewer/ no nombran proyectos concretos',()=>{
- const skip=new Set(['scripts/prepare-dead-air.mjs','scripts/import-conjurados.mjs','scripts/conjurados-pelicula.mjs']);
  const hits=[];
  for(const d of ['app','lib','scripts','viewer'])for(const f of fs.readdirSync(path.join(ROOT,d),{recursive:true})){
   const rel=d+'/'+f.split(path.sep).join('/'),abs=path.join(ROOT,rel);
-  if(skip.has(rel)||!fs.statSync(abs).isFile()||!/\.(mjs|js|html|css|json)$/.test(rel))continue;
+  if(!fs.statSync(abs).isFile()||!/\.(mjs|js|html|css|json)$/.test(rel))continue;
   // Tolerado hasta #14: la clase .toledo-explorer la pinta el visor de la nave que aún carga el proyecto.
   fs.readFileSync(abs,'utf8').split('\n').forEach((l,i)=>{if(/dead-air|conjurados|caseron|toledo/i.test(rel==='app/style.css'?l.replaceAll('.toledo-explorer',''):l))hits.push(`${rel}:${i+1}`);});
  }
