@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 // Esqueleto del prompt de cada bloque en orden fijo (PROCESO.md, paso 7).
-//   node scripts/bloques/prompt.mjs <lote> [bloque] [--project dead-air] [--force]
+//   node scripts/bloques/prompt.mjs <lote> [bloque] [--project id] [--force]
 // Escribe <bloque>/prompt.txt (con huecos [[ACTING]] / [[LOCAL]] si la escena no los aporta) y refs.json.
 // Si prompt.txt ya existe (rellenado a mano), escribe prompt.generated.txt para comparar, salvo --force.
 import fs from 'node:fs';import path from 'node:path';
 import {blockPrompt,framePrompt} from '../../app/workflow.mjs';
-import {parseArgs,loadLote,writeJSON} from './lib.mjs';
-const {args:[lote,only],opts}=parseArgs(process.argv.slice(2));if(!lote){console.error('Uso: prompt.mjs <lote> [bloque] [--force]');process.exit(2);}
-const L=loadLote(opts.project||'dead-air',lote);let gaps=0;
+import {parseArgs,loadLote,writeJSON,cliProject,usageExit} from './lib.mjs';
+const USAGE='Uso: prompt.mjs <lote> [bloque] [--project id] [--force]';
+const {args:[lote,only],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
+const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);let gaps=0;
 for(const block of L.plan){if(only&&block.id!==only)continue;const dir=path.join(L.paths.out,block.id);fs.mkdirSync(dir,{recursive:true});
  // Modo fotograma: el reparto sale de la viñeta del storyboard de la que viene el plano.
  if(block.mode==='fotograma'){const t=L.shots[block.parts[0].shot];const sbShot=(L.project.storyboards||[]).flatMap(b=>b.sequences||[]).flatMap(s=>s.shots||[]).find(x=>x.id===t.storyboardShot);const cast=(sbShot?.cast||[]).filter(id=>L.project.characters.some(c=>c.id===id));

@@ -38,6 +38,6 @@ export function build(T, data, kit) { … return group }   // T = three, data = 
 - Todo lo genérico (materiales, texturas, visor, paseo) lo da la app a través de `kit`.
 - `environments[].viewer` es un objeto de opciones, no una ruta a un `.js`.
 
-El proyecto activo se indica con `--project <id>` o con `RODAJE_PROJECT`. Ningún código de la app contiene ids de proyecto.
+El proyecto de un script se resuelve con `lib/cli.mjs` (`cliProject`, sobre `resolveProject` de `lib/paths.mjs`), por este orden: `--project <id>`, el argumento posicional donde el script ya lo tenía, `RODAJE_PROJECT` y, en cuarto lugar, el proyecto activo en la app. El activo vive en `<DATA>/.activo.json` (`lib/proyecto-activo.mjs`) y solo lo escribe el servidor: `POST /api/active` (con token) al abrir un proyecto en la vista Proyectos, y al crear uno; las recargas con `?project=` y `movil.html` no lo cambian. Los scripts imprimen `Proyecto: X (fuente)` en stderr y, sin proyecto, salen con el uso y código 2 sin tocar el disco (`app/store.mjs` ya no crea `DATA` al importarse; la crea `app/jobs.mjs` al arrancar el servidor). Ningún código de la app contiene ids de proyecto.
 
 `scripts/proyecto-check.mjs` hace cumplir este contrato.

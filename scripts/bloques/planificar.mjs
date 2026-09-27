@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 // Planifica los bloques de una secuencia (PROCESO.md, paso 5) y congela el snapshot del proyecto en el lote.
-//   node scripts/bloques/planificar.mjs <lote> <episodio> <secuencia> [--project dead-air] [--max 15] [--min 5] [--por-plano] [--force]
+//   node scripts/bloques/planificar.mjs <lote> <episodio> <secuencia> [--project id] [--max 15] [--min 5] [--por-plano] [--force]
 // Reglas: bloque 5–15 s; nunca parte una línea; presupuesto de diálogo ≤ duración − 1 (R12); un trayecto por bloque (R10);
 // los planos MASTER van solos; corte preferente donde cambia la cobertura.
 import fs from 'node:fs';import path from 'node:path';
 import {load} from '../../app/store.mjs';import {dialogueBudget} from '../../app/workflow.mjs';
-import {parseArgs,lotePaths,writeJSON} from './lib.mjs';
+import {parseArgs,lotePaths,writeJSON,cliProject,usageExit} from './lib.mjs';
+const USAGE='Uso: planificar.mjs <lote> <episodio> <secuencia> [--project id] [--max 15] [--min 5] [--por-plano] [--force]';
 const {args:[lote,episodeId,sequenceId],opts}=parseArgs(process.argv.slice(2));
-if(!lote||!episodeId||!sequenceId){console.error('Uso: planificar.mjs <lote> <episodio> <secuencia> [--project id] [--max 15] [--force]');process.exit(2);}
-const project=opts.project||'dead-air',MAX=Number(opts.max||15),MIN=Number(opts.min||5);
+if(!lote||!episodeId||!sequenceId)usageExit(USAGE);
+const {project}=cliProject({usage:USAGE,opts}),MAX=Number(opts.max||15),MIN=Number(opts.min||5);
 const p=load(project);const episode=p.episodes.find(e=>e.id===episodeId);if(!episode)throw Error('Episodio desconocido');const sequence=episode.sequences.find(s=>s.id===sequenceId);if(!sequence)throw Error('Secuencia desconocida');
 const words=l=>String(l.spokenText||l.text||'').trim().split(/\s+/).filter(Boolean).length;
 const lineEnd=l=>l.start+Math.max(words(l)/4,l.estimatedDuration||0)+0.3;

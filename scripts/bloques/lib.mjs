@@ -1,7 +1,7 @@
 // Utilidades compartidas por los scripts de lote (PROCESO.md, pasos 5–8).
 import fs from 'node:fs';import path from 'node:path';import {execFileSync} from 'node:child_process';
-import {ROOT,dir,loadEnv} from '../../lib/paths.mjs';import {readJSON,writeJSON} from '../../lib/json.mjs';import {parseArgs} from '../../lib/args.mjs';import {parseMapa} from '../../app/workflow.mjs';
-export {ROOT,readJSON,writeJSON,parseArgs};
+import {ROOT,dir,loadEnv} from '../../lib/paths.mjs';import {readJSON,writeJSON} from '../../lib/json.mjs';import {parseArgs} from '../../lib/args.mjs';import {cliProject,usageExit} from '../../lib/cli.mjs';import {parseMapa} from '../../app/workflow.mjs';
+export {ROOT,readJSON,writeJSON,parseArgs,cliProject,usageExit};
 // Un lote vive en proyectos/<proyecto>/assets/<lote>/ y congela su propio snapshot del proyecto.
 export function lotePaths(project,lote){const base=dir(project);const out=path.join(base,'assets',lote);return {base,out,plan:path.join(out,'plan.json'),snapshot:path.join(out,'project-snapshot.json'),meta:path.join(out,'lote.json'),registry:path.join(base,'registro.json'),uploads:path.join(out,'uploads.json')};}
 export function loadLote(project,lote){const paths=lotePaths(project,lote);if(!fs.existsSync(paths.plan))throw Error(`No existe ${paths.plan}; ejecuta planificar.mjs`);const plan=readJSON(paths.plan),meta=readJSON(paths.meta),snapshot=readJSON(paths.snapshot);const registry=fs.existsSync(paths.registry)?readJSON(paths.registry):{assets:{}};const episode=snapshot.episodes.find(e=>e.id===meta.episode);const sequence=episode.sequences.find(s=>s.id===meta.sequence);const shots=Object.fromEntries(sequence.shots.map(t=>[t.id,t]));return {paths,plan,meta,project:snapshot,registry,episode,sequence,shots,map:mapaFor(paths.base,registry,sequence.location),scene:sceneFor(paths.base,episode,sequence)};}

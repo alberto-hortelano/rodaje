@@ -3,13 +3,14 @@
 // Bloques en modo fotograma (planificar --por-plano): image-to-video con el fotograma del storyboard como primer fotograma y la voz de la línea como target_audio.
 // Si refs.json trae endImage, va como end_image_url (fotograma final): con el mismo fotograma ancla el encuadre en planos casi quietos.
 // --changed-ref "…": en un reintento, el cambio es de referencias (p. ej. fotograma final) y no de una línea del prompt.
-//   node scripts/bloques/enviar.mjs <lote> <bloque> [--project dead-air] [--changed "línea nueva"] [--changed-ref "…"] [--modelo h3] [--yes]
+//   node scripts/bloques/enviar.mjs <lote> <bloque> [--project id] [--changed "línea nueva"] [--changed-ref "…"] [--modelo h3] [--yes]
 // Sin --yes es un ensayo: muestra lo que enviaría y no gasta créditos. Cada envío crea prompt-vNN.txt, request-vNN.json
 // y una entrada en attempts.json. A partir del segundo intento exige --changed (una línea); rechaza el séptimo.
 import fs from 'node:fs';import path from 'node:path';import {execFileSync} from 'node:child_process';
-import {parseArgs,loadLote,loadAttempts,saveAttempts,readJSON,writeJSON,falClient} from './lib.mjs';
-const {args:[lote,blockId],opts}=parseArgs(process.argv.slice(2));if(!lote||!blockId){console.error('Uso: enviar.mjs <lote> <bloque> [--changed "línea"] [--yes]');process.exit(2);}
-const L=loadLote(opts.project||'dead-air',lote);const block=L.plan.find(b=>b.id===blockId);if(!block)throw Error('Bloque desconocido: '+blockId);
+import {parseArgs,loadLote,loadAttempts,saveAttempts,readJSON,writeJSON,falClient,cliProject,usageExit} from './lib.mjs';
+const USAGE='Uso: enviar.mjs <lote> <bloque> [--project id] [--changed "línea"] [--changed-ref "…"] [--modelo h3] [--yes]';
+const {args:[lote,blockId],opts}=parseArgs(process.argv.slice(2));if(!lote||!blockId)usageExit(USAGE);
+const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);const block=L.plan.find(b=>b.id===blockId);if(!block)throw Error('Bloque desconocido: '+blockId);
 const dir=path.join(L.paths.out,blockId);const promptFile=path.join(dir,'prompt.txt'),refsFile=path.join(dir,'refs.json'),motion=path.join(dir,'motion.mp4');
 const frameMode=block.mode==='fotograma';
 for(const [f,why] of [[promptFile,'ejecuta prompt.mjs y rellena los huecos'],[refsFile,'ejecuta prompt.mjs'],...(frameMode?[]:[[motion,'ejecuta render.mjs']])])if(!fs.existsSync(f))throw Error(`Falta ${path.relative(L.paths.base,f)}: ${why}`);

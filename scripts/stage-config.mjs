@@ -1,18 +1,20 @@
 #!/usr/bin/env node
 // Configuración del ensayo 3D de un proyecto (proyecto.stage.rehearsal): animaciones por rol, exteriores y tono de voz.
-//   node scripts/stage-config.mjs show <proyecto>
-//   node scripts/stage-config.mjs check <proyecto>              (sale con 1 si hay errores)
-//   node scripts/stage-config.mjs set <proyecto> --desde <fichero.json>
+//   node scripts/stage-config.mjs show [proyecto]
+//   node scripts/stage-config.mjs check [proyecto]              (sale con 1 si hay errores)
+//   node scripts/stage-config.mjs set [proyecto] --desde <fichero.json>
+// Proyecto: [proyecto] o --project id, RODAJE_PROJECT o el activo en la app.
 // set valida y guarda con store.save (sube la revisión y regenera los derivados).
 import {load,save} from '../app/store.mjs';
 import {rehearsalStageErrors} from '../app/workflow.mjs';
 import {readJSON} from '../lib/json.mjs';
 import {parseArgs} from '../lib/args.mjs';
+import {cliProject, usageExit} from '../lib/cli.mjs';
 
-const USAGE = 'Uso: node scripts/stage-config.mjs show|check <proyecto> · set <proyecto> --desde <fichero.json>';
-const {args: [cmd, id], opts} = parseArgs(process.argv.slice(2));
-if (!['show', 'check', 'set'].includes(cmd) || !id || (cmd === 'set' && typeof opts.desde !== 'string')) { console.error(USAGE); process.exit(2); }
-const p = load(id);
+const USAGE = 'Uso: node scripts/stage-config.mjs show|check [proyecto] · set [proyecto] --desde <fichero.json>  [--project id]';
+const {args: [cmd, ...rest], opts} = parseArgs(process.argv.slice(2));
+if (!['show', 'check', 'set'].includes(cmd) || (cmd === 'set' && typeof opts.desde !== 'string')) usageExit(USAGE);
+const p = load(cliProject({usage: USAGE, opts, args: rest, positional: 0}).project);
 
 if (cmd === 'show') console.log(JSON.stringify(p.stage?.rehearsal ?? null, null, 2));
 if (cmd === 'check') {

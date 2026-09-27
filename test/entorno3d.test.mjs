@@ -5,12 +5,13 @@ const builder=`export function build(T,data,{state}={}){const root=new T.Group()
 // Dos cajas separadas en el estado por defecto; el preset añade una que comparte la cara x+ de «a».
 const model={boxes:[{name:'a',pos:[0,1,0],size:[1,1,1]},{name:'b',pos:[3,1,0],size:[1,1,1]}],presets:[{id:'pegada',state:{extra:[{name:'c',pos:[0,1,0.2],size:[1,1,1]}]}}]};
 fs.mkdirSync(path.join(base,'3d'),{recursive:true});fs.writeFileSync(path.join(base,'3d/b.js'),builder);fs.writeFileSync(path.join(base,'3d/m.json'),JSON.stringify(model));
-fs.writeFileSync(path.join(base,'proyecto.json'),JSON.stringify({id,name:'Entornos',type:'serie',ideas:[],characters:[],locations:[],episodes:[],environments:[{id:'caja',builder:'3d/b.js',data:'3d/m.json'},{id:'solo-glb',glb:'x.glb'},{id:'sin-datos',builder:'3d/b.js'}]}));
+fs.writeFileSync(path.join(base,'3d/roto.js'),'export const build = ;\n');
+fs.writeFileSync(path.join(base,'proyecto.json'),JSON.stringify({id,name:'Entornos',type:'serie',ideas:[],characters:[],locations:[],episodes:[],environments:[{id:'caja',builder:'3d/b.js',data:'3d/m.json'},{id:'solo-glb',glb:'x.glb'},{id:'sin-datos',builder:'3d/b.js'},{id:'roto',builder:'3d/roto.js',data:'3d/m.json'}]}));
 const box=(name,pos,size=[1,1,1])=>{const m=new T.Mesh(new T.BoxGeometry(...size),new T.MeshBasicMaterial());m.name=name;m.position.set(...pos);return m;};
 const group=(...ms)=>{const g=new T.Group();g.add(...ms);return g;};
 const files=()=>fs.readdirSync(base,{recursive:true}).sort();
 
-test('descubre solo los entornos con constructor y datos',()=>{assert.ok(e3.projectIds().includes(id));assert.deepEqual(e3.environmentsWithBuilder().filter(x=>x.projectId===id),[{projectId:id,envId:'caja'}]);});
+test('descubre solo los entornos con constructor y datos',()=>{assert.ok(e3.projectIds().includes(id));assert.deepEqual(e3.environmentsWithBuilder().filter(x=>x.projectId===id),[{projectId:id,envId:'caja'},{projectId:id,envId:'roto'}]);});
 test('loadEnvironment da errores claros',async()=>{await assert.rejects(e3.loadEnvironment(id,'nada'),/Entorno no encontrado: nada/);await assert.rejects(e3.loadEnvironment(id,'solo-glb'),/no tiene constructor/);await assert.rejects(e3.loadEnvironment(id,'sin-datos'),/no tiene constructor/);const ctx=await e3.loadEnvironment(id,'caja');assert.equal(ctx.env.id,'caja');assert.equal(ctx.base,base);assert.equal(typeof ctx.build,'function');assert.equal(ctx.data.boxes.length,2);});
 test('exportGlb devuelve un GLB estable sin escribir en disco',async()=>{const ctx=await e3.loadEnvironment(id,'caja'),before=files();const a=await e3.exportGlb(e3.buildEnvironment(ctx,{textures:false}),{quiet:true});const b=await e3.exportGlb(e3.buildEnvironment(ctx,{textures:false}));assert.equal(a.buffer.subarray(0,4).toString(),'glTF');assert.equal(a.meshes,2);assert.equal(a.bytes,a.buffer.length);assert.match(a.sha256,/^[0-9a-f]{64}$/);assert.equal(a.sha256,b.sha256);const c=await e3.exportGlb(e3.buildEnvironment(ctx,{state:ctx.data.presets[0].state}),{quiet:true});assert.equal(c.meshes,3);assert.notEqual(c.sha256,a.sha256);assert.deepEqual(files(),before);});
 test('quiet silencia console.warn solo durante la exportación',async()=>{const warn=console.warn;await e3.exportGlb(group(box('a',[0,1,0])),{quiet:true});assert.equal(console.warn,warn);});
@@ -19,3 +20,14 @@ test('coplanarPairs detecta caras solapadas y respeta el suelo',()=>{const pegad
  assert.equal(e3.coplanarPairs(group(box('a',[0,1,0]),box('b',[3,1,0]))).size,0);
  assert.equal(e3.coplanarPairs(group(box('a',[0,0.5,0]),box('b',[0.5,1,0.5],[1,2,1]))).size,0);assert.deepEqual([...e3.coplanarPairs(group(box('a',[0,1.5,0]),box('b',[0.5,2,0.5],[1,2,1]))).keys()],['a ↔ b (y− 1.00)']);});
 test('coplanarReport suma defecto y presets con --todos',async()=>{const ctx=await e3.loadEnvironment(id,'caja');const r=e3.coplanarReport(ctx,'--todos');assert.deepEqual(r.porPreset,{defecto:0,pegada:e3.coplanarReport(ctx,'pegada').total});assert.ok(r.porPreset.pegada>0);assert.equal(r.total,r.porPreset.defecto+r.porPreset.pegada);assert.deepEqual([...r.pares.keys()],['defecto','pegada']);assert.deepEqual(e3.coplanarReport(ctx).porPreset,{defecto:0});assert.throws(()=>e3.coplanarReport(ctx,'otro'),/Preset no encontrado: otro/);});
+test('environmentData lee los datos sin importar el constructor',async()=>{const ctx=e3.environmentData(id,'roto');assert.equal(ctx.base,base);assert.equal(ctx.env.id,'roto');assert.equal(ctx.data.boxes.length,2);assert.equal(ctx.build,undefined);await assert.rejects(e3.loadEnvironment(id,'roto'));assert.throws(()=>e3.environmentData(id,'nada'),/Entorno no encontrado: nada/);assert.throws(()=>e3.environmentData(id,'solo-glb'),/no tiene constructor/);});
+test('walkthroughSteps valida y normaliza el recorrido',()=>{
+ for(const d of [{},{walkthrough:[]},{walkthrough:{}},null])assert.throws(()=>e3.walkthroughSteps(d),/El entorno no tiene recorrido \(walkthrough en sus datos\)/);
+ const steps=e3.walkthroughSteps({walkthrough:[{label:'a',walk:true,view:'v',snapshot:'s-1'},{label:'b',view:'v',position:[1,2,3],keys:['w'],seconds:4},{label:'c',noclip:true,keys:['e'],seconds:2,extra:1}]});
+ assert.deepEqual(steps,[{label:'a',walk:true,view:'v',snapshot:'s-1'},{label:'b',view:'v',position:[1,2,3],yawDeg:0,keys:['w'],seconds:4},{label:'c',noclip:true,keys:['e'],seconds:2}]);
+ const bad=[{},{label:''},{label:'x',keys:['w']},{label:'x',keys:['w'],seconds:0},{label:'x',keys:[],seconds:1},{label:'x',seconds:1},{label:'x',position:[1,2]},{label:'x',position:[1,'2',3]},{label:'x',yawDeg:90},{label:'x',snapshot:'../x'},{label:'x',view:3}];
+ for(const s of bad)assert.throws(()=>e3.walkthroughSteps({walkthrough:[s]}),/Paso 1 del recorrido/,JSON.stringify(s));});
+test('captureSetup: valores por defecto y los de data.capture',()=>{
+ assert.deepEqual(e3.captureSetup({},'caja'),{root:'caja',group:undefined,keep:[],fog:true});
+ assert.deepEqual(e3.captureSetup({capture:{root:'r',group:'g',keep:['k'],fog:false}},'caja'),{root:'r',group:'g',keep:['k'],fog:false});
+ assert.equal(e3.captureSetup({capture:{fog:null}},'caja').fog,true);});

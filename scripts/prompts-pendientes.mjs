@@ -1,15 +1,19 @@
 // Lista los prompts de imagen (.prompt.txt con cabecera «Destino:») cuya imagen aún no existe, para generarlos con ChatGPT.
-// Uso: node scripts/prompts-pendientes.mjs <proyecto> [filtro]   (filtro: trozo de ruta, p. ej. «09-girart» o «ambientes/cruce»)
+// Uso: node scripts/prompts-pendientes.mjs [proyecto] [filtro] [--project id]   (filtro: trozo de ruta, p. ej. «09-girart» o «ambientes/cruce»)
+//      Sin proyecto posicional: --project, RODAJE_PROJECT o el activo en la app; para filtrar sin nombrar el proyecto, --project id filtro.
 //      --todos  lista también los ya generados
 import fs from 'node:fs';
 import path from 'node:path';
 import {dir} from '../app/store.mjs';
 import {ROOT} from '../lib/paths.mjs';
+import {takeOption} from '../lib/args.mjs';
+import {cliProject} from '../lib/cli.mjs';
 
+const USAGE = 'Uso: node scripts/prompts-pendientes.mjs [proyecto] [filtro] [--project id] [--todos]';
 const args = process.argv.slice(2);
 const all = args.includes('--todos');
-const [projectId, filter = ''] = args.filter(a => a !== '--todos');
-if (!projectId) throw Error('Uso: node scripts/prompts-pendientes.mjs <proyecto> [filtro] [--todos]');
+const p0 = takeOption(args, '--project');
+const {project: projectId, args: [filter = '']} = cliProject({usage: USAGE, opts: {project: p0}, args: args.filter(a => a !== '--todos'), positional: 0});
 const base = dir(projectId), root = ROOT;
 const walk = d => fs.readdirSync(d, {withFileTypes: true}).flatMap(e => e.name.startsWith('.') ? [] : e.isDirectory() ? walk(path.join(d, e.name)) : e.name.endsWith('.prompt.txt') ? [path.join(d, e.name)] : []);
 let pending = 0, done = 0;

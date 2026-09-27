@@ -1,13 +1,18 @@
 // Rellena una secuencia existente de un capítulo con las viñetas de un storyboard: un plano por viñeta, con su fotograma
 // (storyboardRender), su duración y su diálogo. Repetirlo tras cambiar el storyboard conserva el id de los planos.
-// Uso: node scripts/storyboard-a-secuencia.mjs <proyecto> <storyboard> <secuencia> [--ambiente texto]
+// Uso: node scripts/storyboard-a-secuencia.mjs [proyecto] <storyboard> <secuencia> [--project id] [--ambiente texto]
 import {load, save} from '../app/store.mjs';
 import {storyboardToSequence} from '../app/workflow.mjs';
+import {takeOption} from '../lib/args.mjs';
+import {cliProject, usageExit} from '../lib/cli.mjs';
 
+const USAGE = 'Uso: node scripts/storyboard-a-secuencia.mjs [proyecto] <storyboard> <secuencia> [--project id] [--ambiente texto]';
 const args = process.argv.slice(2);
 const amb = args.includes('--ambiente') ? args.splice(args.indexOf('--ambiente'), 2)[1] : null;
-const [projectId, sbId, seqId] = args;
-if (!seqId) throw Error('Uso: node scripts/storyboard-a-secuencia.mjs <proyecto> <storyboard> <secuencia> [--ambiente texto]');
+const p0 = takeOption(args, '--project');
+if (args.length < 2) usageExit(USAGE);
+const {project: projectId, args: [sbId, seqId]} = cliProject({usage: USAGE, opts: {project: p0}, args, positional: 2});
+if (!seqId) usageExit(USAGE);
 const p = load(projectId);
 const sb = (p.storyboards || []).find(b => b.id === sbId);
 if (!sb) throw Error('Storyboard no encontrado: ' + sbId);

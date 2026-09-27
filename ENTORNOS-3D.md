@@ -32,7 +32,7 @@ Carpeta `ambientes/<id>/3d/`:
 
 Reglas que costó aprender:
 - **Nada a escuadra salvo lo necesario.** Plantas irregulares, remates de muro a escalones y añadidos girados. Lo perfectamente recto se ve falso.
-- **Nada de caras coplanarias.** Se pasa `node scripts/entorno-coplanares.mjs <proyecto> <id> --todos` hasta que dé 0. Separar 1–3 cm o recortar suelos con celdas.
+- **Nada de caras coplanarias.** Se pasa `node scripts/entorno-coplanares.mjs [proyecto] <id> --todos` hasta que dé 0. Separar 1–3 cm o recortar suelos con celdas.
 - **UV en metros** (una tesela cada 2 m) y texturas generadas en `texturas/` e `imagenes/`, con sus prompts en `PROMPTS-TEXTURAS.md`. Si una imagen no existe, se usa la de procedimiento.
 - **Tejados de siluetas no rectangulares:** cada alero es un plano y el tejado es el más bajo de todos, recortado (`clipHalf`). Una malla de celdas deja dientes de sierra.
 - **Suelos bajo puertas y arcos** (umbrales), y el terreno por debajo de la plataforma dentro del recinto, o el recorrido a pie se cae por los huecos.
@@ -45,12 +45,12 @@ Reglas que costó aprender:
    - cambiar un parámetro;
    - regenerar el GLB;
    - `entorno-coplanares`;
-   - capturar desde la cámara calibrada (`scripts/entornos/capturar.mjs`, con un servidor de prueba `PORT=4399`);
+   - capturar desde la cámara calibrada (`scripts/entornos/capturar.mjs <carpeta> '<ángulos>' --entorno <id> [--project id] [--url http://127.0.0.1:4399]`, con un servidor de prueba `PORT=4399`); qué se oculta en la captura sale de `capture` en los datos del entorno (`model.json`): `root`, `group` con los hijos visibles en `keep` y `fog`;
    - montar la captura junto a la referencia, entera y con recorte de la zona dudosa;
    - comparar y repetir.
 
    Se prueban varias variantes en paralelo y se decide por la imagen, no por la intuición.
-4. **Recorrido a pie automático** (`scripts/entornos/recorrer.mjs`): entrar por la puerta, cruzar, subir y bajar escaleras, chocar con un muro. Se repite tras cada cambio de planta.
+4. **Recorrido a pie automático** (`scripts/entornos/recorrer.mjs <carpeta> --entorno <id> [--project id] [--url …]`): entrar por la puerta, cruzar, subir y bajar escaleras, chocar con un muro. Los pasos van en `walkthrough` dentro de los datos del entorno (`model.json`): `label` y, opcionales, `walk`, `view`, `position` + `yawDeg`, `noclip`, `keys` + `seconds` y `snapshot` (nombre de la captura). Se repite tras cada cambio de planta.
 
 ## 5. La planta la corrige el usuario
 

@@ -4,22 +4,26 @@ Pipeline único para producir un episodio con Rodaje: **bloques de 5–15 s con 
 
 Está inspirado en la disciplina de *The Prompter* (Allan Ripley, Higgsfield, 2026): registro de assets con descriptores congelados, reglas con condición de fallo, prompt en bloques de orden fijo, mapa espacial por landmarks, master shot por escena, interpretación como conducta, una línea por intento y montaje en paralelo. Se adapta a nuestras dos diferencias: tenemos guía de vídeo 3D (blocking, cámara y tiempos van en Video 1) y H3 Max limita a 15 s, 8 imágenes y 768P.
 
+## Proyecto
+
+Los scripts no suponen ningún proyecto. Lo toman, por este orden, de `--project <id>`, del argumento posicional donde el script ya lo admitía (`[proyecto]`), de `RODAJE_PROJECT` o del proyecto activo en la app (el último abierto o creado en la vista Proyectos, guardado en `<datos>/.activo.json`). Siempre imprimen en stderr `Proyecto: X (fuente)`: compruébalo antes de dejar que un script escriba. Sin proyecto válido muestran el uso y salen con código 2 sin tocar nada.
+
 ## Los ocho pasos
 
 1. **Guion → capítulo de ensayo.** `storyboardToEpisode()` o un importador como `assets/ep01-rehearsal-v01/import.mjs`. Cada plano lleva `gravity`, `variant`, `staging` (tareas, movimientos, estado de props) y `coverage`.
 2. **Ensayo 3D con voz del navegador y rough cut v0.** Coste cero. Mide duraciones reales y deja el episodio completo visible desde el primer día (`scripts/bloques/montar.mjs` con guía + TTS).
-3. **Registro de assets.** Cada personaje por variante, cada voz, cada ambiente y cada sonido firma tiene un tag fijo y un descriptor congelado en `proyectos/<id>/registro.json`. **Si no está en el registro, no entra en el prompt.** `node scripts/registro.mjs sync|freeze|render|check`.
+3. **Registro de assets.** Cada personaje por variante, cada voz, cada ambiente y cada sonido firma tiene un tag fijo y un descriptor congelado en `proyectos/<id>/registro.json`. **Si no está en el registro, no entra en el prompt.** `node scripts/registro.mjs sync|freeze|render|check [proyecto]` (con `freeze`, los TAG van detrás; un proyecto con id en mayúsculas va con `--project`).
 4. **Mapa espacial y master shot por ambiente.** `ambientes/<id>/MAPA.md`: landmarks en orden de lectura, lado de cámara, línea de 180°, vocabulario de posiciones (nunca metros). Un plano `MASTER · <ambiente>` de 1 s, gran angular y sin líneas, abre la primera secuencia de cada ambiente; su primer fotograma aceptado pasa a ser la plate del registro (continuidad por referencia, no por extensión).
-5. **Planificación de bloques.** `node scripts/bloques/planificar.mjs <lote> <episodio> <secuencia>` produce `assets/<lote>/plan.json`: bloques 5–15 s, nunca parte una línea, presupuesto de diálogo ≤ duración−1 s, un ambiente y un trayecto por bloque, corte preferente en cambio de cobertura.
-6. **Guía por bloque.** `node scripts/bloques/render.mjs <lote>` → `motion.mp4` (sin rótulos), `frame-start.png`, `frame-mid.png`.
-7. **Prompt, envío, intento, revisión.** `node scripts/bloques/prompt.mjs <lote> [bloque]` genera el esqueleto en orden fijo con huecos `[[ACTING]]` y `[[LOCAL]]` que rellena la skill `director-h3`. `enviar.mjs` rechaza prompts con huecos, resuelve referencias por tag y **registra el intento** en `attempts.json`. La revisión cita reglas de `REGLAS.md` o crea una nueva. Reintento = una línea cambiada; al quinto intento se cambia el bloque (R26).
+5. **Planificación de bloques.** `node scripts/bloques/planificar.mjs <lote> <episodio> <secuencia> [--project id]` produce `assets/<lote>/plan.json`: bloques 5–15 s, nunca parte una línea, presupuesto de diálogo ≤ duración−1 s, un ambiente y un trayecto por bloque, corte preferente en cambio de cobertura.
+6. **Guía por bloque.** `node scripts/bloques/render.mjs <lote> [--project id]` → `motion.mp4` (sin rótulos), `frame-start.png`, `frame-mid.png`.
+7. **Prompt, envío, intento, revisión.** `node scripts/bloques/prompt.mjs <lote> [bloque] [--project id]` genera el esqueleto en orden fijo con huecos `[[ACTING]]` y `[[LOCAL]]` que rellena la skill `director-h3`. `enviar.mjs` rechaza prompts con huecos, resuelve referencias por tag y **registra el intento** en `attempts.json`. La revisión cita reglas de `REGLAS.md` o crea una nueva. Reintento = una línea cambiada; al quinto intento se cambia el bloque (R26).
 8. **Montaje incremental y sonido.** `montar.mjs` sustituye cada hueco del rough cut por el bloque aceptado (`edit.mp4` con `usedRange`). Voces off (PA, radio remota) y sonidos firma se generan aparte y se mezclan en post. Música: un tema recurrente, fuera del prompt. La vista **Montaje** de la app reproduce cada corte con el plano, la toma, la viñeta y la escena de cada momento; desde ahí se acepta o rechaza cada toma (con sus reglas), se recorta el tramo usado y se vuelve a montar (solo se recodifican los bloques que cambian).
 
 ## Modo fotograma (sin guía 3D)
 
 Para escenas que el visor 3D no puede representar, como exteriores a caballo, cada plano se genera desde el fotograma aprobado de su viñeta de storyboard. Se usa `minimax/h3-max/image-to-video`: el fotograma es el primer fotograma exacto y la frase ya dicha va como `target_audio_url`. No hay vídeo guía ni hojas adjuntas, así que la identidad se sostiene con el fotograma y los descriptores del registro.
 
-1. `node scripts/storyboard-a-secuencia.mjs <proyecto> <storyboard> <secuencia>`: rellena la secuencia con un plano por viñeta.
+1. `node scripts/storyboard-a-secuencia.mjs [proyecto] <storyboard> <secuencia>`: rellena la secuencia con un plano por viñeta.
 2. Voces con ElevenLabs, en `scripts/bloques/voces.mjs`. Todo es de pago salvo el ensayo sin `--yes`. Siempre por fal, que incluye derechos de uso comercial: solo ve las voces de serie y las de la biblioteca pública de ElevenLabs, no las de una cuenta propia. El vídeo usa el audio de la frase tal cual y los labios lo siguen, así que la interpretación de la voz es la del vídeo.
    - `lineas <episodio> <secuencia>`: genera cada frase. Usa la estabilidad y las etiquetas por defecto del `casting.json` del personaje (campos `stability` y `tags`, p. ej. `"[quietly]"`) y, si la línea lo trae, las etiquetas de su campo `delivery`. Las etiquetas no se pronuncian: dirigen la entonación.
    - `prueba --voz <id> --texto "…" [--estabilidad n]`: una frase suelta para comparar voces, sin tocar el proyecto.
@@ -49,7 +53,7 @@ Se conservan los nombres de sección que H3 Max ya respeta (`subject_definitions
 
 ## Registro de intentos y coste
 
-Cada envío crea una entrada en `assets/<lote>/<bloque>/attempts.json` con prompt versionado (`prompt-vNN.txt`), referencias por tag, duración pedida y devuelta, segundos de inferencia, veredicto, reglas incumplidas y línea cambiada. `node scripts/bloques/informe.mjs <lote>` agrega el lote en `INFORME.md` con coste estimado según `precios.json`.
+Cada envío crea una entrada en `assets/<lote>/<bloque>/attempts.json` con prompt versionado (`prompt-vNN.txt`), referencias por tag, duración pedida y devuelta, segundos de inferencia, veredicto, reglas incumplidas y línea cambiada. `node scripts/bloques/informe.mjs <lote> [--project id]` agrega el lote en `INFORME.md` con coste estimado según `precios.json`.
 
 ## Decisión pendiente
 

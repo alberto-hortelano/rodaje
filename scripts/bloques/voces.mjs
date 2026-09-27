@@ -16,11 +16,11 @@
 //     "modelo": "minimax" en la entrada del idioma del casting.json.
 import fs from 'node:fs';import path from 'node:path';import {execFileSync} from 'node:child_process';
 import {load,save,dir} from '../../app/store.mjs';
-import {parseArgs,falClient,ffprobeDuration,writeJSON} from './lib.mjs';
+import {parseArgs,falClient,ffprobeDuration,writeJSON,cliProject,usageExit} from './lib.mjs';
 const {args:[cmd,...rest],opts}=parseArgs(process.argv.slice(2));
 const usage='Uso: voces.mjs lineas <episodio> <secuencia> | prueba --voz <id> --texto "…" [--modelo minimax] | disenar --personaje <id> --descripcion "…" --texto "…" | cambiar <episodio> <secuencia> <línea> <grabación>  [--project id] [--yes]';
-if(!['lineas','prueba','cambiar','disenar'].includes(cmd)){console.error(usage);process.exit(2);}
-const project=opts.project||'dead-air',base=dir(project);const p=load(project);
+if(!['lineas','prueba','cambiar','disenar'].includes(cmd))usageExit(usage);
+const {project}=cliProject({usage,opts}),base=dir(project);const p=load(project);
 // casting.json de la biblia: la entrada del idioma del proyecto cuya voz coincide con la del personaje.
 const castings=[];const bib=path.join(base,'biblia','personajes');if(fs.existsSync(bib))for(const d of fs.readdirSync(bib)){const f=path.join(bib,d,'voz','casting.json');if(fs.existsSync(f))castings.push(JSON.parse(fs.readFileSync(f,'utf8')));}
 const settingsFor=c=>castings.map(x=>x[p.language]).find(x=>x?.voice===c.voice)||{};

@@ -23,6 +23,8 @@ Además: **escucha** (la reacción empieza antes de que acabe la línea del otro
 
 ## Perfil maestro (campo `acting` del personaje, vía `scripts/perfil.mjs`)
 
+Los scripts imprimen el proyecto que usan (`Proyecto: X (fuente)`, en stderr); compruébalo antes de escribir con `perfil.mjs set`.
+
 Un párrafo de 150–220 palabras en inglés, con este orden: cuerpo como biografía (edad, complexión, postura, desgaste) · motor psicológico en una frase · perfil vocal dramático (cómo cambia bajo presión) · tics **con disparador** ("when someone says Brady, she exhales a cough-laugh over the radio") · un andar con nombre ("a low, rolling old-steward's walk") · la máscara y su grieta ("However, when the PA speaks, she looks at the mural for one beat") · un solo objeto de ternura. Sin vestuario, sin cámara, sin color: el perfil sobrevive a cualquier variante.
 
 ## Voice prompt (campo `voicePrompt`, va al registro como `<ID>_VOICE`)

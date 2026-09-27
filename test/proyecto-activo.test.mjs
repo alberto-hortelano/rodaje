@@ -1,0 +1,20 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
+const {readActiveProject,writeActiveProject,ACTIVE_FILE}=await import('../lib/proyecto-activo.mjs');
+const {DATA}=await import('../lib/paths.mjs');
+const data=()=>{const d=fs.mkdtempSync(path.join(os.tmpdir(),'rodaje-activo-'));for(const id of ['p1','p2']){fs.mkdirSync(path.join(d,id));fs.writeFileSync(path.join(d,id,'proyecto.json'),'{}');}return d;};
+const put=(d,text)=>fs.writeFileSync(path.join(d,ACTIVE_FILE),text);
+
+test('readActiveProject: null si falta, está roto, el id no vale o el proyecto no existe',()=>{const d=data();
+ assert.equal(readActiveProject(d),null);
+ for(const text of ['{roto','null','[]','{"project":42}','{"project":"../p1"}','{"project":"p9"}','{}'])put(d,text),assert.equal(readActiveProject(d),null,text);
+ put(d,'{"project":"p1","at":"x"}');assert.equal(readActiveProject(d),'p1');
+ fs.rmSync(path.join(d,'p1'),{recursive:true});assert.equal(readActiveProject(d),null);
+ assert.equal(readActiveProject(path.join(d,'no-existe')),null);});
+test('readActiveProject usa DATA por defecto',()=>{assert.equal(typeof DATA,'string');assert.doesNotThrow(()=>readActiveProject());});
+test('writeActiveProject escribe {project, at} sin temporales',()=>{const d=data();
+ assert.equal(writeActiveProject('p1',d),'p1');const v=JSON.parse(fs.readFileSync(path.join(d,ACTIVE_FILE),'utf8'));assert.deepEqual(Object.keys(v),['project','at']);assert.equal(v.project,'p1');assert.ok(!Number.isNaN(Date.parse(v.at)));
+ writeActiveProject('p2',d);assert.equal(readActiveProject(d),'p2');assert.deepEqual(fs.readdirSync(d).filter(f=>f.endsWith('.tmp')),[]);});
+test('writeActiveProject rechaza ids no válidos y proyectos inexistentes sin escribir',()=>{const d=data();
+ assert.throws(()=>writeActiveProject('../x',d),/ID de proyecto no válido/);assert.throws(()=>writeActiveProject(undefined,d),/ID de proyecto no válido/);assert.throws(()=>writeActiveProject('p9',d),/No existe el proyecto: p9/);
+ assert.equal(fs.existsSync(path.join(d,ACTIVE_FILE)),false);
+ writeActiveProject('p1',d);const before=fs.readFileSync(path.join(d,ACTIVE_FILE),'utf8');assert.throws(()=>writeActiveProject('p9',d));assert.equal(fs.readFileSync(path.join(d,ACTIVE_FILE),'utf8'),before);});

@@ -5,8 +5,10 @@ Instrucciones para el agente que genera las imágenes (ChatGPT en local). Todas 
 ## Qué generar
 
 ```
-node scripts/prompts-pendientes.mjs <proyecto> [filtro]
+node scripts/prompts-pendientes.mjs [proyecto] [filtro]
 ```
+
+Sin proyecto usa el activo en la app (o `RODAJE_PROJECT`) y lo imprime como «Proyecto: X»; para filtrar sin nombrar el proyecto, `--project <id> <filtro>`.
 
 Lista los prompts cuya imagen todavía no existe, con sus adjuntos. El filtro es un trozo de ruta: `sb-00`, `ambientes/cruce`, `09-girart`, etc. Genera solo lo que pida el usuario; si no concreta, todo lo que salga en la lista.
 
@@ -53,9 +55,9 @@ Negative: <lo que no debe aparecer>
   - qué has generado;
   - qué te has saltado y por qué;
   - cualquier imagen en la que no se haya cumplido algo del prompt: una persona de más, un pájaro, texto, un anacronismo o un personaje que no se parece a su hoja.
-  - Después, `node scripts/prompts-pendientes.mjs <proyecto> [filtro]` debe dar 0 pendientes en lo generado.
+  - Después, `node scripts/prompts-pendientes.mjs [proyecto] [filtro]` debe dar 0 pendientes en lo generado.
 
 ## Después (lo hace el usuario o Claude)
 
-- Viñetas de storyboard: `node scripts/storyboard-prompts.mjs <proyecto> <storyboard> --enlazar` enlaza los fotogramas en la app.
+- Viñetas de storyboard: `node scripts/storyboard-prompts.mjs [proyecto] <storyboard> --enlazar` enlaza los fotogramas en la app.
 - Refs de la biblia y ambientes: se enlazan en la app cuando se aprueban.

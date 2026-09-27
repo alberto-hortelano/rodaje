@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // Guía 3D por bloque (PROCESO.md, paso 6): motion.mp4 sin rótulos, frame-start.png y frame-mid.png.
-//   node scripts/bloques/render.mjs <lote> [bloque] [--project dead-air] [--labels] [--force]
+//   node scripts/bloques/render.mjs <lote> [bloque] [--project id] [--labels] [--force]
 // Necesita la app abierta (./abrir.sh) porque renderiza con /stage.js en Chrome headless. No genera nada de pago.
 import fs from 'node:fs';import path from 'node:path';import {spawn} from 'node:child_process';import {once} from 'node:events';
 import {chromium} from 'playwright';
-import {parseArgs,loadLote} from './lib.mjs';import {load} from '../../app/store.mjs';import {stageFallback} from '../../app/workflow.mjs';
-const {args:[lote,only],opts}=parseArgs(process.argv.slice(2));if(!lote){console.error('Uso: render.mjs <lote> [bloque] [--labels] [--force]');process.exit(2);}
-const L=loadLote(opts.project||'dead-air',lote);const project=stageFallback(L.project,L.project.stage?null:load(opts.project||'dead-air'));const port=process.env.PORT||4320,url=`http://127.0.0.1:${port}/`;
+import {parseArgs,loadLote,cliProject,usageExit} from './lib.mjs';import {load} from '../../app/store.mjs';import {stageFallback} from '../../app/workflow.mjs';
+const USAGE='Uso: render.mjs <lote> [bloque] [--project id] [--labels] [--force]';
+const {args:[lote,only],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
+const {project:id}=cliProject({usage:USAGE,opts});
+const L=loadLote(id,lote);const project=stageFallback(L.project,L.project.stage?null:load(id));const port=process.env.PORT||4320,url=`http://127.0.0.1:${port}/`;
 try{await fetch(url);}catch{console.error(`La app no responde en ${url}. Arranca ./abrir.sh y repite.`);process.exit(1);}
 const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
 try{for(const block of L.plan){if(only&&block.id!==only)continue;const dir=path.join(L.paths.out,block.id);fs.mkdirSync(dir,{recursive:true});if(fs.existsSync(path.join(dir,'motion.mp4'))&&!opts.force){console.log('ya existe',block.id);continue;}

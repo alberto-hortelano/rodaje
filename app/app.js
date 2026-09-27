@@ -29456,6 +29456,8 @@ async function act(action) {
   }
   if (a === "open") {
     p = await api("/api/project?id=" + b2);
+    api("/api/active", { project: b2 }).catch(() => {
+    });
     view = "overview";
     history.replaceState(null, "", "?project=" + b2);
     return render();

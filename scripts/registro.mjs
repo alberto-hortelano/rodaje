@@ -4,9 +4,14 @@
 //   node scripts/registro.mjs freeze [proyecto] TAG… fija sha256 y marca approved (el descriptor no puede estar vacío)
 //   node scripts/registro.mjs render [proyecto]       escribe REGISTRO.md
 //   node scripts/registro.mjs check  [proyecto]       falla si un prompt usa tags no aprobados, o un MAPA.md mide en metros
+// Proyecto: [proyecto] o --project id, RODAJE_PROJECT o el activo en la app. Con freeze, un proyecto con id en MAYÚSCULAS va con --project.
 import fs from 'node:fs';import path from 'node:path';import {createHash} from 'node:crypto';
-import {dir,load} from '../app/store.mjs';import {readJSON,writeJSON} from '../lib/json.mjs';import {tagFor} from '../app/workflow.mjs';
-const [cmd,...rest]=process.argv.slice(2);const project=rest[0]&&!/^[A-Z0-9_]+$/.test(rest[0])?rest.shift():'dead-air';
+import {dir,load} from '../app/store.mjs';import {readJSON,writeJSON} from '../lib/json.mjs';import {tagFor} from '../app/workflow.mjs';import {takeOption} from '../lib/args.mjs';import {cliProject,usageExit} from '../lib/cli.mjs';
+const USAGE='Uso: registro.mjs sync|render|check [proyecto] · freeze [proyecto] TAG… · [--project id]';
+const argv=process.argv.slice(2);const p0=takeOption(argv,'--project');const [cmd,...more]=argv;
+if(!['sync','freeze','render','check'].includes(cmd))usageExit(USAGE);
+const {project,args:rest}=cliProject({usage:USAGE,opts:{project:p0},args:more,positional:cmd==='freeze'?a=>a.length>0&&!/^[A-Z0-9_]+$/.test(a[0]):0});
+if(cmd==='freeze'&&!rest.length)usageExit(USAGE,'Falta el TAG');
 const base=dir(project),file=path.join(base,'registro.json');
 const reg=fs.existsSync(file)?readJSON(file):{version:1,summary:'',lighting:{},assets:{}};
 const save=()=>writeJSON(file,reg);
@@ -26,4 +31,4 @@ function check(){const errors=[];const assetsDir=path.join(base,'assets');
  for(const l of fs.existsSync(path.join(base,'ambientes'))?fs.readdirSync(path.join(base,'ambientes')):[]){const m=path.join(base,'ambientes',l,'MAPA.md');if(!fs.existsSync(m))continue;const md=fs.readFileSync(m,'utf8');const prompt=/```prompt\s*\n([\s\S]*?)```/.exec(md)?.[1]||'';if(/\b\d+([.,]\d+)?\s?(m|metres|meters|metros)\b/i.test(prompt))errors.push(`ambientes/${l}/MAPA.md: el párrafo del prompt mide en metros; usa landmarks`);if(!prompt.trim())errors.push(`ambientes/${l}/MAPA.md: falta el bloque \`\`\`prompt`);}
  for(const [tag,a] of Object.entries(reg.assets)){if(a.status==='approved'&&a.file&&a.sha256&&sha(a.file)!==a.sha256)errors.push(`${tag}: el fichero ${a.file} cambió desde que se congeló; abre una versión nueva`);if(a.kind==='location'&&a.status==='approved'&&!/not framing/i.test(a.descriptor||''))errors.push(`${tag}: el descriptor de localización debe terminar en "Controls geometry, materials, light and atmosphere ONLY — not framing."`);if(a.kind==='character'&&a.status==='approved'&&!/100% matches the reference/i.test(a.descriptor||''))errors.push(`${tag}: el descriptor de personaje debe terminar en "100% matches the reference."`);}
  if(errors.length){console.error(errors.join('\n'));process.exit(1);}console.log('check: sin errores');}
-({sync,freeze:()=>freeze(rest),render,check}[cmd]||(()=>{console.error('Uso: registro.mjs sync|freeze|render|check [proyecto] [TAG…]');process.exit(2);}))();
+({sync,freeze:()=>freeze(rest),render,check}[cmd])();

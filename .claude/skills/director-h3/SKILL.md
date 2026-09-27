@@ -15,6 +15,8 @@ Eres el director de prompts de un bloque. El generador `scripts/bloques/prompt.m
 4. `proyectos/<id>/capitulos/<episodio>/escenas/sNN.json` (interpretación de la escena, creada con la skill `interpretacion`).
 5. `assets/<lote>/<bloque>/frame-start.png` y `frame-mid.png` (la guía) y, si existe, `attempts.json` (para no repetir un cambio ya probado).
 
+Los scripts imprimen el proyecto que usan (`Proyecto: X (fuente)`, en stderr); compruébalo antes de dejar que escriban.
+
 ## Cuatro fases, en silencio
 
 **1. Deconstruir.** Solo este bloque. Elimina cualquier referencia a otros bloques ("como antes", "continúa"), personajes que no están en cuadro, props que no se ven y tags no usados.

@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 // Borrador de mapa espacial por landmarks para un ambiente (PROCESO.md, paso 4).
-//   node scripts/mapa-espacial.mjs [proyecto] <ambiente>       escribe ambientes/<ambiente>/MAPA.md si no existe (o MAPA.borrador.md si ya existe)
+//   node scripts/mapa-espacial.mjs [proyecto] <ambiente> [--project id]   escribe ambientes/<ambiente>/MAPA.md si no existe (o MAPA.borrador.md si ya existe)
 // Lee modelSpace.kit del escenario (y la sala de model.json si la hay), agrupa las piezas por nombre y las sitúa por
 // signo de X/Z respecto al centro de la sala. Claude convierte la tabla en el párrafo ```prompt``` (skill director-h3).
 import fs from 'node:fs';import path from 'node:path';
-import {dir,load} from '../app/store.mjs';
-const args=process.argv.slice(2);const project=args.length>1?args.shift():'dead-air';const id=args[0];
+import {dir,load} from '../app/store.mjs';import {takeOption} from '../lib/args.mjs';import {cliProject,usageExit} from '../lib/cli.mjs';
+const USAGE='Uso: mapa-espacial.mjs [proyecto] <ambiente> [--project id]';
+const argv=process.argv.slice(2);const p0=takeOption(argv,'--project');if(!argv.length)usageExit(USAGE);
+const {project,args:[id]}=cliProject({usage:USAGE,opts:{project:p0},args:argv,positional:1});if(!id)usageExit(USAGE);
 const p=load(project);const l=p.locations.find(l=>l.id===id);if(!l){console.error('Ambiente desconocido: '+id);process.exit(2);}
 const ms=l.modelSpace||{};let room=null;if(ms.model&&ms.room){const f=path.join(dir(project),ms.model);if(fs.existsSync(f)){const m=JSON.parse(fs.readFileSync(f,'utf8'));room=(m.rooms||[]).find(r=>r.id===ms.room)||null;}}
 const kit=ms.kit?.length?ms.kit:(room?.kit||[]);const size=ms.size||room?.size||[10,4,10];

@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // Informe del lote (PROCESO.md, paso 7): intentos, aceptación, reglas más violadas, segundos y coste.
-//   node scripts/bloques/informe.mjs <lote> [--project dead-air]
+//   node scripts/bloques/informe.mjs <lote> [--project id]
 // Falla si un intento rechazado no cita reglas o si un reintento no declara su línea cambiada (R26).
 import fs from 'node:fs';import path from 'node:path';
-import {parseArgs,loadLote,loadAttempts,prices} from './lib.mjs';
-const {args:[lote],opts}=parseArgs(process.argv.slice(2));if(!lote){console.error('Uso: informe.mjs <lote>');process.exit(2);}
-const L=loadLote(opts.project||'dead-air',lote);const price=prices();const rate=e=>price[e]?.price||0;
+import {parseArgs,loadLote,loadAttempts,prices,cliProject,usageExit} from './lib.mjs';
+const USAGE='Uso: informe.mjs <lote> [--project id]';
+const {args:[lote],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
+const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);const price=prices();const rate=e=>price[e]?.price||0;
 const rows=[],rules={},errors=[];let attempts=0,accepted=0,first=0,seconds=0,cost=0,inference=0;
 for(const b of L.plan){const list=loadAttempts(L.paths.out,b.id);attempts+=list.length;const ok=list.find(a=>a.verdict==='accepted');if(ok){accepted++;if(ok.n===1)first++;}
  for(const a of list){seconds+=a.durationRequested||0;cost+=(a.durationRequested||0)*rate(a.endpoint||'minimax/h3-max/reference-to-video');inference+=a.inferenceSeconds||0;for(const r of a.failedRules||[])rules[r]=(rules[r]||0)+1;

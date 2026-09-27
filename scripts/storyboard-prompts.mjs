@@ -1,5 +1,5 @@
 // Exporta las viñetas de un storyboard a prompts de imagen para ChatGPT y enlaza los fotogramas ya generados.
-// Uso: node scripts/storyboard-prompts.mjs <proyecto> <storyboard> [--enlazar]
+// Uso: node scripts/storyboard-prompts.mjs [proyecto] <storyboard> [--project id] [--enlazar]
 //   Escribe storyboards/<id>/prompts/<código>.prompt.txt (cabecera Destino/Adjuntar/Uso, prompt en inglés y Negative)
 //   con destino storyboards/<id>/render/<código>.png. No sobrescribe el prompt de una viñeta cuya imagen ya existe.
 //   Una viñeta con `version: N` se exporta como <código>-vN (prompt e imagen nuevos, el anterior se conserva).
@@ -8,11 +8,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {load, save, dir} from '../app/store.mjs';
 import {ROOT} from '../lib/paths.mjs';
+import {takeOption} from '../lib/args.mjs';
+import {cliProject, usageExit} from '../lib/cli.mjs';
 
+const USAGE = 'Uso: node scripts/storyboard-prompts.mjs [proyecto] <storyboard> [--project id] [--enlazar]';
 const args = process.argv.slice(2);
 const link = args.includes('--enlazar');
-const [projectId, sbId] = args.filter(a => !a.startsWith('--'));
-if (!projectId || !sbId) throw Error('Uso: node scripts/storyboard-prompts.mjs <proyecto> <storyboard> [--enlazar]');
+const p0 = takeOption(args, '--project');
+const pos = args.filter(a => !a.startsWith('--'));
+if (!pos.length) usageExit(USAGE);
+const {project: projectId, args: [sbId]} = cliProject({usage: USAGE, opts: {project: p0}, args: pos, positional: 1});
+if (!sbId) usageExit(USAGE);
 const p = load(projectId), base = dir(projectId), rel = path.relative(ROOT, base);
 const sb = (p.storyboards || []).find(b => b.id === sbId);
 if (!sb) throw Error('Storyboard no encontrado: ' + sbId);

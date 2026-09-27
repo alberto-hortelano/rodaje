@@ -1,26 +1,25 @@
-// Recorrido a pie automático por el caserón (adaptar lugares a cada entorno). Servidor de prueba en :4399.
+// Recorrido a pie automático por un entorno 3D (ENTORNOS-3D.md), contra una app arrancada (servidor de prueba con otro PORT).
+// Uso: node scripts/entornos/recorrer.mjs <carpeta> --entorno <id> [--project id] [--url http://127.0.0.1:4320]
+// Los pasos salen de `walkthrough` en los datos del entorno (model.json); cada uno registra la posición de la cámara y, con snapshot, una captura.
 import {chromium} from 'playwright';
-const SP=process.argv[2];
-const b=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+import {parseArgs} from '../../lib/args.mjs';
+import {cliProject,usageExit} from '../../lib/cli.mjs';
+import {environmentData,walkthroughSteps} from '../../lib/entorno3d.mjs';
+const USAGE='Uso: node scripts/entornos/recorrer.mjs <carpeta> --entorno <id> [--project id] [--url http://127.0.0.1:4320]';
+const {args:[SP],opts}=parseArgs(process.argv.slice(2));
+if(!SP||typeof opts.entorno!=='string'||(opts.url!==undefined&&typeof opts.url!=='string'))usageExit(USAGE);
+const {project}=cliProject({usage:USAGE,opts});
+let steps;try{steps=walkthroughSteps(environmentData(project,opts.entorno).data);}catch(e){console.error(e.message);process.exit(1);}
+const url=`${(opts.url||`http://127.0.0.1:${process.env.PORT||4320}`).replace(/\/$/,'')}/?project=${encodeURIComponent(project)}&view=environment&environment=${encodeURIComponent(opts.entorno)}`;
+const b=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const pg=await b.newPage({viewport:{width:1500,height:1100}});const errs=[];pg.on('pageerror',e=>errs.push(e.message));
-await pg.goto('http://127.0.0.1:4399/?project=conjurados&view=environment&environment=caseron');
+await pg.goto(url);
 await pg.waitForFunction(()=>window.rodaje?.environment,null,{timeout:30000});await pg.waitForTimeout(2500);
 const r=a=>a.map(v=>Math.round(v*100)/100);
-const log=async(label,fn)=>{const p=await pg.evaluate(fn);console.log(label.padEnd(34),JSON.stringify(r(p)));};
 const snap=async n=>{await pg.waitForTimeout(700);const el=await pg.$('.env3d-view');await el.screenshot({path:SP+'/'+n+'.png'});};
-await log('inicio (camino)',()=>{const e=window.rodaje.environment;e.setWalk(true);e.setView('puerta-fuera');return e.camera.position.toArray();});
-await snap('walk-1-camino');
-await log('W 6 s hacia la puerta',()=>window.rodaje.environment.walk(['w'],6));
-await snap('walk-2-patio');
-const tp=(x,y,z,yaw)=>{const e=window.rodaje.environment;e.setView('patio');e.camera.position.set(x,y,z);e.camera.rotation.set(0,yaw,0,'YXZ');};
-await log('portón: W 4 s desde el patio',()=>{const e=window.rodaje.environment;e.setView('porton');return e.walk(['w'],4);});
-await snap('walk-3-sala');
-await log('escalera: W 5 s desde el pie',()=>{const e=window.rodaje.environment;e.setView('sala');e.camera.position.set(5.8,1.62,1.1);e.camera.rotation.set(0,0,0,'YXZ');return e.walk(['w'],4);});
-await snap('walk-4-camara');
-await log('bodega: W 5 s desde la caja',()=>{const e=window.rodaje.environment;e.setView('sala');e.camera.position.set(1.4,1.62,-4.8);e.camera.rotation.set(0,-Math.PI/2,0,'YXZ');return e.walk(['w'],4);});
-await snap('walk-5-bodega');
-await log('cocina: W 4 s desde el patio',()=>{const e=window.rodaje.environment;e.setView('puerta-cocina');return e.walk(['w'],4);});
-await snap('walk-6-cocina');
-await log('muro: W 8 s hacia el oeste',()=>{const e=window.rodaje.environment;e.setView('patio');e.camera.position.set(-5,1.62,7);e.camera.rotation.set(0,Math.PI/2,0,'YXZ');return e.walk(['w'],8);});
-await log('no clip: E 2 s',()=>{const e=window.rodaje.environment;[...document.querySelectorAll('[data-a=noclip]')][0].click();return e.walk(['e'],2);});
+for(const s of steps){
+  const p=await pg.evaluate(s=>{const e=window.rodaje.environment;if(s.walk)e.setWalk(true);if(s.view)e.setView(s.view);if(s.position){e.camera.position.set(...s.position);e.camera.rotation.set(0,s.yawDeg*Math.PI/180,0,'YXZ');}if(s.noclip)document.querySelector('[data-a=noclip]').click();return s.keys?e.walk(s.keys,s.seconds):e.camera.position.toArray();},s);
+  console.log(s.label.padEnd(34),JSON.stringify(r(p)));
+  if(s.snapshot)await snap(s.snapshot);
+}
 console.log(errs.join('\n')||'sin errores');await b.close();

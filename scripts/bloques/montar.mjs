@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 // Montaje incremental del lote (PROCESO.md, paso 8): rough cut desde el primer día.
-//   node scripts/bloques/montar.mjs <lote> [--project dead-air] [--out nombre]
+//   node scripts/bloques/montar.mjs <lote> [--project id] [--out nombre]
 // Por bloque: el intento aceptado (recortado por usedRange) → edit.mp4; si no hay, el último generado sin rechazar (pendiente de
 // revisión) y, si tampoco, la guía 3D con las líneas rotuladas.
 // Salida: assets/<lote>/montaje/<nombre>.mp4 y cut.json (qué bloque viene de qué fuente y su tramo at/length en el montaje).
 // Los edit.mp4 cuya toma y tramo no han cambiado (edit.json) no se vuelven a codificar.
 import fs from 'node:fs';import path from 'node:path';
-import {parseArgs,loadLote,loadAttempts,ff,readJSON,writeJSON,ffprobeDuration} from './lib.mjs';import {chosenAttempt} from '../../app/workflow.mjs';
-const {args:[lote],opts}=parseArgs(process.argv.slice(2));if(!lote){console.error('Uso: montar.mjs <lote> [--out nombre]');process.exit(2);}
-const L=loadLote(opts.project||'dead-air',lote);const outDir=path.join(L.paths.out,'montaje');fs.mkdirSync(outDir,{recursive:true});
+import {parseArgs,loadLote,loadAttempts,ff,readJSON,writeJSON,ffprobeDuration,cliProject,usageExit} from './lib.mjs';import {chosenAttempt} from '../../app/workflow.mjs';
+const USAGE='Uso: montar.mjs <lote> [--project id] [--out nombre]';
+const {args:[lote],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
+const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);const outDir=path.join(L.paths.out,'montaje');fs.mkdirSync(outDir,{recursive:true});
 const existing=fs.readdirSync(outDir).filter(f=>/-cut-v\d+\.mp4$/.test(f)).length;const name=opts.out||`${lote}-cut-v${String(existing).padStart(2,'0')}`;
 const esc=s=>String(s).replace(/\\/g,'\\\\').replace(/'/g,'\u2019').replace(/:/g,'\\:').replace(/%/g,'\\%');
 const font='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';const entries=[],cut=[];let clock=0;

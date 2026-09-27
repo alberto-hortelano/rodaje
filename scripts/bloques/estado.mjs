@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // Estado de los intentos y registro del veredicto (PROCESO.md, paso 7).
-//   node scripts/bloques/estado.mjs <lote> [bloque]                                  consulta la cola, descarga generated-vNN.mp4 y result-vNN.json
+//   node scripts/bloques/estado.mjs <lote> [bloque] [--project id]                   consulta la cola, descarga generated-vNN.mp4 y result-vNN.json
 //   node scripts/bloques/estado.mjs <lote> <bloque> --verdict accepted|rejected \
 //        [--attempt N] [--rules R13,R15] [--notes "…"] [--range 0-9.6,11-14]       registra la revisión (un rechazo exige reglas)
 import fs from 'node:fs';import path from 'node:path';
-import {parseArgs,loadLote,loadAttempts,saveAttempts,readJSON,writeJSON,ffprobeDuration,falClient} from './lib.mjs';
-const {args:[lote,only],opts}=parseArgs(process.argv.slice(2));if(!lote){console.error('Uso: estado.mjs <lote> [bloque] [--verdict …]');process.exit(2);}
-const L=loadLote(opts.project||'dead-air',lote);
+import {parseArgs,loadLote,loadAttempts,saveAttempts,readJSON,writeJSON,ffprobeDuration,falClient,cliProject,usageExit} from './lib.mjs';
+const USAGE='Uso: estado.mjs <lote> [bloque] [--project id] [--verdict accepted|rejected --rules R13 --notes "…" --range 0-9.6]';
+const {args:[lote,only],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
+const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);
 if(opts.verdict){if(!only)throw Error('Indica el bloque');const list=loadAttempts(L.paths.out,only);const a=opts.attempt?list.find(x=>x.n===Number(opts.attempt)):list.at(-1);if(!a)throw Error('No hay intentos');if(a.status!=='done')throw Error(`El intento ${a.n} no está descargado (estado ${a.status})`);
  if(!['accepted','rejected'].includes(opts.verdict))throw Error('--verdict accepted|rejected');const rules=String(opts.rules||'').split(',').map(s=>s.trim()).filter(Boolean);
  if(opts.verdict==='rejected'&&!rules.length)throw Error('Un rechazo cita al menos una regla (R-número) o crea una nueva en REGLAS.md');
