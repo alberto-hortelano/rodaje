@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Planifica los bloques de una secuencia (PROCESO.md, paso 5) y congela el snapshot del proyecto en el lote.
-//   node scripts/bloques/planificar.mjs <lote> <episodio> <secuencia> [--project dead-air] [--max 15] [--min 5] [--force]
+//   node scripts/bloques/planificar.mjs <lote> <episodio> <secuencia> [--project dead-air] [--max 15] [--min 5] [--por-plano] [--force]
 // Reglas: bloque 5–15 s; nunca parte una línea; presupuesto de diálogo ≤ duración − 1 (R12); un trayecto por bloque (R10);
 // los planos MASTER van solos; corte preferente donde cambia la cobertura.
 import fs from 'node:fs';import path from 'node:path';
@@ -16,7 +16,9 @@ const lineEnd=l=>l.start+Math.max(words(l)/4,l.estimatedDuration||0)+0.3;
 function chunks(t){if(t.duration<=MAX)return [[0,t.duration]];const busy=t.lines.map(l=>[l.start,Math.min(t.duration,lineEnd(l))]);const out=[];let from=0;while(t.duration-from>MAX){let cut=null;for(let c=from+MAX;c>from+MIN;c-=.1){if(!busy.some(([a,b])=>a<c&&c<b)){cut=Math.round(c*100)/100;break;}}if(cut===null)throw Error(`El plano ${t.id} no admite un corte sin partir una línea; divídelo en el capítulo`);out.push([from,cut]);from=cut;}out.push([from,t.duration]);return out;}
 const isMaster=t=>t.master===true||/^MASTER\b/i.test(t.title||'');
 const isMove=t=>Object.keys(t.staging?.moves||{}).length>0;
-const units=[];for(const t of sequence.shots)for(const [from,to] of chunks(t))units.push({shot:t,from,to,solo:isMaster(t)||isMove(t),mode:isMaster(t)?'master':'block',rules:isMaster(t)?['MASTER']:isMove(t)?['R10']:[]});
+// --por-plano (modo fotograma, image-to-video): un bloque por plano, que arranca en el fotograma de su viñeta de storyboard.
+const perShot=!!opts['por-plano'];
+const units=[];for(const t of sequence.shots)for(const [from,to] of chunks(t))units.push({shot:t,from,to,solo:perShot||isMaster(t)||isMove(t),mode:perShot?'fotograma':isMaster(t)?'master':'block',rules:isMaster(t)?['MASTER']:isMove(t)?['R10']:[]});
 const blocks=[];let cur=null;const close=()=>{if(cur){blocks.push(cur);cur=null;}};
 for(const u of units){const len=u.to-u.from;const lines=u.shot.lines.filter(l=>l.start>=u.from&&l.start<u.to).map(l=>({...l,start:Math.round((l.start-u.from)*1000)/1000}));
  const fits=cur&&!cur.solo&&!u.solo&&cur.length+len<=MAX+1e-6&&cur.parts.every(pt=>pt.shot!==u.shot.id||pt.to<=u.from)&&dialogueBudget([...cur.allLines,...lines.map(l=>({...l,start:l.start+cur.length}))])<=cur.length+len-1+1e-6;

@@ -30,6 +30,7 @@ Negative: <lo que no debe aparecer>
 ## Para cada prompt
 
 1. **Referencias.** Lee todas las de «Adjuntar» y úsalas como imágenes de referencia en ese orden.
+   - El generador admite como mucho 5. Los prompts nuevos ya vienen con 5 o menos. Si alguno trae más, quita primero las de luz o de sitio (`render/A01.png`, las de ambientes), nunca una de personaje u objeto, y dilo en el informe.
    - Algunas rutas antiguas son relativas a la carpeta del proyecto: si `biblia/...` no existe, prueba con `proyectos/<proyecto>/biblia/...`.
    - «si ya existe» significa que es opcional.
 2. **Dependencias.** Si una referencia todavía no existe porque también está pendiente, genera antes esa. Ejemplos: las viñetas adjuntan `render/A01.png`, y los sublugares adjuntan la imagen base de su ambiente.

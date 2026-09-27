@@ -210,6 +210,316 @@ ${l3.spokenText || l3.text}`;
   } };
 }
 
+// app/montaje.source.js
+import { storyboardShot, chosenAttempt, blockAt } from "./workflow.mjs";
+async function mountMontaje(root, { project: p2, api: api2, toast: toast2 }) {
+  const esc2 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const media2 = (f2) => "/api/asset?project=" + p2.id + "&file=" + encodeURIComponent(f2);
+  const fmt = (s) => Number.isFinite(s) ? `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0")}` : "\u2013";
+  const store = (k, v2) => {
+    try {
+      if (v2 === void 0) return localStorage.getItem("rodaje-montaje-" + p2.id + "-" + k);
+      localStorage.setItem("rodaje-montaje-" + p2.id + "-" + k, v2);
+    } catch {
+    }
+  };
+  const lotes = await api2("/api/lotes?project=" + p2.id);
+  if (!lotes.length) {
+    root.innerHTML = '<div class="empty"><h2>A\xFAn no hay lotes</h2><p>Un lote aparece aqu\xED cuando <code>scripts/bloques/planificar.mjs</code> crea su <code>plan.json</code>; el montaje, al pasar <code>montar.mjs</code>.</p></div>';
+    return { dispose() {
+    } };
+  }
+  let lote, cut, timeline = [], current2 = null, selected = null, take = null, poll = null, disposed = false, rangeDraft = null;
+  const model = (e) => /h3-max/.test(e || "") ? "H3 Max" : /minimax\/h3\//.test(e || "") ? "H3" : (e || "").split("/").slice(-2).join("/");
+  const seqOf = () => p2.episodes.find((e) => e.id === lote.meta.episode)?.sequences.find((s) => s.id === lote.meta.sequence);
+  const episodeOf = () => p2.episodes.find((e) => e.id === lote.meta.episode);
+  const shotOf = (b2) => seqOf()?.shots.find((t2) => t2.id === b2.shots[0]);
+  const sbOf = (b2) => {
+    const t2 = shotOf(b2);
+    if (!t2?.storyboardShot) return null;
+    try {
+      return storyboardShot(p2, t2.storyboardShot).shot;
+    } catch {
+      return null;
+    }
+  };
+  const frameOf = (b2) => b2.refs?.image || shotOf(b2)?.storyboardRender || sbOf(b2)?.render;
+  const blockById = (id3) => lote.blocks.find((b2) => b2.id === id3);
+  const stateOf = (b2) => {
+    const { attempt, pending } = chosenAttempt(b2.attempts);
+    return attempt ? pending ? "pending" : "accepted" : "missing";
+  };
+  const stale = (b2) => {
+    const c = cut?.blocks.find((x2) => x2.block === b2.id), { attempt } = chosenAttempt(b2.attempts);
+    if (!c) return true;
+    if (!attempt) return c.source === "generated";
+    return c.attempt !== attempt.n || JSON.stringify(c.usedRange || null) !== JSON.stringify(attempt.usedRange || c.usedRange || null) || !!c.pending !== (attempt.verdict !== "accepted");
+  };
+  const label = { accepted: "Aceptada", pending: "Sin revisar", missing: "Sin toma" };
+  async function load(id3) {
+    lote = await api2(`/api/lote?project=${p2.id}&lote=${encodeURIComponent(id3)}`);
+    store("lote", id3);
+  }
+  function pickCut(name2) {
+    cut = lote.cuts.find((c) => c.name === name2) || lote.cuts.at(-1) || null;
+    timeline = cut?.blocks || [];
+  }
+  root.innerHTML = `<div class="mt">
+  <div class="mt-bar"><label>Lote<select data-mt="lote">${lotes.map((l3) => `<option value="${esc2(l3.id)}">${esc2(l3.id)} \xB7 ${l3.blocks} bloques</option>`).join("")}</select></label><label>Corte<select data-mt="cut"></select></label><div class="mt-bar-info"></div><button data-mt="montar" class="primary">Volver a montar</button></div>
+  <div class="mt-main"><div class="mt-player"><video data-mt="video" controls preload="metadata"></video><div class="mt-timeline" data-mt="timeline"></div><div class="mt-legend"><span class="mt-dot accepted"></span>Aceptada <span class="mt-dot pending"></span>Sin revisar <span class="mt-dot missing"></span>Sin toma <span class="mt-dot stale"></span>Cambiada desde el montaje \xB7 <kbd>Espacio</kbd> reproducir \xB7 <kbd>\u2190</kbd><kbd>\u2192</kbd> plano anterior/siguiente \xB7 <kbd>E</kbd> editar el plano actual</div></div>
+  <aside class="mt-side" data-mt="side"></aside></div>
+  <section class="mt-editor panel" data-mt="editor"></section></div>`;
+  const $3 = (s) => root.querySelector(`[data-mt="${s}"]`), video = $3("video");
+  const lastLote = store("lote");
+  $3("lote").value = lotes.some((l3) => l3.id === lastLote) ? lastLote : lotes[0].id;
+  function renderBar() {
+    $3("cut").innerHTML = lote.cuts.length ? lote.cuts.map((c) => `<option value="${esc2(c.name)}" ${c === cut ? "selected" : ""}>${esc2(c.name)} \xB7 ${fmt(c.duration)}</option>`).join("") : "<option>Sin montar</option>";
+    const changed = lote.blocks.filter(stale).length, counts = lote.blocks.reduce((n, b2) => (n[stateOf(b2)]++, n), { accepted: 0, pending: 0, missing: 0 }), m2 = lote.montando;
+    root.querySelector(".mt-bar-info").innerHTML = `<span class="pill ok">${counts.accepted} aceptados</span> <span class="pill warn">${counts.pending} sin revisar</span>${counts.missing ? ` <span class="pill">${counts.missing} sin toma</span>` : ""}${changed ? ` <span class="pill mt-stale-pill">${changed} cambiados desde este corte</span>` : ""}${m2?.state === "running" ? ' <span class="pill">Montando\u2026</span>' : m2?.state === "failed" ? ` <span class="pill warn" title="${esc2(m2.error)}">El montaje fall\xF3</span>` : ""}`;
+    $3("montar").disabled = m2?.state === "running";
+  }
+  function renderTimeline() {
+    const total = cut?.duration || timeline.at(-1)?.end || 1;
+    $3("timeline").innerHTML = timeline.map((c) => {
+      const b2 = blockById(c.block), sb = b2 && sbOf(b2);
+      return `<button class="mt-seg ${b2 ? stateOf(b2) : "missing"} ${b2 && stale(b2) ? "stale" : ""} ${selected === c.block ? "selected" : ""}" style="width:${(c.end - c.start) / total * 100}%" data-seg="${esc2(c.block)}" title="${esc2(c.block)}${sb ? " \xB7 " + esc2(sb.code + " " + sb.title) : ""} \xB7 ${fmt(c.start)}\u2013${fmt(c.end)}"><span>${esc2(sb?.code || c.block)}</span></button>`;
+    }).join("") + '<i class="mt-head"></i>';
+    root.querySelectorAll("[data-seg]").forEach((el) => el.onclick = (e) => {
+      const c = timeline.find((x2) => x2.block === el.dataset.seg), r = el.getBoundingClientRect();
+      video.currentTime = c.start + (c.end - c.start) * Math.max(0, Math.min(0.98, (e.clientX - r.left) / r.width));
+      tick();
+      select2(c.block);
+    });
+    moveHead();
+  }
+  function moveHead() {
+    const h = root.querySelector(".mt-head"), total = cut?.duration || timeline.at(-1)?.end || 1;
+    if (h) h.style.left = video.currentTime / total * 100 + "%";
+  }
+  function renderSide() {
+    const el = $3("side");
+    if (!current2) {
+      el.innerHTML = '<p class="tiny">Sin corte montado. Pulsa \xABVolver a montar\xBB.</p>';
+      return;
+    }
+    const b2 = blockById(current2.block), t2 = b2 && shotOf(b2), sb = b2 && sbOf(b2), s = seqOf(), e = episodeOf(), a = b2 && b2.attempts.find((x2) => x2.n === current2.attempt), f2 = b2 && frameOf(b2);
+    el.innerHTML = `<div class="mt-now"><div class="row between"><h2>${esc2(sb?.code || current2.block)} \xB7 ${esc2(sb?.title || t2?.title || "")}</h2><span class="pill ${b2 ? { accepted: "ok", pending: "warn" }[stateOf(b2)] || "" : ""}">${b2 ? label[stateOf(b2)] : ""}</span></div>
+   <p class="tiny">Bloque ${esc2(current2.block)} \xB7 ${fmt(video.currentTime - current2.start)} de ${fmt(current2.end - current2.start)} \xB7 montaje ${fmt(video.currentTime)}</p>
+   ${f2 ? `<figure class="mt-frame"><img src="${media2(f2)}" alt="Vi\xF1eta ${esc2(sb?.code || "")}"><figcaption>Vi\xF1eta del storyboard \xB7 primer fotograma</figcaption></figure>` : ""}
+   <dl class="mt-facts">
+    <dt>Toma</dt><dd>${current2.source === "generated" ? `v${current2.attempt} \xB7 ${esc2(model(a?.endpoint))}${current2.usedRange ? ` \xB7 tramo ${current2.usedRange.map(([x2, y2]) => `${x2}\u2013${y2} s`).join(", ")}` : ""}${current2.pending ? " \xB7 <b>sin revisar</b>" : ""}` : current2.source === "guide" ? "Gu\xEDa 3D" : "Sin toma"}${b2 && stale(b2) ? '<br><span class="mt-stale-text">Ha cambiado desde este corte</span>' : ""}</dd>
+    ${sb?.camera ? `<dt>C\xE1mara</dt><dd>${esc2(sb.camera)}</dd>` : ""}
+    <dt>Acci\xF3n</dt><dd>${esc2(sb?.action || t2?.description || "")}</dd>
+    ${sb?.sound ? `<dt>Sonido</dt><dd>${esc2(sb.sound)}</dd>` : ""}
+    ${(sb?.dialogue || []).length ? `<dt>Di\xE1logo</dt><dd>${sb.dialogue.map((d2) => `<b>${esc2(p2.characters.find((c) => c.id === d2.character)?.name || d2.character || "")}</b> ${esc2(d2.text || d2)}`).join("<br>")}</dd>` : ""}
+    <dt>Escena</dt><dd>${esc2(e?.title || "")} / ${esc2(s?.title || lote.meta.sequence)}</dd>
+   </dl><button data-mt="edit-current">Editar este plano \u2193</button></div>`;
+    el.querySelector('[data-mt="edit-current"]').onclick = () => {
+      select2(current2.block);
+      $3("editor").scrollIntoView({ behavior: "smooth" });
+    };
+  }
+  function tick() {
+    const c = blockAt(timeline, video.currentTime);
+    moveHead();
+    if (c !== current2) {
+      current2 = c;
+      renderSide();
+      if (video.paused && c) select2(c.block, false);
+    } else if (current2) root.querySelector(".mt-now .tiny").textContent = `Bloque ${current2.block} \xB7 ${fmt(video.currentTime - current2.start)} de ${fmt(current2.end - current2.start)} \xB7 montaje ${fmt(video.currentTime)}`;
+  }
+  function select2(id3, force = true) {
+    if (!force && selected === id3) return;
+    selected = id3;
+    const b2 = blockById(id3);
+    const { attempt } = chosenAttempt(b2.attempts);
+    take = (attempt || b2.attempts.filter((a) => a.video).at(-1))?.n ?? null;
+    rangeDraft = null;
+    renderEditor();
+    root.querySelectorAll(".mt-seg").forEach((el) => el.classList.toggle("selected", el.dataset.seg === id3));
+  }
+  function renderEditor() {
+    const el = $3("editor"), b2 = selected && blockById(selected);
+    if (!b2) {
+      el.innerHTML = '<p class="tiny">Elige un plano en la l\xEDnea de tiempo.</p>';
+      return;
+    }
+    const sb = sbOf(b2), a = b2.attempts.find((x2) => x2.n === take), f2 = frameOf(b2), dirOf = b2.direccion;
+    const range = rangeDraft || a?.usedRange || null, dur = a?.durationReturned || a?.durationRequested || b2.length;
+    el.innerHTML = `<div class="row between"><div><div class="eyebrow">Editar plano</div><h2>${esc2(sb?.code || b2.id)} \xB7 ${esc2(sb?.title || "")} <span class="tiny">bloque ${esc2(b2.id)} \xB7 ${b2.length} s en el plan</span></h2></div><div class="row"><button data-ed="prev">\u2190 Anterior</button><button data-ed="next">Siguiente \u2192</button></div></div>
+   <div class="mt-takes">${b2.attempts.map((x2) => `<button class="mt-take ${x2.verdict || (x2.video ? "pending" : "none")} ${x2.n === take ? "active" : ""}" data-take="${x2.n}" ${x2.video ? "" : "disabled"} title="${esc2(x2.changedLine || "Primer intento")}">v${x2.n} \xB7 ${esc2(model(x2.endpoint))} ${x2.verdict === "accepted" ? "\u2713" : x2.verdict === "rejected" ? "\u2715" : x2.video ? "\xB7" : "(sin v\xEDdeo)"}</button>`).join("") || '<span class="tiny">Sin intentos enviados.</span>'}</div>
+   ${a ? `<div class="mt-compare"><div><video data-ed="take" controls preload="metadata" src="${media2(`assets/${lote.id}/${b2.id}/${a.video}`)}"></video><div class="mt-range" data-ed="range"></div>
+    <div class="row mt-range-tools"><button data-ed="in">[ Entrada aqu\xED</button><button data-ed="out">Salida aqu\xED ]</button><button data-ed="full">Tramo del plan</button><span class="tiny">Tramo: <b data-ed="range-text">${range ? range.map(([x2, y2]) => `${x2.toFixed(2)}\u2013${y2.toFixed(2)} s`).join(", ") : `0\u2013${Math.min(dur, b2.length)} s (por defecto)`}</b> \xB7 v\xEDdeo ${fmt(dur)}</span></div></div>
+    <div>${f2 ? `<figure class="mt-frame"><img src="${media2(f2)}" alt="Vi\xF1eta"><figcaption>Primer fotograma pedido</figcaption></figure>` : ""}
+     <dl class="mt-facts"><dt>Modelo</dt><dd>${esc2(a.endpoint)}</dd><dt>Duraci\xF3n</dt><dd>pedida ${a.durationRequested} s \xB7 devuelta ${a.durationReturned?.toFixed?.(2) ?? "\u2013"} s</dd><dt>Cambio</dt><dd>${esc2(a.changedLine || "Primer intento")}</dd>${a.verdict ? `<dt>Veredicto</dt><dd>${a.verdict === "accepted" ? "Aceptada" : "Rechazada"}${a.failedRules?.length ? " \xB7 " + esc2(a.failedRules.join(", ")) : ""}${a.notes ? " \xB7 " + esc2(a.notes) : ""}</dd>` : ""}</dl></div></div>
+   <div class="mt-review"><div class="mt-rules">${lote.rules.map((r) => `<label class="mt-rule" title="${esc2(r.title)}"><input type="checkbox" value="${esc2(r.id)}" ${a.failedRules?.includes(r.id) ? "checked" : ""}>${esc2(r.id)} ${esc2(r.title)}</label>`).join("")}</div>
+    <label>Notas<textarea data-ed="notes" rows="2">${esc2(a.notes || "")}</textarea></label>
+    <div class="row"><button class="primary" data-ed="accept">\u2713 Aceptar y usar esta toma</button><button data-ed="reject">\u2715 Rechazar (marca las reglas que falla)</button>${a.verdict ? '<button data-ed="clear">Quitar veredicto</button>' : ""}</div></div>
+    <details data-ed="prompt"><summary>Prompt enviado (${esc2(a.prompt || "prompt.txt")})</summary><pre class="mt-pre">Cargando\u2026</pre></details>` : ""}
+   ${dirOf ? `<details><summary>Direcci\xF3n del bloque</summary><dl class="mt-facts">${["camera", "action", "acting", "local"].filter((k) => dirOf[k]).map((k) => `<dt>${{ camera: "C\xE1mara", action: "Acci\xF3n", acting: "Actuaci\xF3n", local: "Restricciones" }[k]}</dt><dd>${esc2(typeof dirOf[k] === "string" ? dirOf[k] : JSON.stringify(dirOf[k], null, 1))}</dd>`).join("")}</dl></details>` : ""}`;
+    const q = (s) => el.querySelector(`[data-ed="${s}"]`);
+    q("prev").onclick = () => step(-1);
+    q("next").onclick = () => step(1);
+    el.querySelectorAll("[data-take]").forEach((x2) => x2.onclick = () => {
+      take = Number(x2.dataset.take);
+      rangeDraft = null;
+      renderEditor();
+    });
+    if (!a) return;
+    const tv = q("take");
+    const drawRange = () => {
+      const r = rangeDraft || a.usedRange || [[0, Math.min(dur, b2.length)]];
+      q("range").innerHTML = r.map(([x2, y2]) => `<i style="left:${x2 / dur * 100}%;width:${(y2 - x2) / dur * 100}%"></i>`).join("") + `<b style="left:${tv.currentTime / dur * 100}%"></b>`;
+    };
+    drawRange();
+    tv.ontimeupdate = drawRange;
+    q("range").onclick = (e) => {
+      const r = e.currentTarget.getBoundingClientRect();
+      tv.currentTime = (e.clientX - r.left) / r.width * dur;
+    };
+    const setRange = (r) => {
+      rangeDraft = r;
+      q("range-text").textContent = r.map(([x2, y2]) => `${x2.toFixed(2)}\u2013${y2.toFixed(2)} s`).join(", ") + " (sin guardar: acepta para usarlo)";
+      drawRange();
+    };
+    const cur = () => (rangeDraft || a.usedRange || [[0, Math.min(dur, b2.length)]])[0];
+    q("in").onclick = () => {
+      const [, y2] = cur(), x2 = Math.round(tv.currentTime * 100) / 100;
+      setRange([[x2, y2 > x2 ? y2 : Math.min(dur, x2 + b2.length)]]);
+    };
+    q("out").onclick = () => {
+      const [x2] = cur(), y2 = Math.round(tv.currentTime * 100) / 100;
+      if (y2 <= x2) return toast2("La salida tiene que ir despu\xE9s de la entrada");
+      setRange([[x2, y2]]);
+    };
+    q("full").onclick = () => setRange([[0, Math.round(Math.min(dur, b2.length) * 100) / 100]]);
+    const send = async (verdict) => {
+      const rules = [...el.querySelectorAll(".mt-rule input:checked")].map((i2) => i2.value);
+      try {
+        b2.attempts = await api2("/api/lote-review", { project: p2.id, lote: lote.id, block: b2.id, attempt: a.n, verdict, rules: verdict === "rejected" ? rules : [], notes: q("notes").value.trim(), range: verdict === "accepted" && rangeDraft ? rangeDraft : void 0 });
+        toast2(verdict === "accepted" ? `v${a.n} aceptada para ${sb?.code || b2.id}` : verdict === "rejected" ? `v${a.n} rechazada` : "Veredicto quitado");
+        rangeDraft = null;
+        renderBar();
+        renderTimeline();
+        renderSide();
+        renderEditor();
+      } catch (e) {
+        toast2(e.message);
+      }
+    };
+    q("accept").onclick = () => send("accepted");
+    q("reject").onclick = () => send("rejected");
+    if (q("clear")) q("clear").onclick = () => send(null);
+    q("prompt").ontoggle = async (e) => {
+      if (!e.target.open || e.target.dataset.loaded) return;
+      e.target.dataset.loaded = 1;
+      const r = await fetch(media2(`assets/${lote.id}/${b2.id}/${a.prompt || "prompt.txt"}`));
+      e.target.querySelector("pre").textContent = r.ok ? await r.text() : "No se encuentra el prompt.";
+    };
+  }
+  function step(d2) {
+    const i2 = lote.blocks.findIndex((b2) => b2.id === selected), n = lote.blocks[Math.max(0, Math.min(lote.blocks.length - 1, i2 + d2))];
+    if (!n) return;
+    const c = timeline.find((x2) => x2.block === n.id);
+    if (c && video.paused) {
+      video.currentTime = c.start + 0.01;
+      tick();
+    }
+    select2(n.id);
+  }
+  async function open(id3, cutName) {
+    await load(id3);
+    pickCut(cutName);
+    $3("lote").value = id3;
+    renderBar();
+    video.src = cut ? media2(cut.file) : "";
+    current2 = null;
+    renderTimeline();
+    video.currentTime = 0;
+    tick();
+    if (!current2) renderSide();
+    select2(selected && blockById(selected) ? selected : lote.blocks[0].id);
+    watch();
+  }
+  function watch() {
+    clearInterval(poll);
+    if (lote.montando?.state !== "running") return;
+    poll = setInterval(async () => {
+      if (disposed) return clearInterval(poll);
+      const before = lote.cuts.length;
+      const fresh = await api2(`/api/lote?project=${p2.id}&lote=${encodeURIComponent(lote.id)}`).catch(() => null);
+      if (!fresh || fresh.montando?.state === "running") return;
+      clearInterval(poll);
+      if (fresh.montando?.state === "failed") {
+        lote = fresh;
+        renderBar();
+        return toast2("El montaje fall\xF3: " + fresh.montando.error);
+      }
+      toast2(fresh.montando?.output || "Montaje terminado");
+      const keep = selected;
+      await open(lote.id, fresh.cuts.at(-1)?.name);
+      if (keep && fresh.cuts.length > before) select2(keep);
+    }, 3e3);
+  }
+  $3("lote").onchange = (e) => {
+    selected = null;
+    open(e.target.value).catch((err) => toast2(err.message));
+  };
+  $3("cut").onchange = (e) => {
+    pickCut(e.target.value);
+    video.src = media2(cut.file);
+    current2 = null;
+    renderBar();
+    renderTimeline();
+    tick();
+  };
+  $3("montar").onclick = async () => {
+    try {
+      lote.montando = await api2("/api/montar", { project: p2.id, lote: lote.id });
+      renderBar();
+      toast2("Montando: se crea un corte nuevo; los planos sin cambios no se vuelven a codificar.");
+      watch();
+    } catch (e) {
+      toast2(e.message);
+    }
+  };
+  video.ontimeupdate = tick;
+  video.onseeked = tick;
+  video.onpause = () => {
+    if (current2) select2(current2.block, false);
+  };
+  const keys = (e) => {
+    if (e.target.closest?.("input,textarea,select") || !root.isConnected) return;
+    if (e.key === " " && !e.target.closest?.("video,button")) {
+      e.preventDefault();
+      video.paused ? video.play() : video.pause();
+    } else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      if (e.target.closest?.("video")) return;
+      e.preventDefault();
+      const i2 = timeline.indexOf(current2), c = timeline[Math.max(0, Math.min(timeline.length - 1, i2 + (e.key === "ArrowRight" ? 1 : -1)))];
+      if (c) {
+        video.currentTime = c.start + 0.01;
+        tick();
+        select2(c.block);
+      }
+    } else if (e.key === "e" || e.key === "E") {
+      if (current2) {
+        select2(current2.block);
+        $3("editor").scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
+  document.addEventListener("keydown", keys);
+  await open($3("lote").value);
+  return { dispose() {
+    disposed = true;
+    clearInterval(poll);
+    document.removeEventListener("keydown", keys);
+    video.removeAttribute("src");
+    video.load();
+  } };
+}
+
 // node_modules/@marijn/find-cluster-break/src/index.js
 var rangeFrom = [];
 var rangeTo = [];
@@ -7296,7 +7606,7 @@ function posAtCoordsImprecise(view2, contentRect, block, x2, y2) {
   let content2 = view2.state.sliceDoc(block.from, block.to);
   return block.from + findColumn(content2, into, view2.state.tabSize);
 }
-function blockAt(view2, pos, side) {
+function blockAt2(view2, pos, side) {
   let line = view2.lineBlockAt(pos);
   if (Array.isArray(line.type)) {
     let best;
@@ -7315,7 +7625,7 @@ function blockAt(view2, pos, side) {
   return line;
 }
 function moveToLineBoundary(view2, start, forward, includeWrap) {
-  let block = blockAt(view2, start.head, start.assoc || -1);
+  let block = blockAt2(view2, start.head, start.assoc || -1);
   let coords = !includeWrap || block.type != BlockType.Text || !(view2.lineWrapping || block.widgetLineBreaks) ? null : view2.coordsAtPos(start.assoc < 0 && start.head > block.from ? start.head - 1 : start.head);
   if (coords) {
     let editorRect = view2.dom.getBoundingClientRect();
@@ -12385,7 +12695,7 @@ function rectanglesForRange(view2, className, range) {
   let lineElt = content2.querySelector(".cm-line"), lineStyle = lineElt && window.getComputedStyle(lineElt);
   let leftSide = contentRect.left + (lineStyle ? parseInt(lineStyle.paddingLeft) + Math.min(0, parseInt(lineStyle.textIndent)) : 0);
   let rightSide = contentRect.right - (lineStyle ? parseInt(lineStyle.paddingRight) : 0);
-  let startBlock = blockAt(view2, from, 1), endBlock = blockAt(view2, to, -1);
+  let startBlock = blockAt2(view2, from, 1), endBlock = blockAt2(view2, to, -1);
   let visualStart = startBlock.type == BlockType.Text ? startBlock : null;
   let visualEnd = endBlock.type == BlockType.Text ? endBlock : null;
   if (visualStart && (view2.lineWrapping || startBlock.widgetLineBreaks))
@@ -28569,7 +28879,7 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { variants, zones, channels, storyboardShot, storyboardPrompt, storyboardToEpisode, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, locationEnvironment, environmentChoice } from "./workflow.mjs";
+import { variants, zones, channels, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, locationEnvironment, environmentChoice } from "./workflow.mjs";
 import { createStage as createStage2 } from "./stage.js";
 var state;
 var p = null;
@@ -28629,10 +28939,10 @@ var sbShots = (b2) => (b2.sequences || []).flatMap((s) => s.shots || []);
 var sbDur = (n) => `${Math.floor(n / 60)} min ${Math.round(n % 60)} s`;
 var sbRefPath = (r) => typeof r === "string" ? r : r.path;
 function sbMove(shotId2, targetShotId, seqId) {
-  const { sequence: from, shot: t2 } = storyboardShot(p, shotId2);
+  const { sequence: from, shot: t2 } = storyboardShot2(p, shotId2);
   let to, anchor;
   if (targetShotId) {
-    const r = storyboardShot(p, targetShotId);
+    const r = storyboardShot2(p, targetShotId);
     to = r.sequence;
     anchor = r.shot;
   } else to = (p.storyboards || []).flatMap((b2) => b2.sequences).find((s) => s.id === seqId);
@@ -28782,7 +29092,7 @@ async function render() {
   const generation = ++renderGeneration;
   stage?.dispose();
   stage = null;
-  const nav2 = p ? [["overview", "Vista del proyecto"], ["ideas", "Historia e ideas"], ["characters", "Personajes y voces"], ["locations", "Ambientes"], ["environments", "Entornos 3D"], ...p.shipModel ? [["ship", "Nave \xB7 modelo 3D"]] : [], ["storyboards", "Storyboards"], ["outline", "Escaleta"], ["episodes", p?.type === "serie" ? "Cap\xEDtulos" : "Actos"], ["issues", "Pendientes"], ["jobs", "Generaciones"]] : [["library", "Mis proyectos"], ["jobs", "Generaciones"]];
+  const nav2 = p ? [["overview", "Vista del proyecto"], ["ideas", "Historia e ideas"], ["characters", "Personajes y voces"], ["locations", "Ambientes"], ["environments", "Entornos 3D"], ...p.shipModel ? [["ship", "Nave \xB7 modelo 3D"]] : [], ["storyboards", "Storyboards"], ["outline", "Escaleta"], ["episodes", p?.type === "serie" ? "Cap\xEDtulos" : "Actos"], ["montaje", "Montaje"], ["issues", "Pendientes"], ["jobs", "Generaciones"]] : [["library", "Mis proyectos"], ["jobs", "Generaciones"]];
   $2("#app").innerHTML = `<div class="shell"><aside class="sidebar"><div class="brand"><i class="logo"></i> rodaje<span style="font-size:10px;align-self:end">LOCAL</span></div><div class="eyebrow">Estudio de historias</div>${p ? `<div class="projectname">${esc(p.name)}</div>` : ""}${nav2.map(([v2, l3]) => btn(l3, "nav:" + v2, view === v2 || v2 === "environments" && view === "environment" ? "active" : "")).join("")}<div class="bottom">${p ? btn("\u2190 Todos los proyectos", "library") : ""}${btn("\u2699 Ajustes", "settings")}<small>De la primera idea<br>a la \xFAltima toma.</small></div></aside><main class="main"><header class="topbar"><span>${p ? esc(p.name) + " / " + esc(nav2.find((n) => n[0] === view)?.[1] || (view === "storyboard" ? "Storyboard" : view === "environment" ? "Entornos 3D" : "Estudio de plano")) : "TU ESPACIO DE PRODUCCI\xD3N"}</span><div class="row"><span class="pill">${state.settings.configured ? "\u25CF Generaci\xF3n conectada" : "\u25CB Generaci\xF3n sin configurar"}</span>${p ? btn("Actualizar", "refresh") + btn("Guardar cambios", "save") : ""}</div></header><div class="workspace" id="workspace"></div></main></div>`;
   {
     const a = $2(".sidebar button.active"), s = a?.parentElement;
@@ -28825,7 +29135,7 @@ async function render() {
   }
   if (view === "characters" || view === "locations") {
     const chars = view === "characters", list = chars ? p.characters : p.locations;
-    html3 = heading2(chars ? "El reparto." : "Los lugares de la historia.", chars ? "Identidad visual, vestuario y voz de cada personaje." : "Referencias de luz, color y geograf\xEDa para cada escenario.", btn(chars ? "+ Personaje" : "+ Escenario", chars ? "new-character" : "new-location", "primary")) + `<div class="grid${chars ? " cast" : ""}">${list.map((c) => `<article class="card">${image(c.image)}<div class="inner"><div class="row between"><h2>${esc(c.name)}</h2><span class="pill">${chars ? "PERSONAJE" : esc(c.kind)}</span></div><p>${esc(c.description.slice(0, 160))}</p>${chars ? `<small>Voz: ${esc(c.voice || "Sin asignar")}</small>${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}` : ""}<div class="actions">${btn("Editar", (chars ? "character:" : "location:") + c.id)}${btn("Subir imagen", (chars ? "upload-character:" : "upload-location:") + c.id)}${btn("Generar hoja", (chars ? "gen-character:" : "gen-location:") + c.id)}</div>${chars ? `<div class="actions">${btn("Probar voz", "voice:" + c.id)}${btn("Subir muestra", "upload-voice:" + c.id)}${c.kind !== "voice" ? btn("Variantes por zona", "variants:" + c.id) : ""}</div>` : ""}${chars && c.variants ? `<div class="actions">${Object.entries(c.variants).map(([v2, x2]) => `<div class="note"><b>${esc(variants.find(([id3]) => id3 === v2)?.[1] || v2)}</b><p>${esc((x2.description || "").slice(0, 85))}</p>${x2.image ? `<img style="height:90px;width:120px;object-fit:cover" src="${media(x2.image)}" alt="${esc(v2)}">` : ""}<div class="row">${btn("Generar", "gen-variant:" + c.id + ":" + v2)}${btn("Subir", "upload-variant:" + c.id + ":" + v2)}</div></div>`).join("")}</div>` : ""}${!chars && c.modelSpace?.snapshot ? `<div class="note"><b>Encuadre 3D</b><p class="tiny">La imagen principal define el aspecto; esta vista fija la distribuci\xF3n y la c\xE1mara.</p><img src="${media(c.modelSpace.snapshot)}" alt="Encuadre 3D de ${esc(c.name)}" style="width:100%;height:auto;object-fit:contain">${c.modelSpace.room !== "exterior" ? btn("Visitar estancia en 3D", "visit-room:" + c.modelSpace.room) : ""}</div>` : ""}${c.images?.length > 1 ? `<label>Versi\xF3n visual<select data-version="${c.id}" data-kind="${view}">${opts(c.images.map((f2, i2) => [f2, "Versi\xF3n " + (i2 + 1)]), c.image)}</select></label>` : ""}</div></article>`).join("") || `<div class="empty"><h2>${chars ? "Presenta a tu protagonista." : "Define el primer escenario."}</h2><p>Puedes generar im\xE1genes o importar las que ya tienes.</p></div>`}</div>`;
+    html3 = heading2(chars ? "El reparto." : "Los lugares de la historia.", chars ? "Identidad visual, vestuario y voz de cada personaje." : "Referencias de luz, color y geograf\xEDa para cada escenario.", btn(chars ? "+ Personaje" : "+ Escenario", chars ? "new-character" : "new-location", "primary")) + `<div class="grid${chars ? " cast" : ""}">${list.map((c) => `<article class="card">${image(c.image)}<div class="inner"><div class="row between"><h2>${esc(c.name)}</h2><span class="pill">${chars ? "PERSONAJE" : esc(c.kind)}</span></div><p>${esc(c.description.slice(0, 160))}</p>${chars ? `<small>Voz: ${esc(c.voice || "Sin asignar")}${/^[A-Za-z0-9]{20}$/.test(c.voice || "") ? ` \xB7 <a href="https://elevenlabs.io/app/voice-library?voiceId=${esc(c.voice)}" target="_blank" rel="noopener">escuchar en ElevenLabs \u2197</a>` : ""}</small>${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}` : ""}<div class="actions">${btn("Editar", (chars ? "character:" : "location:") + c.id)}${btn("Subir imagen", (chars ? "upload-character:" : "upload-location:") + c.id)}${btn("Generar hoja", (chars ? "gen-character:" : "gen-location:") + c.id)}</div>${chars ? `<div class="actions">${btn("Probar voz", "voice:" + c.id)}${btn("Subir muestra", "upload-voice:" + c.id)}${c.kind !== "voice" ? btn("Variantes por zona", "variants:" + c.id) : ""}</div>` : ""}${chars && c.variants ? `<div class="actions">${Object.entries(c.variants).map(([v2, x2]) => `<div class="note"><b>${esc(variants.find(([id3]) => id3 === v2)?.[1] || v2)}</b><p>${esc((x2.description || "").slice(0, 85))}</p>${x2.image ? `<img style="height:90px;width:120px;object-fit:cover" src="${media(x2.image)}" alt="${esc(v2)}">` : ""}<div class="row">${btn("Generar", "gen-variant:" + c.id + ":" + v2)}${btn("Subir", "upload-variant:" + c.id + ":" + v2)}</div></div>`).join("")}</div>` : ""}${!chars && c.modelSpace?.snapshot ? `<div class="note"><b>Encuadre 3D</b><p class="tiny">La imagen principal define el aspecto; esta vista fija la distribuci\xF3n y la c\xE1mara.</p><img src="${media(c.modelSpace.snapshot)}" alt="Encuadre 3D de ${esc(c.name)}" style="width:100%;height:auto;object-fit:contain">${c.modelSpace.room !== "exterior" ? btn("Visitar estancia en 3D", "visit-room:" + c.modelSpace.room) : ""}</div>` : ""}${c.images?.length > 1 ? `<label>Versi\xF3n visual<select data-version="${c.id}" data-kind="${view}">${opts(c.images.map((f2, i2) => [f2, "Versi\xF3n " + (i2 + 1)]), c.image)}</select></label>` : ""}</div></article>`).join("") || `<div class="empty"><h2>${chars ? "Presenta a tu protagonista." : "Define el primer escenario."}</h2><p>Puedes generar im\xE1genes o importar las que ya tienes.</p></div>`}</div>`;
   }
   const sbFrame = (t2) => {
     const main = t2.render || t2.sketch;
@@ -28866,6 +29176,7 @@ async function render() {
     const e = p.episodes.find((e2) => e2.id === episodeId);
     html3 = heading2(esc(e?.title || "Ensayo 3D"), "Guion completo \xB7 decorados provisionales \xB7 voces del navegador. Los tiempos son orientativos.", btn("\u2190 Cap\xEDtulos", "nav:episodes")) + '<div id="rehearsal"></div>';
   }
+  if (view === "montaje") html3 = heading2("Montaje.", "El corte de cada lote, plano a plano: la toma generada, la vi\xF1eta del storyboard y la escena. Revisa las tomas, recorta y vuelve a montar.") + '<div id="montaje"></div>';
   if (view === "jobs") html3 = heading2("Generaciones.", "Trabajos persistentes, versiones y resultados de producci\xF3n.", btn("Actualizar", "refresh")) + `<section class="panel">${jobsHTML()}</section>`;
   if (view === "shot") {
     const { e, s, t: t2 } = current();
@@ -28878,6 +29189,7 @@ async function render() {
   }
   $2("#workspace").innerHTML = html3;
   enableImageViewer();
+  if (view === "montaje") stage = await mountMontaje($2("#montaje"), { project: p, api, toast });
   if (view === "rehearsal") stage = await mountRehearsal($2("#rehearsal"), { project: p, episode: p.episodes.find((e) => e.id === episodeId) });
   if (view === "ship") {
     if (p.shipModel) {
@@ -29018,7 +29330,7 @@ async function render() {
     dirty = true;
   });
   document.querySelectorAll("[data-sb-render]").forEach((el) => el.onchange = async () => {
-    storyboardShot(p, el.dataset.sbRender).shot.render = el.value;
+    storyboardShot2(p, el.dataset.sbRender).shot.render = el.value;
     await save();
     await render();
   });
@@ -29215,7 +29527,7 @@ async function act(action) {
   }
   if (["new-character", "character", "new-location", "location"].includes(a)) {
     const chars = a.includes("character"), list = chars ? p.characters : p.locations, item = list.find((c2) => c2.id === b2) || { id: id2(), name: "", description: "", voice: "", kind: "forest", color: "#88a899" };
-    modal(chars ? "Hoja de personaje" : "Escenario", input("Nombre", "name", item.name) + area(chars ? "Identidad, vestuario, personalidad y voz" : "Aspecto, iluminaci\xF3n y referencias de espacio", "description", item.description) + (chars ? area("Aspecto para prompts de imagen y v\xEDdeo (breve; si se deja vac\xEDo se deduce de la descripci\xF3n)", "look", item.look || "") + select("Presencia", "kind", [["person", "Personaje f\xEDsico"], ["voice", "Solo voz / megafon\xEDa"]], item.kind || "person") + input("Voz ElevenLabs \xB7 nombre o ID", "voice", item.voice) + input("Color del mu\xF1eco 3D", "color", item.color, "color") : select("Base de previsualizaci\xF3n", "kind", [["forest", "Exterior \xB7 bosque"], ["interior", "Interior"], ["city", "Exterior \xB7 ciudad"], ["empty", "Espacio libre"]], item.kind) + select("Entorno 3D (sustituye la base en los planos)", "environment", [["", "Ninguno"], ...(p.environments || []).filter((e) => e.builder && e.data).map((e) => [e.id, e.name])], item.environment || "")), async (f2) => {
+    modal(chars ? "Hoja de personaje" : "Escenario", input("Nombre", "name", item.name) + area(chars ? "Identidad, vestuario, personalidad y voz" : "Aspecto, iluminaci\xF3n y referencias de espacio", "description", item.description) + (chars ? area("Aspecto para prompts de imagen y v\xEDdeo (breve; si se deja vac\xEDo se deduce de la descripci\xF3n)", "look", item.look || "") + select("Presencia", "kind", [["person", "Personaje f\xEDsico"], ["voice", "Solo voz / megafon\xEDa"]], item.kind || "person") + input("Voz ElevenLabs \xB7 nombre o ID", "voice", item.voice) + `<p class="tiny">Voz actual${item.voice ? `: ${esc(item.voice)}` : " sin asignar"}.${/^[A-Za-z0-9]{20}$/.test(item.voice || "") ? ` <a href="https://elevenlabs.io/app/voice-library?voiceId=${esc(item.voice)}" target="_blank" rel="noopener">Escuchar en ElevenLabs \u2197</a>` : ""}</p>` + (item.sample ? `<div class="note"><b>Muestra de voz</b><audio controls src="${media(item.sample)}"></audio></div>` : '<p class="tiny">Sin muestra de voz: \xABProbar voz\xBB en la tarjeta del personaje la genera.</p>') + input("Color del mu\xF1eco 3D", "color", item.color, "color") : select("Base de previsualizaci\xF3n", "kind", [["forest", "Exterior \xB7 bosque"], ["interior", "Interior"], ["city", "Exterior \xB7 ciudad"], ["empty", "Espacio libre"]], item.kind) + select("Entorno 3D (sustituye la base en los planos)", "environment", [["", "Ninguno"], ...(p.environments || []).filter((e) => e.builder && e.data).map((e) => [e.id, e.name])], item.environment || "")), async (f2) => {
       if (!f2.name.trim()) throw Error("Escribe un nombre");
       if (!chars && !f2.environment) {
         delete f2.environment;
@@ -29372,7 +29684,7 @@ async function act(action) {
     return;
   }
   if (a === "sb-move") {
-    const { sequence: s0, shot: t3 } = storyboardShot(p, b2);
+    const { sequence: s0, shot: t3 } = storyboardShot2(p, b2);
     const i2 = s0.shots.indexOf(t3), j = i2 + Number(c);
     if (j < 0 || j >= s0.shots.length) return;
     s0.shots.splice(i2, 1);
@@ -29381,14 +29693,14 @@ async function act(action) {
     return render();
   }
   if (a === "delete-sb-shot") {
-    const { sequence: s0, shot: t3 } = storyboardShot(p, b2);
+    const { sequence: s0, shot: t3 } = storyboardShot2(p, b2);
     if (!confirm(`\xBFEliminar la vi\xF1eta \xAB${t3.code || t3.title}\xBB?`)) return;
     s0.shots = s0.shots.filter((x2) => x2.id !== b2);
     await save();
     return render();
   }
   if (a === "upload-sb-sketch" || a === "upload-sb-render") {
-    const { shot: t3 } = storyboardShot(p, b2);
+    const { shot: t3 } = storyboardShot2(p, b2);
     return upload("image/png,image/jpeg,image/webp", (r) => {
       if (a === "upload-sb-sketch") t3.sketch = r.file;
       else {
@@ -29445,7 +29757,7 @@ async function act(action) {
     return;
   }
   if (a === "sb-prompt") {
-    const { storyboard: b0, sequence: s0, shot: t3 } = storyboardShot(p, b2);
+    const { storyboard: b0, sequence: s0, shot: t3 } = storyboardShot2(p, b2);
     const text2 = storyboardPrompt(p, b0, s0, t3), images = [t3.sketch, ...(t3.references || []).map(sbRefPath)].filter(Boolean);
     modal("Prompt de imagen \xB7 " + (t3.code || t3.title), `<textarea readonly style="min-height:300px;font-size:12px">${esc(text2)}</textarea><p class="tiny">Im\xE1genes que se env\xEDan, en orden: ${images.length ? images.map((f2, i2) => `${i2 + 1}. ${esc(f2)}`).join(" \xB7 ") : "ninguna (generaci\xF3n sin referencia)"}</p>`, async () => {
       await navigator.clipboard.writeText(text2);
@@ -29601,7 +29913,7 @@ try {
   const params = new URLSearchParams(location.search), project = params.get("project");
   if (project) {
     p = await api("/api/project?id=" + encodeURIComponent(project));
-    view = ["overview", "ideas", "characters", "locations", "episodes", "jobs", "shot", "ship", "rehearsal", "storyboards", "storyboard", "outline", "issues", "environments", "environment"].includes(params.get("view")) ? params.get("view") : "overview";
+    view = ["overview", "ideas", "characters", "locations", "episodes", "jobs", "shot", "ship", "rehearsal", "storyboards", "storyboard", "outline", "issues", "environments", "environment", "montaje"].includes(params.get("view")) ? params.get("view") : "overview";
     episodeId = params.get("episode");
     storyboardId = params.get("storyboard");
     environmentId = params.get("environment");

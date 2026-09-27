@@ -1,0 +1,17 @@
+// Vista Montaje: lotes de assets/<lote>/ con sus bloques, intentos y cortes; veredictos y remontaje (scripts/bloques/montar.mjs).
+import fs from 'node:fs';import path from 'node:path';import {execFile} from 'node:child_process';
+import {ROOT,dir,read,write} from './store.mjs';import {parseRules,reviewAttempt,cutTimeline} from './workflow.mjs';
+const name=/^[\w.-]+$/,check=(v,what)=>{if(typeof v!=='string'||!name.test(v))throw Error(what+' no válido');return v;};
+const loteDir=(project,lote)=>path.join(dir(project),'assets',check(lote,'Lote'));
+const jsonOr=(f,fallback)=>fs.existsSync(f)?read(f):fallback;
+const running=new Map();
+function cuts(project,lote){const d=path.join(loteDir(project,lote),'montaje');if(!fs.existsSync(d))return [];return fs.readdirSync(d).filter(f=>f.endsWith('.cut.json')).sort().map(f=>{const c=read(path.join(d,f)),base=f.replace(/\.cut\.json$/,'');return {name:base,file:`assets/${lote}/montaje/${base}.mp4`,at:c.at,duration:c.duration,blocks:cutTimeline(c,read(path.join(loteDir(project,lote),'plan.json')))};}).filter(c=>fs.existsSync(path.join(dir(project),c.file)));}
+const rules=project=>parseRules(fs.existsSync(path.join(dir(project),'REGLAS.md'))?fs.readFileSync(path.join(dir(project),'REGLAS.md'),'utf8'):'');
+const status=(project,lote)=>running.get(project+'/'+lote)||null;
+export function listLotes(project){const base=path.join(dir(project),'assets');if(!fs.existsSync(base))return [];return fs.readdirSync(base).filter(l=>name.test(l)&&fs.existsSync(path.join(base,l,'plan.json'))).map(l=>{const meta=jsonOr(path.join(base,l,'lote.json'),{}),plan=read(path.join(base,l,'plan.json'));const c=cuts(project,l);return {id:l,episode:meta.episode,sequence:meta.sequence,created:meta.created,blocks:plan.length,cuts:c.map(({name,file,at,duration})=>({name,file,at,duration}))};}).sort((a,b)=>String(b.created).localeCompare(String(a.created)));}
+export function loteDetail(project,lote){const d=loteDir(project,lote);if(!fs.existsSync(path.join(d,'plan.json')))throw Error('Lote desconocido');const meta=jsonOr(path.join(d,'lote.json'),{}),plan=read(path.join(d,'plan.json')),direccion=jsonOr(path.join(d,'direccion.json'),{});
+ return {id:lote,meta,rules:rules(project),cuts:cuts(project,lote),montando:status(project,lote),blocks:plan.map(b=>({id:b.id,length:b.length,duration:b.duration,mode:b.mode,shots:b.parts.map(x=>x.shot),refs:jsonOr(path.join(d,b.id,'refs.json'),null),attempts:jsonOr(path.join(d,b.id,'attempts.json'),[]),direccion:direccion[b.id]||null}))};}
+export function review(project,lote,block,opts){const d=loteDir(project,lote),f=path.join(d,check(block,'Bloque'),'attempts.json');if(!fs.existsSync(f))throw Error('El bloque no tiene intentos');const b=read(path.join(d,'plan.json')).find(x=>x.id===block);
+ const list=reviewAttempt(read(f),{...opts,length:b?.length,known:rules(project).map(r=>r.id)});write(f,list);return list;}
+export function montar(project,lote){const key=project+'/'+lote;if(running.get(key)?.state==='running')throw Error('Ya se está montando este lote');loteDir(project,lote);const job={state:'running',started:new Date().toISOString()};running.set(key,job);
+ execFile(process.execPath,[path.join(ROOT,'scripts/bloques/montar.mjs'),lote,'--project',project],{cwd:ROOT,maxBuffer:1<<24},(err,stdout,stderr)=>{Object.assign(job,{state:err?'failed':'done',finished:new Date().toISOString(),output:String(stdout).trim().split('\n').at(-1),error:err?String(stderr||err.message).trim().split('\n').slice(-3).join('\n'):null});});return job;}
