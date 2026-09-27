@@ -9,15 +9,23 @@ export function polyContains(poly, x, z) { let inside = false; for (let i = 0, j
 export function polyDist(poly, x, z) { if (polyContains(poly, x, z)) return 0; let best = Infinity; for (let i = 0; i < poly.length; i++) best = Math.min(best, segDist(x, z, poly[i], poly[(i + 1) % poly.length])); return best; }
 export function centroid(poly) { return poly.reduce((a, [x, z]) => [a[0] + x / poly.length, a[1] + z / poly.length], [0, 0]); }
 // Desplaza cada lado hacia dentro una distancia y corta los lados contiguos: el polígono de la cara interior de un muro.
+// Lados de longitud 0 (vértice duplicado): se saltan y el vértice repite el punto del vecino. Lados colineales: el vértice es el punto desplazado del lado.
 export function insetPolygon(poly, dist) {
   const c = centroid(poly), n = poly.length, lines = [];
   for (let i = 0; i < n; i++) {
     const [ax, az] = poly[i], [bx, bz] = poly[(i + 1) % n], L = Math.hypot(bx - ax, bz - az);
+    if (!(L > 0)) { lines.push(null); continue; }
     let nx = -(bz - az) / L, nz = (bx - ax) / L;
     if (nx * (c[0] - ax) + nz * (c[1] - az) < 0) { nx = -nx; nz = -nz; }
     lines.push([ax + nx * dist, az + nz * dist, bx - ax, bz - az]);
   }
-  return lines.map((l, i) => { const m = lines[(i + n - 1) % n], den = m[2] * l[3] - m[3] * l[2]; const t = ((l[0] - m[0]) * l[3] - (l[1] - m[1]) * l[2]) / den; return [m[0] + t * m[2], m[1] + t * m[3]]; });
+  if (!lines.some(Boolean)) return poly.map(p => [...p]);
+  const next = i => { while (!lines[i % n]) i++; return lines[i % n]; }, prev = i => { while (!lines[(i + n) % n]) i--; return lines[(i + n) % n]; };
+  return lines.map((_, i) => {
+    const l = next(i), m = prev(i - 1), den = m[2] * l[3] - m[3] * l[2];
+    if (Math.abs(den) <= 1e-9 * Math.hypot(m[2], m[3]) * Math.hypot(l[2], l[3])) return [l[0], l[1]];
+    const t = ((l[0] - m[0]) * l[3] - (l[1] - m[1]) * l[2]) / den; return [m[0] + t * m[2], m[1] + t * m[3]];
+  });
 }
 // x de un lado (a→b) a la altura z, y z a la x.
 export const xAtZ = ([ax, az], [bx, bz], z) => ax + (bx - ax) * (z - az) / (bz - az);

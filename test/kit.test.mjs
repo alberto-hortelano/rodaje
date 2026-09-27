@@ -37,6 +37,23 @@ test('sin document: proceduralTextures vacío y applyImageTextures no pide URLs'
 test('compatible con el objeto de opciones',()=>{const state={pendon:'x'},url=f=>'/a/'+f,sky=()=>{},kit=createKit(T,{state,textures:true,textureUrl:url,onSky:sky});assert.equal(kit.isKit,true);assert.equal(kit.state,state);assert.equal(kit.textures,true);assert.equal(kit.textureUrl,url);assert.equal(kit.onSky,sky);assert.equal(kit.tile,2);
  const d=createKit(T,{palette:P});assert.deepEqual(d.state,{});assert.equal(d.textures,false);assert.equal(d.textureUrl,null);assert.equal(d.onSky,null);});
 
+test('insetPolygon: lados colineales y vértice duplicado dan puntos finitos',()=>{const sq=[[0,0],[4,0],[4,4],[0,4]],rh=[[0,0],[4,2],[2,6],[-2,4]],IN=insetPolygon(sq,1),ins=(P,i,p)=>[...P.slice(0,i),p,...P.slice(i)],r5=Math.sqrt(5);
+ // Cada caso: nombre, polígono, distancia y lo esperado = el resultado sin ese vértice más el punto intermedio desplazado.
+ for(const [name,P,dist,want] of [['horizontal',ins(sq,1,[2,0]),1,ins(IN,1,[2,1])],['vertical',ins(sq,2,[4,2]),1,ins(IN,2,[3,2])],['hacia fuera',ins(sq,1,[2,0]),-1,ins(insetPolygon(sq,-1),1,[2,-1])],
+  ['diagonal',ins(rh,1,[2,1]),1,ins(insetPolygon(rh,1),1,[2-1/r5,1+2/r5])],['duplicado',ins(sq,1,[4,0]),1,ins(IN,1,IN[1])],['duplicado en el cierre',[...sq,[0,0]],1,[...IN,IN[0]]]]){
+  const got=insetPolygon(P,dist);assert.ok(got.flat().every(Number.isFinite),name);close(got.flat(),want.flat(),name,1e-9);}
+ assert.deepEqual(insetPolygon([[1,1],[1,1],[1,1]],1),[[1,1],[1,1],[1,1]]);});
+// Reproducción de alberto-hortelano/conjurados#3: el editor de plantas añade un vértice en un lado alineado con los ejes de la cocina.
+const cocina=[];
+for(const id of fs.existsSync(path.join(ROOT,'proyectos'))?fs.readdirSync(path.join(ROOT,'proyectos')).sort():[]){const pj=path.join(ROOT,'proyectos',id,'proyecto.json');if(!fs.existsSync(pj))continue;let p;try{p=JSON.parse(fs.readFileSync(pj,'utf8'));}catch{continue;}
+ for(const e of p.environments||[]){if(typeof e.builder!=='string'||typeof e.data!=='string')continue;const file=path.join(ROOT,'proyectos',id,e.builder),dataFile=path.join(ROOT,'proyectos',id,e.data);if(!fs.existsSync(file)||!fs.existsSync(dataFile))continue;
+  let data;try{data=JSON.parse(fs.readFileSync(dataFile,'utf8'));}catch{continue;}const fi=data.dims?.planta?.formas?.findIndex?.(f=>f.id==='cocina')??-1;if(fi>=0&&fs.readFileSync(file,'utf8').includes('insetPolygon'))cocina.push({at:`${id}/${e.id}`,file,data,fi});}}
+test('insetPolygon: la cocina con un vértice en los lados 1 y 2 construye sin NaN',{skip:!cocina.length&&'sin planta con cocina'},async()=>{const {anadirVertice}=await import('../viewer/planta.mjs');
+ for(const c of cocina){const {build}=await import(c.file),K=c.data.dims.planta.formas[c.fi].puntos;
+  for(const lado of [1,2]){const a=K[lado],b=K[(lado+1)%K.length],m=[(a[0]+b[0])/2,(a[1]+b[1])/2].map(v=>Math.round(v*10)/10),data=structuredClone(c.data);data.dims.planta=anadirVertice(c.data.dims.planta,c.fi,lado,m);
+   const w=console.warn,e=console.error;console.warn=console.error=()=>{};let root;try{root=build(T,data,createKit(T,{textures:false}));}finally{console.warn=w;console.error=e;}
+   const bad=[];root.traverse(o=>{if(o.isMesh&&!o.geometry.attributes.position.array.every(Number.isFinite))bad.push(o.name||o.parent?.name);});assert.deepEqual(bad,[],`${c.at} lado ${lado}`);}}});
+
 // ── Equivalencia con el constructor antiguo del caserón: se buscan en proyectos/ los constructores con el bloque de herramientas propio.
 const legacy=[];
 for(const id of fs.existsSync(path.join(ROOT,'proyectos'))?fs.readdirSync(path.join(ROOT,'proyectos')):[]){const pj=path.join(ROOT,'proyectos',id,'proyecto.json');if(!fs.existsSync(pj))continue;let p;try{p=JSON.parse(fs.readFileSync(pj,'utf8'));}catch{continue;}
