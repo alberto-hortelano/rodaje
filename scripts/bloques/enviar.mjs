@@ -6,7 +6,7 @@
 //   node scripts/bloques/enviar.mjs <lote> <bloque> [--project id] [--changed "línea nueva"] [--changed-ref "…"] [--modelo h3] [--yes]
 // Sin --yes es un ensayo: muestra lo que enviaría y no gasta créditos. Cada envío crea prompt-vNN.txt, request-vNN.json
 // y una entrada en attempts.json. A partir del segundo intento exige --changed (una línea); rechaza el séptimo.
-import fs from 'node:fs';import path from 'node:path';import {ffmpeg} from '../../lib/media.mjs';
+import fs from 'node:fs';import path from 'node:path';import {ffmpeg} from '../../lib/media.mjs';import {uploadFile,submit} from '../../lib/fal.mjs';
 import {parseArgs,readJSON,writeJSON,falClient,cliProject,usageExit} from './lib.mjs';import {loadLote,loadAttempts,saveAttempts} from '../../lib/lotes.mjs';
 const USAGE='Uso: enviar.mjs <lote> <bloque> [--project id] [--changed "línea"] [--changed-ref "…"] [--modelo h3] [--yes]';
 const {args:[lote,blockId],opts}=parseArgs(process.argv.slice(2));if(!lote||!blockId)usageExit(USAGE);
@@ -32,7 +32,7 @@ const input=frameMode?{duration:refs.durationRequested,resolution:'768P',prompt_
 console.log(frameMode?`${lote}/${blockId} intento ${n} (fotograma): pide ${input.duration} s · primer fotograma ${refs.image} · voz ${voiceTrack?path.relative(L.paths.base,voiceTrack):'—'}`:`${lote}/${blockId} intento ${n}: pide ${input.duration} s · imágenes ${refs.images.map(i=>i.tag).join(', ')} · audios ${refs.audios.map(a=>a.tag).join(', ')||'—'} · vídeo motion.mp4`);
 if(!opts.yes){console.log('Ensayo: no se ha enviado nada. Añade --yes para enviar (coste ≈ '+(input.duration*(opts.modelo==='h3'?0.06:0.08)).toFixed(2)+' $ a 768P'+(opts.modelo==='h3'?', H3 original':'')+').');process.exit(0);}
 const client=await falClient();const cacheFile=L.paths.uploads;const cache=fs.existsSync(cacheFile)?readJSON(cacheFile):{};
-async function upload(rel,type){const abs=path.join(L.paths.base,rel);const key=rel+':'+fs.statSync(abs).mtimeMs;if(!cache[key]){cache[key]=await client.storage.upload(new File([fs.readFileSync(abs)],path.basename(abs),{type}));writeJSON(cacheFile,cache);}return cache[key];}
+async function upload(rel,type){const abs=path.join(L.paths.base,rel);const key=rel+':'+fs.statSync(abs).mtimeMs;if(!cache[key]){cache[key]=await uploadFile(client,abs,{type});writeJSON(cacheFile,cache);}return cache[key];}
 if(frameMode){input.image_url=await upload(refs.image,'image/png');if(refs.endImage)input.end_image_url=await upload(refs.endImage,'image/png');if(voiceTrack)input.target_audio_url=await upload(path.relative(L.paths.base,voiceTrack),'audio/wav');}
 else{const motionRel=path.relative(L.paths.base,motion);
 input.reference_image_urls=await Promise.all(refs.images.map(i=>upload(i.file,'image/png')));input.reference_video_urls=[await upload(motionRel,'video/mp4')];if(refs.audios.length)input.reference_audio_urls=await Promise.all(refs.audios.map(a=>upload(a.file,'audio/wav')));}
@@ -40,5 +40,5 @@ const promptName=`prompt-v${String(n).padStart(2,'0')}.txt`,requestName=`request
 // --modelo h3: el H3 original (image-to-video) en lugar de H3 Max; mismos parámetros, 0,06 $/s a 768P.
 const endpoint=frameMode?(opts.modelo==='h3'?'minimax/h3/image-to-video':'minimax/h3-max/image-to-video'):'minimax/h3-max/reference-to-video';const attempt={n,at:new Date().toISOString(),endpoint,prompt:promptName,request:requestName,refs:frameMode?[refs.image,...(refs.endImage?['fin:'+refs.endImage]:[]),...(voiceTrack?['voz.wav']:[])]:[...refs.images.map(i=>i.tag),...refs.audios.map(a=>a.tag)],durationRequested:input.duration,resolution:'768P',changedLine:opts.changed||(opts['changed-ref']?'[referencias] '+opts['changed-ref']:null),status:'submitting'};
 writeJSON(path.join(dir,requestName),{status:'submitting',endpoint,input});attempts.push(attempt);saveAttempts(L.paths.out,blockId,attempts);
-const q=await client.queue.submit(endpoint,{input});attempt.requestId=q.request_id;attempt.status='submitted';writeJSON(path.join(dir,requestName),{status:'submitted',endpoint,input,requestId:q.request_id});saveAttempts(L.paths.out,blockId,attempts);
+const q=await submit(client,endpoint,input);attempt.requestId=q.request_id;attempt.status='submitted';writeJSON(path.join(dir,requestName),{status:'submitted',endpoint,input,requestId:q.request_id});saveAttempts(L.paths.out,blockId,attempts);
 console.log('ENVIADO',blockId,'intento',n,q.request_id,'→ node scripts/bloques/estado.mjs',lote,blockId);

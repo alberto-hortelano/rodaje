@@ -14,7 +14,7 @@
 //     Diseña una voz nueva con MiniMax (3 $ por voz) y la guarda como candidata en el casting.json del personaje, con su muestra.
 //     Para conservarla hay que usarla en una generación de voz antes de 7 días. Para adoptarla: voz del personaje = su ID y
 //     "modelo": "minimax" en la entrada del idioma del casting.json.
-import fs from 'node:fs';import path from 'node:path';import {ffmpeg} from '../../lib/media.mjs';
+import fs from 'node:fs';import path from 'node:path';import {ffmpeg} from '../../lib/media.mjs';import {download} from '../../lib/fal.mjs';import {speak,changeVoice,designVoice} from '../../lib/tts.mjs';
 import {load,save,dir} from '../../app/store.mjs';
 import {parseArgs,falClient,ffprobeDuration,writeJSON,cliProject,usageExit} from './lib.mjs';
 const {args:[cmd,...rest],opts}=parseArgs(process.argv.slice(2));
@@ -25,13 +25,9 @@ const {project}=cliProject({usage,opts}),base=dir(project);const p=load(project)
 const castings=[];const bib=path.join(base,'biblia','personajes');if(fs.existsSync(bib))for(const d of fs.readdirSync(bib)){const f=path.join(bib,d,'voz','casting.json');if(fs.existsSync(f))castings.push(JSON.parse(fs.readFileSync(f,'utf8')));}
 const settingsFor=c=>castings.map(x=>x[p.language]).find(x=>x?.voice===c.voice)||{};
 const toWav=(mp3)=>{const wav=mp3.replace(/\.[a-z0-9]+$/,'.wav');ffmpeg(['-i',mp3,'-ar','44100','-ac','1',wav]);return wav;};
-// Solo por fal: da derechos de uso comercial (la cuenta propia de ElevenLabs del usuario es de uso no comercial). Devuelve el mp3 como Buffer.
-const fetchBuf=async url=>Buffer.from(await (await fetch(url)).arrayBuffer());
-const tts=async(client,text,voice,stability)=>{const r=await client.subscribe('fal-ai/elevenlabs/tts/eleven-v3',{input:{text,voice,stability,language_code:p.language}});const url=r.data?.audio?.url;if(!url)throw Error('ElevenLabs no devolvió audio');return fetchBuf(url);};
-// MiniMax Speech-02 HD: voces de serie de MiniMax o diseñadas con `disenar` (custom_voice_id). Sin etiquetas de interpretación.
-const minimax=async(client,text,voice,speed=1)=>{const r=await client.subscribe('fal-ai/minimax/speech-02-hd',{input:{text:text.replace(/\[[^\]]*\]\s*/g,''),voice_setting:{voice_id:voice,speed},language_boost:'English',output_format:'url'}});const url=r.data?.audio?.url;if(!url)throw Error('MiniMax no devolvió audio');return fetchBuf(url);};
-const say=(client,text,voice,s)=>s.modelo==='minimax'?minimax(client,text,voice,s.speed??1):tts(client,text,voice,s.stability??.5);
-const sts=async(client,recording,voice)=>{const up=await client.storage.upload(new File([fs.readFileSync(recording)],path.basename(recording)));const r=await client.subscribe('fal-ai/elevenlabs/voice-changer',{input:{audio_url:up,voice,remove_background_noise:true}});const url=r.data?.audio?.url;if(!url)throw Error('El cambiador de voz no devolvió audio');return fetchBuf(url);};
+// Voz y cambiador solo por fal (lib/tts.mjs): da derechos de uso comercial (la cuenta propia de ElevenLabs del usuario es de uso no comercial).
+// MiniMax Speech-02 HD («modelo»: «minimax»): voces de serie de MiniMax o diseñadas con `disenar` (custom_voice_id). Sin etiquetas de interpretación.
+const say=(client,text,voice,s)=>speak(client,{model:s.modelo,text,voice,stability:s.stability,speed:s.speed,language:p.language});
 const writeMp3=(buf,file)=>{fs.writeFileSync(file,buf);return file;};
 const lineText=(c,l)=>[settingsFor(c).tags,l.delivery,l.spokenText||l.text].filter(Boolean).join(' ').trim();
 
@@ -48,8 +44,8 @@ if(cmd==='disenar'){
  const folder=fs.existsSync(bib)&&fs.readdirSync(bib).find(d=>new RegExp(`^\\d+-${c.id}$`).test(d));if(!folder)throw Error(`No encuentro la carpeta de ${c.id} en la biblia`);
  const castFile=path.join(bib,folder,'voz','casting.json');console.log(`Diseño de voz MiniMax para ${c.name} (3 $): «${opts.descripcion}»\nMuestra: «${opts.texto}»\nSe guardará como candidata en ${path.relative(base,castFile)}`);
  if(!opts.yes){console.log('Ensayo: añade --yes para diseñarla (de pago).');process.exit(0);}
- const client=await falClient();const r=await client.subscribe('fal-ai/minimax/voice-design',{input:{prompt:opts.descripcion,preview_text:opts.texto}});const id=r.data?.custom_voice_id,url=r.data?.audio?.url;if(!id)throw Error('MiniMax no devolvió custom_voice_id');
- const out=path.join(base,'assets','voces','disenos');fs.mkdirSync(out,{recursive:true});const wav=url?toWav(writeMp3(await fetchBuf(url),path.join(out,`${c.id}-${id}.mp3`))):null;
+ const client=await falClient();const {id,url}=await designVoice(client,{prompt:opts.descripcion,previewText:opts.texto});
+ const out=path.join(base,'assets','voces','disenos');fs.mkdirSync(out,{recursive:true});const wav=url?toWav(writeMp3(await download(url),path.join(out,`${c.id}-${id}.mp3`))):null;
  fs.mkdirSync(path.dirname(castFile),{recursive:true});const cast=fs.existsSync(castFile)?JSON.parse(fs.readFileSync(castFile,'utf8')):{};
  (cast.candidatas??=[]).push({modelo:'minimax',voice:id,descripcion:opts.descripcion,muestra:wav&&path.relative(base,wav),texto:opts.texto,fecha:new Date().toISOString().slice(0,10),caduca:'se borra si no se usa en una generación antes de 7 días'});
  writeJSON(castFile,cast);console.log('✓ voz',id,'· muestra',wav&&path.relative(base,wav));process.exit(0);}
@@ -61,7 +57,7 @@ if(cmd==='cambiar'){
  console.log(`${t.title}: ${c.name} «${l.text}» · grabación ${recording} → voz ${c.voice}`);
  if(!opts.yes){console.log('Ensayo: añade --yes para convertirla (ElevenLabs, de pago).');process.exit(0);}
  const client=await falClient();fs.mkdirSync(out,{recursive:true});
- const wav=toWav(writeMp3(await sts(client,recording,c.voice),path.join(out,l.id+'-cambiada.mp3')));l.audio=path.relative(base,wav);l.audioDuration=Math.round((ffprobeDuration(wav)||0)*100)/100;l.audioSource='voice-changer';
+ const wav=toWav(writeMp3(await changeVoice(client,{file:recording,voice:c.voice}),path.join(out,l.id+'-cambiada.mp3')));l.audio=path.relative(base,wav);l.audioDuration=Math.round((ffprobeDuration(wav)||0)*100)/100;l.audioSource='voice-changer';
  save(p,p.revision);console.log('✓',c.name,l.audio,l.audioDuration+' s · revisión',p.revision);process.exit(0);}
 
 // lineas
