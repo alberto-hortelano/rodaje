@@ -1,21 +1,21 @@
 // Fusión de ediciones de imagen (ChatGPT): la original encima, la editada debajo; se borra a pincel la zona editada y se guarda el resultado.
-// Uso: node scripts/fusionar.mjs [proyecto] [--puerto 4398]   → abre http://127.0.0.1:4398
+// Uso: node scripts/fusionar.mjs [proyecto] [--puerto 4398] [--migrar]   → abre http://127.0.0.1:4398
 // Busca pares original/editada (mismo tamaño, casi idénticas). Al guardar:
 //   <editada>.png            ← la fusión (sustituye a la editada, así las rutas del proyecto siguen valiendo)
 //   <editada>.chatgpt.png    ← la edición tal como salió de ChatGPT (solo la primera vez)
 //   <editada>.mascara.png    ← la máscara, para retomar la fusión
-// Registro de fusiones en <DATA>/fusiones.json. Respeta RODAJE_DATA y usa safe de lib/paths (rechaza "..", absolutas y enlaces fuera de proyectos).
+// Registro de fusiones en <DATA>/<proyecto>/fusiones.json, con rutas relativas al proyecto (lib/fusiones.mjs). Al arrancar, y con --migrar (sin servidor), reparte el antiguo <DATA>/fusiones.json; sus huérfanas se quedan en él. Respeta RODAJE_DATA y usa safe de lib/paths (rechaza "..", absolutas y enlaces fuera de proyectos).
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import {execFileSync} from 'node:child_process';
 import {ROOT, DATA, safe} from '../lib/paths.mjs';
-import {writeJSON} from '../lib/json.mjs';
+import {leerFusiones, registrarFusion, migrarFusiones} from '../lib/fusiones.mjs';
 
 const args = process.argv.slice(2);
 const port = Number(args.includes('--puerto') ? args.splice(args.indexOf('--puerto'), 2)[1] : 4398);
+const migrar = args.includes('--migrar'); if (migrar) args.splice(args.indexOf('--migrar'), 1);
 const only = args[0];
-const LOG = path.join(DATA, 'fusiones.json');
 const SKIP = /\.(chatgpt|mascara)\.png$/;
 const SKIP_DIR = /^(node_modules|versiones|trabajos|capturas|texturas|\.git)$|^sample-|^p\d+$|^b\d+$/;
 
@@ -51,9 +51,9 @@ function orient(a, b, covers) {
 }
 
 function findPairs() {
-  const log = readLog(), pairs = [];
+  const pairs = [];
   for (const project of fs.readdirSync(DATA).filter(p => fs.existsSync(path.join(DATA, p, 'proyecto.json')) && (!only || p === only))) {
-    const covers = coverOrder(project), byDir = new Map();
+    const covers = coverOrder(project), byDir = new Map(), log = leerFusiones(DATA, project);
     for (const f of walk(path.join(DATA, project))) { const d = path.dirname(f); if (!byDir.has(d)) byDir.set(d, []); byDir.get(d).push(f); }
     for (const files of byDir.values()) {
       const sized = files.map(f => [f, pngSize(f)]).filter(([, s]) => s);
@@ -66,7 +66,7 @@ function findPairs() {
         const related = stem(a) === stem(b) || (covers.has(a) && covers.has(b));
         if (related ? c.media > 9 || c.cambiado > 0.06 : c.media > 5 || c.cambiado > 0.005) continue;
         const [orig, edit] = orient(a, b, covers), rel = f => path.relative(DATA, f);
-        pairs.push({original: rel(orig), editada: rel(edit), tamano: sa, media: +c.media.toFixed(1), cambiado: +(c.cambiado * 100).toFixed(1), segura: c.media <= 5 && c.cambiado <= 0.02, fusionada: log[rel(edit)]?.fecha || null, mascara: fs.existsSync(edit.replace(/\.png$/, '.mascara.png'))});
+        pairs.push({original: rel(orig), editada: rel(edit), tamano: sa, media: +c.media.toFixed(1), cambiado: +(c.cambiado * 100).toFixed(1), segura: c.media <= 5 && c.cambiado <= 0.02, fusionada: log[path.relative(path.join(DATA, project), edit).split(path.sep).join('/')]?.fecha || null, mascara: fs.existsSync(edit.replace(/\.png$/, '.mascara.png'))});
       }
     }
   }
@@ -75,10 +75,18 @@ function findPairs() {
   for (const p of pairs) if (!best.has(p.editada) || best.get(p.editada).media > p.media) best.set(p.editada, p);
   return [...best.values()].sort((x, y) => x.editada.localeCompare(y.editada));
 }
-const readLog = () => { try { return JSON.parse(fs.readFileSync(LOG, 'utf8')); } catch { return {}; } };
 
 const body = req => new Promise((ok, ko) => { const c = []; req.on('data', d => c.push(d)); req.on('end', () => ok(Buffer.concat(c))); req.on('error', ko); });
 const send = (res, code, data, type = 'application/json') => { res.writeHead(code, {'content-type': type, 'cache-control': 'no-store'}); res.end(type === 'application/json' ? JSON.stringify(data) : data); };
+
+function informe(m) {
+  for (const [id, n] of Object.entries(m.movidas)) console.log(`${id}: ${n} fusiones movidas a ${path.join(DATA, id, 'fusiones.json')}`);
+  if (m.raiz === 'borrado') console.log(`Retirado ${path.join(DATA, 'fusiones.json')}`);
+  if (m.huerfanas.length) console.error(`Aviso: ${m.huerfanas.length} fusiones sin proyecto se quedan en ${path.join(DATA, 'fusiones.json')}: ${m.huerfanas.join(', ')}`);
+  if (migrar && !Object.keys(m.movidas).length) console.log('Nada que migrar');
+}
+try { informe(migrarFusiones(DATA)); } catch (e) { console.error('No se pudo migrar el registro de fusiones: ' + e.message); process.exit(1); }
+if (migrar) process.exit(0);
 
 let cache = null;
 http.createServer(async (req, res) => {
@@ -102,8 +110,7 @@ http.createServer(async (req, res) => {
       const raw = edit.replace(/\.png$/, '.chatgpt.png');
       if (!fs.existsSync(raw)) fs.copyFileSync(edit, raw);
       fs.writeFileSync(edit, data);
-      const log = readLog(); log[path.relative(DATA, edit)] = {original: path.relative(DATA, orig), cruda: path.relative(DATA, raw), fecha: new Date().toISOString()};
-      writeJSON(LOG, log);
+      registrarFusion(DATA, {editada: edit, original: orig, cruda: raw});
       cache = null;
       return send(res, 200, {ok: true, cruda: path.relative(DATA, raw)});
     }
