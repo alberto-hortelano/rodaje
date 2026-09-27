@@ -29206,7 +29206,7 @@ async function render() {
         const module = await import(media(e.viewer));
         stage = await module.mountEnvironment(el, { project: p, environment: e });
       } else if (e.glb) {
-        const viewer = "/environment.js", module = await import(viewer);
+        const viewer = "/viewer/glb.mjs", module = await import(viewer);
         stage = await module.mountGlb(el, { url: media(e.glb), name: e.name });
       } else el.textContent = "Este entorno a\xFAn no tiene modelo. Sube un GLB.";
     } catch (err) {
