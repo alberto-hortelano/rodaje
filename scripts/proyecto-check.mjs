@@ -19,7 +19,8 @@ function walkFiles(root,rel=''){const out=[];
 
 function listFiles(dir){
  if(fs.existsSync(path.join(dir,'.git'))){
-  try{return execFileSync('git',['ls-files','--cached','--others','--exclude-standard','-z'],{cwd:dir,encoding:'utf8',maxBuffer:1<<28}).split('\0').filter(f=>f&&fs.existsSync(path.join(dir,f)));}catch{}}
+  try{return execFileSync('git',['ls-files','--cached','--others','--exclude-standard','-z'],{cwd:dir,encoding:'utf8',maxBuffer:1<<28}).split('\0')
+   .filter(f=>f&&!f.split('/').slice(0,-1).some(d=>SKIP_DIRS.has(d))&&fs.existsSync(path.join(dir,f)));}catch{}}
  return walkFiles(dir).sort();}
 
 function checkOne(id){const dir=projectDir(id),files=listFiles(dir);let manifest={};const extra=[];
@@ -37,7 +38,7 @@ function report({id,files,found}){const errors=found.filter(x=>x.level==='error'
 const {args,opts}=parseArgs(process.argv.slice(2));
 for(const k of ['all','report'])if(typeof opts[k]==='string'){args.push(opts[k]);opts[k]=true;} // parseArgs es voraz
 const ids=opts.all?fs.readdirSync(DATA,{withFileTypes:true}).filter(e=>e.isDirectory()&&ID_RE.test(e.name)&&fs.existsSync(path.join(DATA,e.name,'proyecto.json'))).map(e=>e.name).sort():args.slice(0,1);
-if(!opts.all&&!ids.length){console.error(USAGE);process.exit(2);}
+if(opts.all?args.length:!ids.length){console.error(USAGE);process.exit(2);}
 if(!opts.all&&!ID_RE.test(ids[0])){console.error('ID de proyecto no válido: '+ids[0]);process.exit(2);}
 if(!opts.all&&!fs.existsSync(projectDir(ids[0]))){console.error('No existe el proyecto: '+ids[0]);process.exit(2);}
 const results=ids.map(checkOne);results.forEach(report);

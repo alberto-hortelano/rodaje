@@ -14,6 +14,12 @@ test('stripCode: división, regex, strings y plantillas',()=>{
  const src='// window\nx=1 /* a\nb */ + "s"\ny=/re/;\nz=`a\nb`';assert.ok(lines(stripCode(src))<=lines(src));
  const keep='a\n// c\nb="x"\nc=/r/\n';assert.equal(lines(stripCode(keep)),lines(keep));});
 
+test('stripCode: plantillas anidadas y strings cortados',()=>{
+ assert.equal(stripCode('a=`<p>${`<b>x</b>`}</p>`;document.body'),'a=`${``}`;document.body');
+ assert.equal(stripCode('a=`${ {k:`}`}.k }`;b'),'a=`${ {k:``}.k }`;b');
+ assert.equal(lines(stripCode("a='x\nb=1")),2);assert.equal(stripCode("a='x\nb=1"),"a=''\nb=1");
+ assert.equal(lines(stripCode("a='x\\\ny';b")),2);});
+
 test('builderIssues: sin falsos positivos',()=>{
  for(const src of ['// uses window','/* document */',"'window'",'"import x"','`fetch`','/window/.test(s)','obj.process','obj . process','({window: 1})','export function build(T,data,kit){}'])
   assert.deepEqual(builderIssues(src),[],src);});
@@ -23,6 +29,13 @@ test('builderIssues: detecta globales, módulos y exports',()=>{
  for(const [src,t] of [["import x from 'y'",'import'],['const u=import.meta.url','import'],["require('x')",'require'],['f(...window)','window'],['globalThis.a=1','globalThis'],['eval(s)','eval']])
   assert.deepEqual(builderIssues(src),[t],src);
  assert.deepEqual(builderIssues('eval(a);eval(b)'),['eval']);
+ for(const [src,t] of [['h=`<p>${`<b>x</b>`}</p>`;document.body','document'],['h=`<p>${`<b>x</b>`}</p>`;window.x','window'],['h=`${`${window.w}`}`','window'],
+  ['localStorage.x=1','localStorage'],['sessionStorage.getItem(k)','sessionStorage'],['module.exports={}','module.exports'],['exports.x = 1','exports'],["exports['x']=1",'exports']])
+  assert.deepEqual(builderIssues(src),[t],src);
+ for(const src of ['const module=1;module.id','const exports=new Set()','a.localStorage'])assert.deepEqual(builderIssues(src),[],src);
+ assert.deepEqual(builderIssues("export * from 'x';\nexport function build(){}"),['export *']);
+ // Conservador: una desestructuración también se marca.
+ assert.deepEqual(builderIssues('const {document}=kit'),['document']);
  assert.deepEqual(builderIssues('export const A=1;\nlet a;export {a as b};\nexport default 1;\nexport async function f(){}\nexport function build(){}'),['export A','export b','export default','export f']);});
 
 test('R-code ignora el constructor declarado',()=>{
@@ -88,4 +101,12 @@ test('CLI: salida, códigos de salida y --all',()=>{
  let r=run('pc-test');assert.equal(r.status,1);assert.match(r.stdout,/R-code · 1/);assert.match(r.stdout,/suelto\.mjs/);assert.doesNotMatch(r.stdout,/trabajos/);
  r=run('pc-test','--report');assert.equal(r.status,0);
  r=run('--all','--report');assert.equal(r.status,0);assert.match(r.stdout,/pc-test ·/);assert.match(r.stdout,/^Total: /m);
- r=run();assert.equal(r.status,2);assert.match(r.stderr,/Uso:/);});
+ r=run();assert.equal(r.status,2);assert.match(r.stderr,/Uso:/);
+ r=run('--all','pc-test');assert.equal(r.status,2);assert.match(r.stderr,/Uso:/);});
+
+test('CLI: con git también se salta trabajos/',()=>{
+ const dir=path.join(DATA,'pc-git');fs.mkdirSync(path.join(dir,'trabajos'),{recursive:true});
+ fs.writeFileSync(path.join(dir,'proyecto.json'),'{"id":"pc-git"}');fs.writeFileSync(path.join(dir,'suelto.mjs'),'');fs.writeFileSync(path.join(dir,'trabajos','x.mjs'),'');
+ assert.equal(spawnSync('git',['init','-q'],{cwd:dir}).status,0);
+ const r=spawnSync(process.execPath,['scripts/proyecto-check.mjs','pc-git'],{cwd:path.resolve(import.meta.dirname,'..'),encoding:'utf8',env:{...process.env,RODAJE_DATA:DATA}});
+ assert.equal(r.status,1);assert.match(r.stdout,/R-code · 1/);assert.match(r.stdout,/suelto\.mjs/);assert.doesNotMatch(r.stdout,/trabajos/);});
