@@ -28881,7 +28881,7 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { variants, zones, channels, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, locationEnvironment, environmentChoice } from "./workflow.mjs";
+import { variants, zones, channels, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice } from "./workflow.mjs";
 import { createStage as createStage2 } from "./stage.js";
 var state;
 var p = null;
@@ -29111,7 +29111,7 @@ async function render() {
   }
   if (view === "environments") {
     const list = environmentList(p);
-    html3 = heading2("Entornos 3D.", "Decorados en 3D con medidas reales: exterior, interior y piezas con nombre. Cada entorno se abre en su visor; los planos los usar\xE1n como decorado.", btn("+ Entorno GLB", "new-environment", "primary")) + (list.length ? `<div class="grid">${list.map((e) => `<article class="card">${image(e.image)}<div class="inner"><div class="row between"><h2>${esc(e.name)}</h2><span class="pill">${esc(e.kind === "visor" ? "VISOR PROPIO" : e.kind === "glb" ? "GLB" : "SIN MODELO")}</span></div><p>${esc(e.description.slice(0, 220))}</p>${e.glb ? `<small>${esc(e.glb)}</small>` : ""}<div class="actions">${btn("Abrir", e.action, "primary")}${e.id !== "ship" ? btn("Editar", "edit-environment:" + e.id) + btn("Subir GLB", "upload-environment:" + e.id) : ""}</div></div></article>`).join("")}</div>` : '<section class="panel"><p>Este proyecto a\xFAn no tiene entornos 3D. Sube un GLB (de Tripo, Meshy, Hunyuan3D\u2026) o a\xF1ade uno con visor propio en <code>environments</code>.</p></section>');
+    html3 = heading2("Entornos 3D.", "Decorados en 3D con medidas reales: exterior, interior y piezas con nombre. Cada entorno se abre en su visor; los planos los usar\xE1n como decorado.", btn("+ Entorno GLB", "new-environment", "primary")) + (list.length ? `<div class="grid">${list.map((e) => `<article class="card">${image(e.image)}<div class="inner"><div class="row between"><h2>${esc(e.name)}</h2><span class="pill">${esc(e.kind === "visor" ? "VISOR PROPIO" : e.kind === "constructor" ? "VISOR 3D" : e.kind === "glb" ? "GLB" : "SIN MODELO")}</span></div><p>${esc(e.description.slice(0, 220))}</p>${e.glb ? `<small>${esc(e.glb)}</small>` : ""}<div class="actions">${btn("Abrir", e.action, "primary")}${e.id !== "ship" ? btn("Editar", "edit-environment:" + e.id) + btn("Subir GLB", "upload-environment:" + e.id) : ""}</div></div></article>`).join("")}</div>` : '<section class="panel"><p>Este proyecto a\xFAn no tiene entornos 3D. Sube un GLB (de Tripo, Meshy, Hunyuan3D\u2026) o a\xF1ade uno con visor propio en <code>environments</code>.</p></section>');
   }
   if (view === "environment") {
     const e = (p.environments || []).find((x2) => x2.id === environmentId);
@@ -29202,12 +29202,16 @@ async function render() {
   if (view === "environment") {
     const e = (p.environments || []).find((x2) => x2.id === environmentId), el = $2("#environment-model");
     try {
-      if (e.viewer) {
-        const module = await import(media(e.viewer));
+      const v2 = environmentViewer(e);
+      if (v2.kind === "legacy") {
+        const module = await import(media(v2.module));
         stage = await module.mountEnvironment(el, { project: p, environment: e });
-      } else if (e.glb) {
+      } else if (v2.kind === "mount") {
+        const viewer = "/viewer/mount.mjs", module = await import(viewer);
+        stage = await module.mountEnvironment(el, { project: p, environment: e });
+      } else if (v2.kind === "glb") {
         const viewer = "/viewer/glb.mjs", module = await import(viewer);
-        stage = await module.mountGlb(el, { url: media(e.glb), name: e.name });
+        stage = await module.mountGlb(el, { url: media(v2.url), name: e.name });
       } else el.textContent = "Este entorno a\xFAn no tiene modelo. Sube un GLB.";
     } catch (err) {
       el.textContent = "No se pudo cargar el entorno 3D: " + err.message;

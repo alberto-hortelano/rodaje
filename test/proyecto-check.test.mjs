@@ -39,6 +39,18 @@ test('R-manifest: claves de nave, viewer y rutas de código',()=>{
  const found=rules(mk({shipModel:{},shipModelHistory:[],environments:[{builder:'e.js',viewer:'e/explore.js'},{viewer:{camera:1}}],ideas:[{sourceFile:'x/index.html'}]},{'e.js':''}),'R-manifest');
  assert.deepEqual(found.map(x=>x.detail),['shipModel','shipModelHistory','environments.0.viewer: e/explore.js','ideas.0.sourceFile: x/index.html']);});
 
+test('plugins del visor: R-code, R-builder (contenido) y R-manifest (declaración)',()=>{
+ const env=plugins=>({environments:[{builder:'b.js',data:'m.json',viewer:{plugins}}]});
+ let found=mk(env(['v.js']),{'b.js':'export function build(){}','v.js':'export function plugin(api){}','m.json':'{}','x.mjs':''});
+ assert.deepEqual(rules(found,'R-code').map(x=>x.file),['x.mjs']);assert.deepEqual(rules(found,'R-builder'),[]);assert.deepEqual(rules(found,'R-manifest'),[]);
+ found=mk(env(['v.js','w.mjs']),{'b.js':'export function plugin(){}\nexport function build(){}','v.js':'document.body;\nexport const K=1;\nexport function plugin(){}','w.mjs':'export function build(){}'});
+ assert.deepEqual(rules(found,'R-builder').map(x=>[x.file,x.detail]),[['b.js','export plugin'],['v.js','document'],['v.js','export K'],['w.mjs','export build'],['w.mjs','falta export plugin']]);
+ found=mk(env(['no.js','../x.js','/abs/y.js','v.json','v.js']),{'b.js':'export function build(){}','v.json':'{}','v.js':null});
+ assert.deepEqual(rules(found,'R-manifest').map(x=>x.detail),['environments[0].viewer.plugins[0] no existe: no.js','environments[0].viewer.plugins[1] fuera del proyecto: ../x.js','environments[0].viewer.plugins[2] fuera del proyecto: /abs/y.js','environments[0].viewer.plugins[3] no es .js/.mjs: v.json']);
+ assert.deepEqual(rules(found,'R-builder').map(x=>[x.file,x.detail]),[['v.js','no se puede leer: binario v.js']]);
+ for(const plugins of ['v.js',[1],{a:'v.js'}])assert.ok(rules(mk(env(plugins),{'v.js':''}),'R-manifest').some(x=>x.detail==='environments[0].viewer.plugins no es una lista de rutas'),JSON.stringify(plugins));
+ const abs=rules(mk(env(['/home/u/v.js']),{}),'R-abs');assert.deepEqual(abs.map(x=>x.detail),['environments.0.viewer.plugins.0']);});
+
 test('R-before',()=>{
  const yes=['before.json','before-explore.js','before','explore.js.before-roll','dir/before.js'],no=['beforehand.md','x-before.json'];
  const map=Object.fromEntries([...yes,...no].map(f=>[f,'']));

@@ -3,7 +3,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {spawnSync} from 'node:child_process';import {createHash} from 'node:crypto';
 const ROOT=path.resolve(import.meta.dirname,'..'),SCRIPTS=path.join(ROOT,'scripts');
 const tmp=()=>fs.mkdtempSync(path.join(os.tmpdir(),'rodaje-cli-'));
-const baseEnv=()=>{const env={...process.env,FAL_KEY:''};delete env.RODAJE_PROJECT;return env;};
+const baseEnv=()=>{const env={...process.env,FAL_KEY:'test:dummy'};delete env.RODAJE_PROJECT;return env;};
 const run=(script,args,env={})=>spawnSync(process.execPath,[path.join(SCRIPTS,script),...args],{cwd:ROOT,encoding:'utf8',timeout:30000,env:{...baseEnv(),...env}});
 const snapshot=d=>fs.existsSync(d)?fs.readdirSync(d,{recursive:true}).sort().map(f=>{const p=path.join(d,f);return fs.statSync(p).isDirectory()?f+'/':f+' '+createHash('sha256').update(fs.readFileSync(p)).digest('hex');}):null;
 
@@ -111,10 +111,10 @@ test('compatibilidad: cada fuente del proyecto y su línea «Proyecto: X (fuente
  }
 });
 
-test('app/, lib/ y scripts/ no nombran proyectos concretos',()=>{
+test('app/, lib/, scripts/ y viewer/ no nombran proyectos concretos',()=>{
  const skip=new Set(['scripts/check-ui.mjs','scripts/prepare-dead-air.mjs','scripts/import-conjurados.mjs','scripts/conjurados-pelicula.mjs']);
  const hits=[];
- for(const d of ['app','lib','scripts'])for(const f of fs.readdirSync(path.join(ROOT,d),{recursive:true})){
+ for(const d of ['app','lib','scripts','viewer'])for(const f of fs.readdirSync(path.join(ROOT,d),{recursive:true})){
   const rel=d+'/'+f.split(path.sep).join('/'),abs=path.join(ROOT,rel);
   if(skip.has(rel)||!fs.statSync(abs).isFile()||!/\.(mjs|js|html|css|json)$/.test(rel))continue;
   // Tolerado hasta #14: la clase .toledo-explorer la pinta el visor de la nave que aún carga el proyecto.

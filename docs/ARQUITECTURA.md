@@ -14,7 +14,7 @@ Estado objetivo; las issues #3 a #20 lo van completando.
 ```
 app/      servidor HTTP, persistencia (store), trabajos, montaje, funciones puras (workflow) y UI (*.source.js → app.js)
 lib/      núcleo compartido de Node: rutas y proyecto activo, JSON atómico, argumentos, ffmpeg, fal, TTS, Chrome, lotes, validador de proyectos
-viewer/   3D de navegador: kit de construcción, visor de entornos, paseo y colisiones, visor GLB, editor de plantas; se sirve en /viewer/<ruta> (glb.mjs, kit.mjs)
+viewer/   3D de navegador: kit de construcción, visor de entornos, paseo y colisiones, visor GLB, editor de plantas; se sirve en /viewer/<ruta> (kit.mjs; mount.mjs, visor de entornos con constructor; walk.mjs, paseo y colisión inyectable; plugins.mjs, contrato de plugins; glb.mjs)
 scripts/  CLIs finos sobre lib/
 docs/     documentación de la aplicación y del proceso de producción
 ```
@@ -28,19 +28,38 @@ Un proyecto contiene:
 - Lotes: `assets/<lote>/<bloque>/` con prompts, `refs.json` y `attempts.json`.
 - Binarios ignorados por git: imágenes, vídeo, audio y GLB.
 
-**El único código permitido son los constructores de escenario** que declara `environments[].builder`:
+**Hay dos tipos de código permitido, los dos declarados en `environments[]`**: los constructores de escenario (`builder`) y los plugins del visor (`viewer.plugins`).
 
 ```js
 export function build(T, data, kit) { … return group }   // T = three, data = model.json, kit = viewer/kit
+export function plugin(api) { … return hooks }            // api del visor genérico (viewer/mount.mjs)
 ```
 
-- Sin `import`, `require`, `document`, `window`, `process`, `fetch`, `eval` ni `globalThis`.
-- Todo lo genérico (materiales, texturas, visor, paseo) lo da la app a través de `kit`.
-- `environments[].viewer` es un objeto de opciones, no una ruta a un `.js`.
+- Sin `import`, `require`, `document`, `window`, `process`, `fetch`, `eval` ni `globalThis`. El constructor solo exporta `build`; el plugin solo exporta `plugin`, síncrono, y es obligatorio.
+- Todo lo genérico (materiales, texturas, visor, paseo) lo da la app: al constructor a través de `kit` y al plugin a través de `api`.
+- `environments[].viewer` es `{plugins: [...], …opciones}`: rutas `.js`/`.mjs` del proyecto y opciones del visor. Durante la transición la app tolera un texto (visor propio del proyecto) hasta #11 (caserón) y #14 (nave); `proyecto-check` lo sigue marcando como R-manifest.
 
 El proyecto de un script se resuelve con `lib/cli.mjs` (`cliProject`, sobre `resolveProject` de `lib/paths.mjs`), por este orden: `--project <id>`, el argumento posicional donde el script ya lo tenía, `RODAJE_PROJECT` y, en cuarto lugar, el proyecto activo en la app. El activo vive en `<DATA>/.activo.json` (`lib/proyecto-activo.mjs`) y solo lo escribe el servidor: `POST /api/active` (con token) al abrir un proyecto en la vista Proyectos, y al crear uno; las recargas con `?project=` y `movil.html` no lo cambian. Los scripts imprimen `Proyecto: X (fuente)` en stderr y, sin proyecto, salen con el uso y código 2 sin tocar el disco (`app/store.mjs` ya no crea `DATA` al importarse; la crea `app/jobs.mjs` al arrancar el servidor). Ningún código de la app contiene ids de proyecto.
 
-`scripts/proyecto-check.mjs` hace cumplir este contrato.
+`scripts/proyecto-check.mjs` hace cumplir este contrato. A los plugins les aplica R-code (un plugin declarado no cuenta como código suelto), R-builder (contenido: mismas prohibiciones, único export `plugin`) y R-manifest (declaración: lista de rutas, dentro del proyecto, existentes y `.js`/`.mjs`).
+
+### Plugins del visor
+
+La app abre un entorno así: `viewer` como texto → visor propio del proyecto (legado); `builder` y `data` → `/viewer/mount.mjs`; solo `glb` → `/viewer/glb.mjs`. El visor genérico no sabe nada de ningún escenario: luces, niebla, fondo, cortes, piezas atravesables, entrada del paseo y vista general van en los plugins del proyecto (`ambientes/<id>/3d/visor.js`). Sin plugins pone un fondo `#b9c0c4`, luces como el visor GLB y encuadra la caja del modelo.
+
+El visor importa todos los plugins por `/api/asset` antes de montar; si alguno no exporta `plugin`, el entorno no se abre. Monta el DOM, el renderer, una escena vacía, la cámara y los controles; llama a `plugin(api)` de cada uno en orden (las luces del plugin entran antes que el modelo); completa fondo y luces si faltan; prepara colisión y caminante; construye y va a la vista general.
+
+`api`:
+- `T`, `scene`, `camera`, `controls`, `renderer`; `data` (`model.json`), `environment` (la entrada del manifiesto), `options` (`viewer` sin `plugins`).
+- `model` (el grupo construido), `state` y `setState(next)`, `mode` (`'orbit'` o `'walk'`), `setWalk(on)`, `setView(id)`, `overview()`, `walker` (`viewer/walk.mjs`).
+- `ui.button({a, text, pressed}, onClick)`: botón en la barra tras «Vista general», en orden de llamada; devuelve `{pressed, text}` con setters. Un `data-a` del visor o repetido es un error.
+- `ui.action(a, fn)` para `[data-a]` de paneles; `ui.note(text)`, `ui.hint(text)`; `ui.panel({title, html})` y `ui.overlay(html)` devuelven `{set(html)}`.
+
+Hooks (todos opcionales; uno desconocido es un error). Con varios plugins se llama a todos, en orden, salvo donde se indica:
+- `onBuild(model)` tras cada construcción; `onSky(tx)` tras poner el cielo; `onOverview()` antes de ir a la vista general; `onView(mark, {mode})` antes de mover la cámara a un lugar; `onFrame(dt, {mode})` en cada fotograma; `dispose()`.
+- `overview()` → `{position, target, text?}`, `spawn()` → `{position, lookAt}` y `collision({T, step, radius, skip})` → `{collect, groundAt, blocked}`: gana el primero que devuelve algo.
+- `passable(obj)`: basta con que uno diga sí; se prueba en cada antepasado de la malla.
+- `expose: {…}`: métodos que se añaden a `window.rodaje.environment`; no pueden pisar los del visor.
 
 ### El tercer argumento: `kit`
 
