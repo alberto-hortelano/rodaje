@@ -1,10 +1,20 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {execFileSync} from 'node:child_process';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {execFileSync,spawnSync} from 'node:child_process';
 const paths=await import('../lib/paths.mjs'),json=await import('../lib/json.mjs'),argsLib=await import('../lib/args.mjs'),store=await import('../app/store.mjs'),bloques=await import('../scripts/bloques/lib.mjs');
 const {DATA,safe,projectDir,resolveProject}=paths;
 const tmp=()=>fs.mkdtempSync(path.join(os.tmpdir(),'rodaje-lib-'));
 const leftovers=d=>fs.readdirSync(d).filter(f=>f.endsWith('.tmp'));
 
 test('importar lib/paths no toca el disco',()=>{const missing=path.join(tmp(),'no','existe');execFileSync(process.execPath,['--input-type=module','-e',`await import(${JSON.stringify(new URL('../lib/paths.mjs',import.meta.url).href)})`],{env:{...process.env,RODAJE_DATA:missing}});assert.equal(fs.existsSync(missing),false);});
+// Importa un módulo de lib/ en un subproceso con el entorno dado (sin las variables de test heredadas) e imprime expr.
+const importIn=(m,expr,extra={})=>{const env={...process.env,...extra};for(const k of ['NODE_TEST_CONTEXT','RODAJE_DATA','RODAJE_CONFIG_DIR'])if(!(k in extra))delete env[k];return spawnSync(process.execPath,['--input-type=module','-e',`const m=await import(${JSON.stringify(new URL(m,import.meta.url).href)});console.log(${expr})`],{env,encoding:'utf8'});};
+test('lib/paths lanza bajo node --test sin RODAJE_DATA y fuera de tests usa <ROOT>/proyectos',()=>{
+ const r=importIn('../lib/paths.mjs','m.DATA',{NODE_TEST_CONTEXT:'child-v8'});assert.notEqual(r.status,0);assert.match(r.stderr,/RODAJE_DATA no definido bajo node --test/);
+ const ok=importIn('../lib/paths.mjs','m.DATA');assert.equal(ok.status,0,ok.stderr);assert.equal(ok.stdout.trim(),path.join(paths.ROOT,'proyectos'));
+});
+test('lib/fal lanza bajo node --test sin RODAJE_CONFIG_DIR y fuera de tests usa la raíz del repositorio',()=>{
+ const r=importIn('../lib/fal.mjs','m.CONFIG_DIR',{NODE_TEST_CONTEXT:'child-v8',RODAJE_DATA:tmp()});assert.notEqual(r.status,0);assert.match(r.stderr,/RODAJE_CONFIG_DIR no definido bajo node --test/);
+ const ok=importIn('../lib/fal.mjs','m.CONFIG_DIR');assert.equal(ok.status,0,ok.stderr);assert.equal(ok.stdout.trim(),paths.ROOT);
+});
 test('store y bloques reexportan las mismas funciones de lib/',()=>{assert.equal(paths.DATA,store.DATA);assert.equal(paths.ROOT,store.ROOT);assert.equal(store.dir,paths.projectDir);assert.equal(paths.dir,paths.projectDir);assert.equal(store.safe,paths.safe);assert.equal(store.read,json.readJSON);assert.equal(store.write,json.writeJSON);assert.equal(bloques.parseArgs,argsLib.parseArgs);assert.equal(typeof bloques.cliProject,'function');assert.equal(typeof bloques.usageExit,'function');assert.equal(bloques.writeJSON,json.writeJSON);assert.equal(bloques.readJSON,json.readJSON);assert.equal(bloques.ROOT,paths.ROOT);for(const k of ['lotePaths','loadLote','mapaFor','sceneFor','sceneNumber','attemptsPath','loadAttempts','saveAttempts','acceptedAttempt'])assert.equal(bloques[k],undefined,k);});
 test('safe rechaza rutas que salen de la raíz y acepta rutas nuevas dentro',()=>{assert.throws(()=>safe(DATA,'../x'),/Ruta no válida/);assert.throws(()=>safe(DATA,'/etc'),/Ruta no válida/);assert.throws(()=>safe(DATA,42),/Ruta no válida/);const link=path.join(DATA,'enlace-fuera');if(!fs.existsSync(link))fs.symlinkSync(os.tmpdir(),link);assert.throws(()=>safe(DATA,'enlace-fuera/x.json'),/Enlace fuera del proyecto/);assert.equal(safe(DATA,'a/b.json'),path.join(DATA,'a','b.json'));});
 test('projectDir valida el id',()=>{assert.throws(()=>projectDir('a/b'),/ID no válido/);assert.throws(()=>projectDir('x y'),/ID no válido/);assert.equal(projectDir('ok-1'),path.join(DATA,'ok-1'));});

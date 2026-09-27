@@ -22,7 +22,7 @@ Desconfía del informe del ingeniero y compruébalo todo tú:
 
 Los scripts que escriben en un proyecto se prueban sobre una copia con `RODAJE_DATA=<copia en scratchpad>`, nunca sobre `proyectos/`.
 
-Los tests se ejecutan SIEMPRE con `npm test` o con `node --import ./test/setup.mjs --test <fichero>`: sin `setup.mjs` algunos tests escriben en `proyectos/` reales.
+Los tests se ejecutan SIEMPRE con `npm test` o con `node --import ./test/setup.mjs --test <fichero>`: sin `setup.mjs` fallan al importar `lib/paths.mjs` o `lib/fal.mjs` (guarda para no escribir en `proyectos/` reales ni leer la configuración local).
 
 Los servidores o procesos que arranques se paran SOLO por su PID (guárdalo al arrancar). Nunca `pkill`/`killall` por patrón: mata la app del usuario.
 

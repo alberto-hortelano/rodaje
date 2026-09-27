@@ -5,7 +5,7 @@ test('cover request sends the sequence prompt as a single 16:9 image without ref
 
 
 // ---- Golden de peticiones y argv de ffmpeg/ffprobe (issue #5), sin red ni coste: harness.mjs y golden/ en test/fixtures/providers/.
-// Grabar solo sobre el código anterior al refactor: RODAJE_GOLDEN=grabar node --import ./test/setup.mjs --test --test-isolation=none test/providers.test.mjs
+// Grabar solo sobre el código anterior al refactor: RODAJE_GOLDEN=grabar node --import ./test/setup.mjs --test test/providers.test.mjs
 const H=await import('./fixtures/providers/harness.mjs');
 test('el golden no se regraba sobre el código refactorizado',()=>assert.equal(H.RECORD_BLOCKED,null));
 const APP_JOBS=['character','character-ref','location','voice','line','ambience','keyframe','video','storyboard','cover','outline','export','preview'];

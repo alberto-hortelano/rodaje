@@ -7,7 +7,7 @@
     "start": "node --env-file-if-exists=.env app/server.mjs",
     "start:lan": "RODAJE_LAN=1 node --env-file-if-exists=.env app/server.mjs",
     "check:proyectos": "node scripts/proyecto-check.mjs --all --report",
-    "test": "node --import ./test/setup.mjs --test --test-isolation=none test/*.test.mjs",
+    "test": "node --import ./test/setup.mjs --test test/*.test.mjs",
     "build:ui": "esbuild app/app.source.js --bundle --format=esm --external:./workflow.mjs --external:./stage.js --outfile=app/app.js --banner:js=\"// Generated from app.source.js. Run npm run build:ui after editing UI sources.\""
   },
   "dependencies": {
