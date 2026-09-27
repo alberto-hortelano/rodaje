@@ -40,9 +40,19 @@
 
 ## Proyecto y control
 
-- `scripts/proyecto-check.mjs`: valida un proyecto o `--all`: código fuera de constructores, constructores con globales o exports extra, rutas de código en el manifiesto, copias `before` y rutas absolutas (`npm run check:proyectos` lo pasa en modo informe).
+- `scripts/proyecto-check.mjs`: valida un proyecto o `--all`: código fuera de constructores, constructores con globales o exports extra, rutas de código en el manifiesto, copias `before` y rutas absolutas. Sale con 1 si hay errores (los avisos no cuentan); `--report` siempre sale con 0. `npm run check:proyectos` pasa `--all` y falla si hay errores. `--all` sin carpeta de datos no valida nada y sale con 0.
+- `scripts/proyecto-rutas.mjs` (`[proyecto] [--origen nombre=/ruta/abs]... [--aplicar] [--forzar]`): reescribe las rutas absolutas de los datos de un proyecto según «Rutas en los datos de un proyecto». Sin `--aplicar` es un simulacro que no escribe: plan por fichero, un ejemplo por prefijo y los tokens sin resolver. `--aplicar` exige el repo del proyecto limpio (`--forzar` lo salta), guarda `proyecto.json` con `store.save` (regenera los derivados) y sustituye los tokens en el resto de `.json`, `.md` y `.txt` dejando lo demás byte a byte. Sale con 0 si todo se resuelve, 1 si queda algo (lo resoluble se aplica) y 2 por uso o árbol sucio.
+- `scripts/proyecto-hook.mjs` (`install|uninstall [proyecto]`): instala o quita en el repo del proyecto un hook `pre-commit` que pasa `proyecto-check` y bloquea el commit solo si hay errores (se salta con `git commit --no-verify`). Respeta `core.hooksPath`, no toca un `pre-commit` ajeno (sale con 1) y, si faltan rodaje o node, el hook avisa y deja pasar.
 - `scripts/linea-base.mjs`: instantánea de digests, GLB, coplanares y capturas 3D para detectar regresiones; se comparan dos con `diff -r`.
 - `scripts/pendientes.mjs`: importar · listar el tablero de pendientes.
 - `scripts/leer-movil.mjs`: servidor de solo lectura de `guion/` e `ideas/` para leerlos desde el móvil.
 
 La vista Montaje de la app (`app/montaje.source.js`, `app/montaje.mjs`) revisa y remonta lotes con los mismos `attempts.json`.
+
+## Rutas en los datos de un proyecto
+
+Los datos de un proyecto no llevan rutas absolutas de la máquina (`proyecto-check`, regla R-abs):
+
+- Dentro del proyecto: ruta relativa POSIX a la raíz del proyecto (`assets/lote/b01/edit.mp4`), sin `./`.
+- Listas de `ffmpeg -f concat` (`concat.txt`, `*-concat.txt`, `list.txt`): cada `file '…'` relativa a la carpeta de la lista (`file '../b01/edit.mp4'`); `ffmpeg` las resuelve desde ahí.
+- Fuera del proyecto (material de origen, carpetas de otras herramientas): `origen:<nombre>/<resto>`, o `origen:<nombre>` para la raíz del origen; por ejemplo, `origen:codex/<id>/exec-….png`. El nombre cumple `^[a-z0-9][a-z0-9-]*$`. La correspondencia entre nombre y carpeta no se guarda en los datos: se da con `--origen nombre=/ruta/abs` al migrar, y la app no resuelve `origen:`; solo conserva la procedencia.

@@ -31,6 +31,8 @@ const TABLE={
  'entorno-coplanares.mjs':[['caja'],['caja','--todos']],
  'entornos/capturar.mjs':[['out','[]','--entorno','caja']],
  'entornos/recorrer.mjs':[['out','--entorno','caja']],
+ 'proyecto-rutas.mjs':[['--aplicar'],['--origen','codex=/x/img','--aplicar','--forzar']],
+ 'proyecto-hook.mjs':[['install'],['uninstall']],
 };
 const EXCLUIDOS={
  'bloques/lib.mjs':'biblioteca, no es una orden',

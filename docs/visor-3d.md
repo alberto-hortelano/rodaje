@@ -4,7 +4,7 @@ Código de navegador en `viewer/`, servido en `/viewer/<ruta>`: kit de construcc
 
 ## Cómo se abre un entorno
 
-La app abre un entorno así: `viewer` como texto → visor propio del proyecto (rama `legacy`, para proyectos antiguos; `proyecto-check` lo marca como R-manifest); `builder` y `data` → `/viewer/mount.mjs`; solo `glb` → `/viewer/glb.mjs`. El visor genérico no sabe nada de ningún escenario: luces, niebla, fondo, cortes, piezas atravesables, entrada del paseo y vista general van en los plugins del proyecto (`ambientes/<id>/3d/visor.js`). Sin plugins pone un fondo `#b9c0c4`, luces como el visor GLB y encuadra la caja del modelo.
+La app abre un entorno así: `builder` y `data` → `/viewer/mount.mjs`; solo `glb` → `/viewer/glb.mjs`. `viewer` como texto (una ruta a un visor propio) ya no se admite: la app no lo abre, muestra en su lugar un mensaje que pide pasarlo a `builder` + `data` con `viewer.plugins` (la tarjeta del entorno dice «VISOR NO VÁLIDO») y `proyecto-check` lo da como error R-manifest. El visor genérico no sabe nada de ningún escenario: luces, niebla, fondo, cortes, piezas atravesables, entrada del paseo y vista general van en los plugins del proyecto (`ambientes/<id>/3d/visor.js`). Sin plugins pone un fondo `#b9c0c4`, luces como el visor GLB y encuadra la caja del modelo.
 
 El visor importa todos los plugins por `/api/asset` antes de montar; si alguno no exporta `plugin`, el entorno no se abre. Monta el DOM, el renderer, una escena vacía, la cámara y los controles; llama a `plugin(api)` de cada uno en orden (las luces del plugin entran antes que el modelo); completa fondo y luces si faltan; prepara colisión y caminante; construye y va a la vista general.
 

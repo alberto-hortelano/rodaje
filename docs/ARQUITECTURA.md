@@ -41,7 +41,7 @@ export function plugin(api) { … return hooks }            // api del visor gen
 
 - Sin `import`, `require`, `document`, `window`, `process`, `fetch`, `eval` ni `globalThis`. El constructor solo exporta `build`; el plugin solo exporta `plugin`, síncrono, y es obligatorio.
 - Todo lo genérico (materiales, texturas, visor, paseo) lo da la app: al constructor a través de `kit` y al plugin a través de `api` (los dos en `docs/visor-3d.md`).
-- `environments[].viewer` es `{plugins, …opciones}`; la rama legacy (texto) la marca R-manifest.
+- `environments[].viewer` es `{plugins, …opciones}`. Como texto ya no se admite: la app no lo abre y R-manifest lo da como error.
 
 Visor 3D (kit, plugins, paseo, editor de plantas): `docs/visor-3d.md`.
 

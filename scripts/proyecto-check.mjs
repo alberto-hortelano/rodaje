@@ -3,27 +3,15 @@
 // Sin --report sale con 1 si hay errores. Solo lee.
 import fs from 'node:fs';
 import path from 'node:path';
-import {execFileSync} from 'node:child_process';
 import {DATA,ID_RE,projectDir,safe} from '../lib/paths.mjs';
 import {readJSON} from '../lib/json.mjs';
 import {parseArgs} from '../lib/args.mjs';
 import {RULES,checkProject} from '../lib/proyecto-check.mjs';
+import {listProjectFiles} from '../lib/proyecto-ficheros.mjs';
 
-const SKIP_DIRS = new Set(['.git','trabajos','versiones','node_modules']);
 const USAGE = 'Uso: node scripts/proyecto-check.mjs <id>|--all [--report]';
 
-function walkFiles(root,rel=''){const out=[];
- for(const e of fs.readdirSync(path.join(root,rel),{withFileTypes:true})){const p=rel?rel+'/'+e.name:e.name;
-  if(e.isDirectory()){if(!SKIP_DIRS.has(e.name))out.push(...walkFiles(root,p));}else if(e.isFile())out.push(p);}
- return out;}
-
-function listFiles(dir){
- if(fs.existsSync(path.join(dir,'.git'))){
-  try{return execFileSync('git',['ls-files','--cached','--others','--exclude-standard','-z'],{cwd:dir,encoding:'utf8',maxBuffer:1<<28}).split('\0')
-   .filter(f=>f&&!f.split('/').slice(0,-1).some(d=>SKIP_DIRS.has(d))&&fs.existsSync(path.join(dir,f)));}catch{}}
- return walkFiles(dir).sort();}
-
-function checkOne(id){const dir=projectDir(id),files=listFiles(dir);let manifest={};const extra=[];
+function checkOne(id){const dir=projectDir(id),files=listProjectFiles(dir);let manifest={};const extra=[];
  try{manifest=readJSON(path.join(dir,'proyecto.json'));}catch(e){extra.push({rule:'R-manifest',level:'error',file:'proyecto.json',detail:'JSON no válido: '+e.message});}
  const found=checkProject({manifest,files,read:f=>fs.readFileSync(safe(dir,f),'utf8')});
  return {id,files:files.length,found:[...found,...extra].sort((a,b)=>RULES.indexOf(a.rule)-RULES.indexOf(b.rule))};}
@@ -37,7 +25,8 @@ function report({id,files,found}){const errors=found.filter(x=>x.level==='error'
 
 const {args,opts}=parseArgs(process.argv.slice(2));
 for(const k of ['all','report'])if(typeof opts[k]==='string'){args.push(opts[k]);opts[k]=true;} // parseArgs es voraz
-const ids=opts.all?fs.readdirSync(DATA,{withFileTypes:true}).filter(e=>e.isDirectory()&&ID_RE.test(e.name)&&fs.existsSync(path.join(DATA,e.name,'proyecto.json'))).map(e=>e.name).sort():args.slice(0,1);
+// --all sin carpeta de datos: ningún proyecto, total a cero.
+const ids=opts.all?!fs.existsSync(DATA)?[]:fs.readdirSync(DATA,{withFileTypes:true}).filter(e=>e.isDirectory()&&ID_RE.test(e.name)&&fs.existsSync(path.join(DATA,e.name,'proyecto.json'))).map(e=>e.name).sort():args.slice(0,1);
 if(opts.all?args.length:!ids.length){console.error(USAGE);process.exit(2);}
 if(!opts.all&&!ID_RE.test(ids[0])){console.error('ID de proyecto no válido: '+ids[0]);process.exit(2);}
 if(!opts.all&&!fs.existsSync(projectDir(ids[0]))){console.error('No existe el proyecto: '+ids[0]);process.exit(2);}

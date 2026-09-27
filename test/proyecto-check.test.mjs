@@ -50,7 +50,7 @@ test('R-builder: fuera del proyecto, inexistente y contenido',()=>{
 
 test('R-manifest: claves de nave, viewer y rutas de código',()=>{
  const found=rules(mk({shipModel:{},shipModelHistory:[],environments:[{builder:'e.js',viewer:'e/explore.js'},{viewer:{camera:1}}],ideas:[{sourceFile:'x/index.html'}]},{'e.js':''}),'R-manifest');
- assert.deepEqual(found.map(x=>x.detail),['shipModel','shipModelHistory','environments.0.viewer: e/explore.js','ideas.0.sourceFile: x/index.html']);});
+ assert.deepEqual(found.map(x=>x.detail),['shipModel','shipModelHistory','environments.0.viewer: e/explore.js (viewer como ruta ya no se admite: usa builder + data y viewer.plugins)','ideas.0.sourceFile: x/index.html']);});
 
 test('plugins del visor: R-code, R-builder (contenido) y R-manifest (declaración)',()=>{
  const env=plugins=>({environments:[{builder:'b.js',data:'m.json',viewer:{plugins}}]});
@@ -110,3 +110,11 @@ test('CLI: con git también se salta trabajos/',()=>{
  assert.equal(spawnSync('git',['init','-q'],{cwd:dir}).status,0);
  const r=spawnSync(process.execPath,['scripts/proyecto-check.mjs','pc-git'],{cwd:path.resolve(import.meta.dirname,'..'),encoding:'utf8',env:{...process.env,RODAJE_DATA:DATA}});
  assert.equal(r.status,1);assert.match(r.stdout,/R-code · 1/);assert.match(r.stdout,/suelto\.mjs/);assert.doesNotMatch(r.stdout,/trabajos/);});
+
+test('CLI: --all sin carpeta de datos sale con 0 y total a cero',()=>{
+ const r=spawnSync(process.execPath,['scripts/proyecto-check.mjs','--all'],{cwd:path.resolve(import.meta.dirname,'..'),encoding:'utf8',env:{...process.env,RODAJE_DATA:path.join(DATA,'no','existe')}});
+ assert.equal(r.status,0,r.stderr);assert.match(r.stdout,/^Total: 0 errores, 0 avisos en 0 ficheros distintos$/m);});
+
+test('package.json: check:proyectos es estricto (sin --report)',()=>{
+ const pkg=JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname,'../package.json'),'utf8'));
+ assert.equal(pkg.scripts['check:proyectos'],'node scripts/proyecto-check.mjs --all');});

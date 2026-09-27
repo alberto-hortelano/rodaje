@@ -29111,7 +29111,7 @@ async function render() {
   }
   if (view === "environments") {
     const list = environmentList(p);
-    html3 = heading2("Entornos 3D.", "Decorados en 3D con medidas reales: exterior, interior y piezas con nombre. Cada entorno se abre en su visor; los planos los usar\xE1n como decorado.", btn("+ Entorno GLB", "new-environment", "primary")) + (list.length ? `<div class="grid">${list.map((e) => `<article class="card">${image(e.image)}<div class="inner"><div class="row between"><h2>${esc(e.name)}</h2><span class="pill">${esc(e.kind === "visor" ? "VISOR PROPIO" : e.kind === "constructor" ? "VISOR 3D" : e.kind === "glb" ? "GLB" : "SIN MODELO")}</span></div><p>${esc(e.description.slice(0, 220))}</p>${e.glb ? `<small>${esc(e.glb)}</small>` : ""}<div class="actions">${btn("Abrir", e.action, "primary")}${btn("Editar", "edit-environment:" + e.id) + btn("Subir GLB", "upload-environment:" + e.id)}</div></div></article>`).join("")}</div>` : '<section class="panel"><p>Este proyecto a\xFAn no tiene entornos 3D. Sube un GLB (de Tripo, Meshy, Hunyuan3D\u2026) o a\xF1ade uno con visor propio en <code>environments</code>.</p></section>');
+    html3 = heading2("Entornos 3D.", "Decorados en 3D con medidas reales: exterior, interior y piezas con nombre. Cada entorno se abre en su visor; los planos los usar\xE1n como decorado.", btn("+ Entorno GLB", "new-environment", "primary")) + (list.length ? `<div class="grid">${list.map((e) => `<article class="card">${image(e.image)}<div class="inner"><div class="row between"><h2>${esc(e.name)}</h2><span class="pill">${esc(e.kind === "no v\xE1lido" ? "VISOR NO V\xC1LIDO" : e.kind === "constructor" ? "VISOR 3D" : e.kind === "glb" ? "GLB" : "SIN MODELO")}</span></div><p>${esc(e.description.slice(0, 220))}</p>${e.invalid ? `<small>${esc(e.invalid)}</small>` : ""}${e.glb ? `<small>${esc(e.glb)}</small>` : ""}<div class="actions">${btn("Abrir", e.action, "primary")}${btn("Editar", "edit-environment:" + e.id) + btn("Subir GLB", "upload-environment:" + e.id)}</div></div></article>`).join("")}</div>` : '<section class="panel"><p>Este proyecto a\xFAn no tiene entornos 3D. Sube un GLB (de Tripo, Meshy, Hunyuan3D\u2026) o a\xF1ade uno con constructor y datos en <code>environments</code>.</p></section>');
   }
   if (view === "environment") {
     const e = (p.environments || []).find((x2) => x2.id === environmentId);
@@ -29194,10 +29194,8 @@ async function render() {
     const e = (p.environments || []).find((x2) => x2.id === environmentId), el = $2("#environment-model");
     try {
       const v2 = environmentViewer(e);
-      if (v2.kind === "legacy") {
-        const module = await import(media(v2.module));
-        stage = await module.mountEnvironment(el, { project: p, environment: e });
-      } else if (v2.kind === "mount") {
+      if (v2.kind === "invalido") el.textContent = v2.message;
+      else if (v2.kind === "mount") {
         const viewer = "/viewer/mount.mjs", module = await import(viewer);
         stage = await module.mountEnvironment(el, { project: p, environment: e });
       } else if (v2.kind === "glb") {

@@ -27,3 +27,6 @@ test('montar: un ffmpeg fallido sale con código distinto de 0 y su stderr hered
 test('el golden solo contiene hosts simulados y la clave de prueba, sin ElevenLabs directo',()=>{const files=fs.readdirSync(H.GOLDEN,{recursive:true}).filter(f=>f.endsWith('.jsonl'));assert.ok(files.length>=23);
  for(const f of files){const text=fs.readFileSync(path.join(H.GOLDEN,f),'utf8');assert.doesNotMatch(text,/api\.elevenlabs|xi-api/i,f);
   for(const line of text.split('\n').filter(Boolean)){const e=JSON.parse(line);if(e.kind!=='fetch')continue;assert.ok(['rest.fal.ai','queue.fal.run'].includes(new URL(e.url).hostname)||new URL(e.url).hostname.endsWith('.mock.invalid'),e.url);assert.ok(e.auth===null||e.auth==='Key test:dummy',f);}}});
+test('montar: concat.txt con rutas relativas a la carpeta del montaje',async()=>{const {ABS_RE}=await import('../lib/proyecto-check.mjs');const d=H.cliData(),r=H.runCli(d,'scripts/bloques/montar.mjs',['lote-a']);assert.equal(r.status,0,r.stderr);
+ const text=fs.readFileSync(path.join(d,H.CLI_PROJECT,'assets/lote-a/montaje/concat.txt'),'utf8'),lines=text.trimEnd().split('\n');
+ assert.doesNotMatch(text,ABS_RE);assert.ok(text.endsWith('\n'));assert.ok(lines.length>0);for(const l of lines)assert.match(l,/^file '\.\.\/b0\d\/edit\.mp4'$/);});

@@ -6,7 +6,7 @@
 // Salida: assets/<lote>/montaje/<nombre>.mp4 y cut.json (qué bloque viene de qué fuente y su tramo at/length en el montaje).
 // Los edit.mp4 cuya toma y tramo no han cambiado (edit.json) no se vuelven a codificar.
 import fs from 'node:fs';import path from 'node:path';
-import {parseArgs,ff,readJSON,writeJSON,ffprobeDuration,cliProject,usageExit} from './lib.mjs';import {loadLote,loadAttempts} from '../../lib/lotes.mjs';import {chosenAttempt} from '../../app/workflow.mjs';
+import {parseArgs,ff,readJSON,writeJSON,ffprobeDuration,cliProject,usageExit} from './lib.mjs';import {loadLote,loadAttempts} from '../../lib/lotes.mjs';import {chosenAttempt} from '../../app/workflow.mjs';import {concatList} from '../../lib/media.mjs';
 const USAGE='Uso: montar.mjs <lote> [--project id] [--out nombre]';
 const {args:[lote],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
 const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);const outDir=path.join(L.paths.out,'montaje');fs.mkdirSync(outDir,{recursive:true});
@@ -27,6 +27,6 @@ for(const block of L.plan){const dir=path.join(L.paths.out,block.id);const targe
   const vf=['scale=1280:720,setsar=1,fps=24',`drawtext=fontfile=${font}:fontsize=20:fontcolor=yellow@0.8:x=20:y=20:text='GUÍA 3D ${block.id}'`,...draw].join(',');
   ff(['-i',guide,'-f','lavfi','-i','anullsrc=r=48000:cl=stereo','-t',block.length,'-vf',vf,'-map','0:v:0','-map','1:a:0','-shortest','-c:v','libx264','-preset','fast','-crf','18','-c:a','aac','-b:a','128k',target]);cut.push({block:block.id,source:'guide',lines:lines.length});}
  const length=ffprobeDuration(target)||0;Object.assign(cut.at(-1),{at:Math.round(clock*1000)/1000,length:Math.round(length*1000)/1000});clock+=length;entries.push(target);}
-const list=path.join(outDir,'concat.txt');fs.writeFileSync(list,entries.map(f=>`file '${f}'`).join('\n')+'\n');const outFile=path.join(outDir,name+'.mp4');ff(['-f','concat','-safe','0','-i',list,'-c','copy','-movflags','+faststart',outFile]);
+const list=path.join(outDir,'concat.txt');fs.writeFileSync(list,concatList(entries,outDir));const outFile=path.join(outDir,name+'.mp4');ff(['-f','concat','-safe','0','-i',list,'-c','copy','-movflags','+faststart',outFile]);
 writeJSON(path.join(outDir,name+'.cut.json'),{lote,at:new Date().toISOString(),duration:ffprobeDuration(outFile),blocks:cut});
 const gen=cut.filter(c=>c.source==='generated').length,pend=cut.filter(c=>c.pending).length;console.log(`${path.relative(L.paths.base,outFile)}: ${cut.length} bloques, ${gen} generados (${pend} sin revisar), ${cut.filter(c=>c.source==='guide').length} en guía, ${cut.filter(c=>c.source==='missing').length} sin nada`);
