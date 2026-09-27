@@ -1,6 +1,6 @@
 // viewer/walk.mjs en Node: colisión por rayos (suelo, muros, piezas que se saltan) y caminante (peldaños, deslizamiento, «no clip», colisión inyectable).
 import test from 'node:test';import assert from 'node:assert/strict';import * as T from 'three';
-import {raycastCollision,createWalker,WALK_KEYS} from '../viewer/walk.mjs';
+import {raycastCollision,createWalker,WALK_KEYS,restoreWalkPose} from '../viewer/walk.mjs';
 
 const box=(parent,name,[x0,x1],[y0,y1],[z0,z1])=>{const m=new T.Mesh(new T.BoxGeometry(x1-x0,y1-y0,z1-z0),new T.MeshBasicMaterial());m.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);m.name=name;parent.add(m);return m;};
 // Suelo de 20 × 20 m con la cara de arriba en y = 0, un muro al norte (z = −5), un peldaño de 0,2 m al este y un escalón de 0,5 m al oeste.
@@ -46,3 +46,20 @@ test('createWalker: walkKeys por defecto y opciones de walkOptions',async()=>{co
  const fake={collect(){},groundAt:()=>0,blocked:()=>false},cam=new T.PerspectiveCamera();
  const w=createWalker(T,cam,{collision:fake,...walkOptions({walk:{eye:1.5}})});assert.equal(w.walkKeys,WALK_KEYS);assert.equal(w.eye,1.5);
  w.place(0,0,0);near(cam.position.y,1.5,1e-9,'ojos');});
+
+const yawPitch=cam=>{const e=new T.Euler().setFromQuaternion(cam.quaternion,'YXZ');return [e.y,e.x,e.z];};
+const poseDe=(yaw,pitch,roll=0)=>new T.Quaternion().setFromEuler(new T.Euler(pitch,yaw,roll,'YXZ')).toArray();
+test('restoreWalkPose: repone suelo y orientación en un caminante nuevo, y se sigue andando',()=>{const {root}=world(),collision=raycastCollision(T);collision.collect(root);
+ const cam=new T.PerspectiveCamera(),w=createWalker(T,cam,{collision});w.place(0,0,0);w.aim(cam.position.toArray(),[0,1.62,10]);
+ restoreWalkPose(T,w,cam,{position:[2,1.82,0],quaternion:poseDe(Math.PI/6,-Math.PI/18)});
+ near(w.floorY,0.2,1e-6,'suelo del peldaño');assert.deepEqual(cam.position.toArray().map(v=>Math.round(v*1e6)/1e6),[2,1.82,0]);
+ const [y,x,z]=yawPitch(cam);near(y,Math.PI/6,1e-9,'yaw');near(x,-Math.PI/18,1e-9,'pitch');near(z,0,1e-9,'alabeo');
+ const [px,,pz]=w.walk(['w'],0.3);assert.ok(px<2&&pz<0,`anda hacia donde mira: ${px},${pz}`);near(yawPitch(cam)[0],Math.PI/6,1e-9,'yaw tras andar');});
+
+test('restoreWalkPose: con «no clip» conserva la altura; sin él baja al suelo; acota alabeo y pitch',()=>{const {root}=world(),collision=raycastCollision(T);collision.collect(root);
+ const cam=new T.PerspectiveCamera(),w=createWalker(T,cam,{collision});w.noclip=true;
+ restoreWalkPose(T,w,cam,{position:[0,7,0],quaternion:poseDe(0,0.3,0.8)});assert.deepEqual(cam.position.toArray(),[0,7,0]);
+ const [,x,z]=yawPitch(cam);near(x,0.3,1e-9,'pitch');near(z,0,1e-9,'sin alabeo');
+ w.noclip=false;restoreWalkPose(T,w,cam,{position:[0,7,0],quaternion:poseDe(1,1.55)});near(cam.position.y,1.62,1e-6,'baja al suelo');near(w.floorY,0,1e-6,'suelo');
+ const [y2,x2]=yawPitch(cam);near(x2,1.45,1e-9,'pitch acotado');near(y2,1,1e-9,'yaw');
+ restoreWalkPose(T,w,cam,{position:[50,3,50],quaternion:[0,0,0,1]});near(cam.position.y,3,1e-9,'sin suelo conserva la altura');});

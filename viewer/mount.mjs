@@ -1,23 +1,30 @@
 // Visor genérico de entornos con constructor: órbita, lugares, estados, recorrido a pie, «no clip», pantalla completa, captura y GLB.
-// mountEnvironment(container, {project, environment}) → {setView, setState, setWalk, setNoclip, mode, noclip, walk, state, scene, camera, controls, renderer, dispose}.
+// mountEnvironment(container, {project, environment, persist}) → {setView, setState, setWalk, setNoclip, mode, noclip, walk, state, scene, camera, controls, renderer, saveView, dispose}.
+// Recuerda la vista en sessionStorage (solo la pestaña) salvo con persist: false o persist=0 en la URL (docs/visor-3d.md).
 // Lo propio de cada escenario (luces, cortes, piezas atravesables, entrada del paseo, vista general) llega por los plugins
 // del proyecto (environments[].viewer.plugins); sin plugins pone luces y fondo por defecto y encuadra la caja del modelo.
 import * as T from 'three';
 import {OrbitControls} from '/three/examples/jsm/controls/OrbitControls.js';
 import {GLTFExporter} from '/three/examples/jsm/exporters/GLTFExporter.js';
 import {createKit} from './kit.mjs';
-import {createWalker, raycastCollision} from './walk.mjs';
-import {esc, pluginPaths, viewerOptions, initialState, buttonHTML, combineHooks, defaultSpawn, framePose, CORE_ACTIONS, assignExpose, walkOptions, handleKey, withGlbUserData} from './plugins.mjs';
+import {createWalker, raycastCollision, restoreWalkPose} from './walk.mjs';
+import {esc, pluginPaths, viewerOptions, initialState, buttonHTML, combineHooks, defaultSpawn, framePose, CORE_ACTIONS, assignExpose, walkOptions, handleKey, withGlbUserData, viewKey, persistEnabled, parseSavedView, buildSavedView} from './plugins.mjs';
 
 const CSS = `.env3d{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px}.env3d-view{position:relative;background:#1b2126;border-radius:10px;overflow:hidden;aspect-ratio:16/9}.env3d-view canvas{width:100%;height:100%;display:block}.env3d-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;align-items:center}.env3d-bar select{max-width:260px}.env3d-side{display:flex;flex-direction:column;gap:10px;max-height:78vh;overflow:auto}.env3d-side h4{margin:4px 0}.env3d-marks button{display:block;width:100%;text-align:left;margin:2px 0;padding:6px 8px}.env3d-marks small{display:block;opacity:.7;font-size:11px;line-height:1.3}.env3d-note{position:absolute;left:12px;bottom:10px;right:12px;color:#e8e4da;font-size:13px;text-shadow:0 1px 3px #000;pointer-events:none}.env3d-state label{display:block;font-size:12px;margin:4px 0}.env3d-cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;font:18px monospace;text-shadow:0 0 3px #000;pointer-events:none;display:none}.env3d-hint{position:absolute;left:12px;top:10px;right:12px;color:#f1eee6;font-size:12px;text-shadow:0 1px 3px #000;pointer-events:none;display:none}.env3d-walk .env3d-cross,.env3d-walk .env3d-hint{display:block}.env3d-view:fullscreen{aspect-ratio:auto}.env3d-state select{width:100%}.env3d-overlay{position:absolute;inset:0;pointer-events:none}@media(max-width:900px){.env3d{grid-template-columns:1fr}}`;
 
-export async function mountEnvironment(container, {project, environment: env}) {
+export async function mountEnvironment(container, {project, environment: env, persist}) {
   const asset = f => '/api/asset?project=' + encodeURIComponent(project.id) + '&file=' + encodeURIComponent(f);
   const data = await (await fetch(asset(env.data))).json();
   const builder = await import(asset(env.builder));
   const plugins = [];
   for (const file of pluginPaths(env)) { const m = await import(asset(file)); if (typeof m.plugin !== 'function') throw Error(`El plugin ${file} no exporta plugin(api)`); plugins.push({file, plugin: m.plugin}); }
-  let state = initialState(data);
+  // Vista guardada: se lee antes de la primera construcción para construir una sola vez con su estado.
+  const storeKey = viewKey(project.id, env.id);
+  let store = null;
+  if (persistEnabled({persist, search: location.search})) try { store = sessionStorage; } catch {}
+  let savedText = null; try { savedText = store?.getItem(storeKey) ?? null; } catch {}
+  const saved = parseSavedView(savedText, {data, plugins: pluginPaths(env)});
+  let state = initialState(data, saved);
   const marks = data.landmarks || [];
   // 1 · DOM, renderer, escena vacía, cámara y controles.
   container.innerHTML = `<style>${CSS}</style><div class="env3d-bar">
@@ -151,14 +158,28 @@ export async function mountEnvironment(container, {project, environment: env}) {
   container.querySelectorAll('[data-state]').forEach(s => { s.onchange = () => setState({[s.dataset.state]: s.value}); });
   const resize = () => { const w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
   const ro = new ResizeObserver(resize); ro.observe(view);
-  // 5 · Primera construcción y vista general.
-  rebuild(); resize(); hooks.onOverview(); goOverview();
+  // 5 · Primera construcción y vista guardada o general.
+  rebuild(); resize();
+  if (saved) restoreSaved(saved); else { hooks.onOverview(); goOverview(); }
+  function restoreSaved(s) {
+    setNoclip(s.noclip);
+    if (s.mode === 'walk') { setWalk(true); restoreWalkPose(T, walker, camera, s); }
+    else { hooks.onOverview(); go(s.position, s.target, hooks.overview()?.text ?? env.name); }
+    for (const {file, error} of hooks.restoreView(s.plugins, {mode})) console.warn(`El plugin ${file}: restoreView: ${error?.message ?? error}`);
+  }
+  const snapshot = () => buildSavedView({mode, position: camera.position.toArray(), quaternion: camera.quaternion.toArray(),
+    target: controls.target.toArray(), noclip: !!walker.noclip, state: {...state}, plugins: hooks.saveView()});
+  // Lanza si algo no es serializable; los guardados automáticos lo avisan sin cortar.
+  function saveView() { const snap = snapshot(); store?.setItem(storeKey, JSON.stringify(snap)); return snap; }
+  const saveQuiet = () => { try { saveView(); } catch (e) { console.error('No se pudo guardar la vista: ' + e.message); } };
+  const onHidden = () => { if (document.visibilityState === 'hidden') saveQuiet(); };
+  window.addEventListener('pagehide', saveQuiet); document.addEventListener('visibilitychange', onHidden);
   let last = performance.now();
   const loop = () => { if (stopped) return; const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000); last = now; if (mode === 'walk') walker.update(dt); else controls.update(); hooks.onFrame(dt, {mode}); renderer.render(scene, camera); raf = requestAnimationFrame(loop); };
   loop();
   const stage = {
-    setView, setState, setWalk, setNoclip, get mode() { return mode; }, get noclip() { return walker.noclip; }, walk: (keysDown, seconds) => walker.walk(keysDown, seconds), get state() { return {...state}; }, scene, camera, controls, renderer,
-    dispose() { stopped = true; cancelAnimationFrame(raf); hooks.dispose(); ro.disconnect(); controls.dispose(); renderer.dispose(); window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onKeyUp); window.removeEventListener('blur', onBlur); window.removeEventListener('mousemove', onMouse); window.removeEventListener('pointerup', onUp); if (document.pointerLockElement) document.exitPointerLock(); container.innerHTML = ''; },
+    setView, setState, setWalk, setNoclip, saveView, get mode() { return mode; }, get noclip() { return walker.noclip; }, walk: (keysDown, seconds) => walker.walk(keysDown, seconds), get state() { return {...state}; }, scene, camera, controls, renderer,
+    dispose() { saveQuiet(); window.removeEventListener('pagehide', saveQuiet); document.removeEventListener('visibilitychange', onHidden); stopped = true; cancelAnimationFrame(raf); hooks.dispose(); ro.disconnect(); controls.dispose(); renderer.dispose(); window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onKeyUp); window.removeEventListener('blur', onBlur); window.removeEventListener('mousemove', onMouse); window.removeEventListener('pointerup', onUp); if (document.pointerLockElement) document.exitPointerLock(); container.innerHTML = ''; },
   };
   return assignExpose(stage, hooks.expose);
 }

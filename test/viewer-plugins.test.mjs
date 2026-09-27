@@ -1,6 +1,7 @@
 // viewer/plugins.mjs: rutas y opciones de viewer, estado inicial, botones y combinación de hooks de varios plugins.
 import test from 'node:test';import assert from 'node:assert/strict';
-import {esc,pluginPaths,viewerOptions,initialState,buttonHTML,combineHooks,defaultSpawn,framePose,CORE_ACTIONS,CORE_API,HOOKS,assignExpose,checkWalker,walkOptions,handleKey,ignoresKeys,GLB_USERDATA,glbUserData,withGlbUserData} from '../viewer/plugins.mjs';
+import {esc,pluginPaths,viewerOptions,initialState,buttonHTML,combineHooks,defaultSpawn,framePose,CORE_ACTIONS,CORE_API,HOOKS,assignExpose,checkWalker,walkOptions,handleKey,ignoresKeys,GLB_USERDATA,glbUserData,withGlbUserData,VIEW_VERSION,viewKey,persistEnabled,checkSerializable,buildSavedView,parseSavedView} from '../viewer/plugins.mjs';
+import * as T from 'three';
 
 test('pluginPaths y viewerOptions',()=>{
  for(const env of [{},{viewer:'a/explore.js'},{viewer:{camera:1}},{viewer:null},{viewer:['x.js']}])assert.deepEqual(pluginPaths(env),[],JSON.stringify(env));
@@ -102,3 +103,53 @@ test('glbUserData y withGlbUserData: solo las claves de GLB_USERDATA y restaura 
  const root={userData:ud};const r=await withGlbUserData(root,()=>{assert.deepEqual(root.userData,{units:'metres',state:{a:1}});return 'glb';});
  assert.equal(r,'glb');assert.equal(root.userData,ud);
  await assert.rejects(withGlbUserData(root,async()=>{throw Error('falla');}),/falla/);assert.equal(root.userData,ud);});
+
+test('viewKey y persistEnabled',()=>{assert.equal(VIEW_VERSION,1);assert.equal(viewKey('dead-air','toledo'),'rodaje:visor:dead-air:toledo');
+ assert.equal(persistEnabled({persist:false}),false);assert.equal(persistEnabled({search:'?persist=0'}),false);assert.equal(persistEnabled({search:'?project=a&persist=0'}),false);
+ for(const search of ['','?persist=1','?x=0'])assert.equal(persistEnabled({search}),true,search);
+ assert.equal(persistEnabled({persist:true,search:'?persist=0'}),false);assert.equal(persistEnabled(),true);assert.equal(persistEnabled({persist:undefined}),true);});
+
+test('checkSerializable: planos sí; funciones, undefined, no finitos, instancias y ciclos no, con la ruta',()=>{
+ const nulo=Object.create(null);nulo.a=[1,{b:'x'}];
+ for(const v of [null,true,'a',0,-1.5,[],{},{a:[1,{b:[null,false]}]},nulo])assert.doesNotThrow(()=>checkSerializable(v),JSON.stringify(v));
+ const ciclo={a:[]};ciclo.a.push(ciclo);
+ for(const [v,re] of [[{a:[0,{b:()=>1}]},/\(function\) en \.a\[1\]\.b/],[{a:undefined},/\(undefined\) en \.a/],[{a:NaN},/NaN/],[[Infinity],/Infinity.*\[0\]/],[{a:1n},/bigint/],[{a:Symbol('s')},/symbol/],
+  [{p:new T.Vector3()},/Vector3.*\.p/],[{m:new Map()},/Map/],[ciclo,/ciclo/],[undefined,/undefined/]])assert.throws(()=>checkSerializable(v),re,String(re));
+ assert.throws(()=>checkSerializable({f(){}},'El plugin x.js: saveView'),/^Error: El plugin x\.js: saveView: valor no serializable \(function\) en \.f$/);});
+
+const DATA={states:{luz:{label:'Luz',options:{on:'Encendida',off:'Apagada'}},puerta:{label:'Puerta',options:{abierta:'A',cerrada:'C'}}},defaultState:{luz:'on',puerta:'cerrada'}};
+const vista=(extra={})=>({mode:'walk',position:[1,1.62,-2],quaternion:[0,0.5,0,0.5],target:[0,1,0],noclip:false,state:{luz:'off'},plugins:{'a.js':{x:1}},...extra});
+test('buildSavedView y parseSavedView: ida y vuelta, cuaternión normalizado',()=>{
+ const v=buildSavedView(vista());assert.deepEqual(Object.keys(v),['v','mode','camera','target','noclip','state','plugins']);assert.equal(v.v,1);
+ const {quaternion:q,...r}=parseSavedView(JSON.stringify(v),{data:DATA,plugins:['a.js']});
+ assert.deepEqual(r,{mode:'walk',position:[1,1.62,-2],target:[0,1,0],noclip:false,state:{luz:'off'},plugins:{'a.js':{x:1}}});
+ [0,Math.SQRT1_2,0,Math.SQRT1_2].forEach((x,i)=>assert.ok(Math.abs(q[i]-x)<1e-12,String(q)));
+ assert.throws(()=>buildSavedView(vista({plugins:{'a.js':{f:()=>1}}})),/no serializable \(function\) en \.plugins\.a\.js\.f/);});
+
+test('parseSavedView: lo inválido da null sin lanzar; estado y plugins se filtran clave a clave',()=>{const ctx={data:DATA,plugins:['a.js','b.js']};
+ const txt=o=>JSON.stringify({...buildSavedView(vista()),...o});
+ for(const t of [null,undefined,3,'','{roto','null','[]',txt({v:2}),txt({mode:'map'}),txt({camera:{position:[NaN,0,0],quaternion:[0,0,0,1]}}),JSON.stringify({...buildSavedView(vista()),camera:{position:[0,0,0],quaternion:[0,0,0,0]}}),
+  txt({camera:{position:[0,0],quaternion:[0,0,0,1]}}),txt({target:[0,0,'1']}),txt({noclip:undefined}),txt({noclip:'no'})])assert.equal(parseSavedView(t,ctx),null,String(t));
+ assert.equal(parseSavedView(JSON.stringify({...buildSavedView(vista()),camera:{position:[0,0,0],quaternion:[1e-9,0,0,0]}}),ctx),null,'norma < 1e-6');
+ const r=parseSavedView(txt({state:{luz:'fantasma',puerta:'abierta',otra:'x',n:1},plugins:{'a.js':42,'otro.js':{},'b.js':null}}),ctx);
+ assert.deepEqual(r.state,{puerta:'abierta'});assert.deepEqual(r.plugins,{'a.js':42,'b.js':null});
+ assert.deepEqual(parseSavedView(txt({state:'x',plugins:[1]}),ctx).state,{});assert.deepEqual(parseSavedView(txt({plugins:'x'}),ctx).plugins,{});
+ assert.deepEqual(parseSavedView(txt({state:{toString:'off'}}),{data:{}}).state,{});assert.deepEqual(parseSavedView(txt({}),{data:DATA}).plugins,{});});
+
+test('initialState: mezcla el estado guardado sin mutar',()=>{const saved={state:{luz:'off'}};
+ const s=initialState(DATA,saved);assert.deepEqual(s,{luz:'off',puerta:'cerrada'});assert.deepEqual(DATA.defaultState,{luz:'on',puerta:'cerrada'});assert.deepEqual(saved.state,{luz:'off'});
+ assert.deepEqual(initialState(DATA,null),{luz:'on',puerta:'cerrada'});assert.deepEqual(initialState(undefined,{state:{a:1}}),{a:1});});
+
+test('combineHooks: saveView por ruta y restoreView con su parte',()=>{
+ assert.deepEqual(HOOKS.slice(-2),['saveView','restoreView']);assert.deepEqual(Object.keys(combineHooks([])),HOOKS);
+ const log=[];
+ const h=combineHooks([{file:'a.js',hooks:{saveView:()=>({x:[1,{y:'z'}]}),restoreView:(s,c)=>log.push(['a',s,c.mode])}},{file:'b.js',hooks:{saveView:()=>undefined,restoreView:s=>{log.push(['b',s]);throw Error('roto');}}},
+  {file:'c.js',hooks:{restoreView:s=>log.push(['c',s])}},{file:'d.js',hooks:{saveView:()=>0}}]);
+ assert.deepEqual(h.saveView(),{'a.js':{x:[1,{y:'z'}]},'d.js':0});
+ const errs=h.restoreView({'a.js':1,'b.js':undefined,'otro.js':2},{mode:'walk'});
+ assert.deepEqual(log,[['a',1,'walk'],['b',undefined]]);assert.equal(errs.length,1);assert.equal(errs[0].file,'b.js');assert.match(errs[0].error.message,/roto/);
+ assert.deepEqual(h.restoreView(null,{mode:'orbit'}),[]);assert.deepEqual(combineHooks([]).saveView(),{});assert.deepEqual(combineHooks([]).restoreView({},{}),[]);
+ assert.throws(()=>combineHooks([{file:'m.js',hooks:{saveView:()=>({v:new T.Vector3()})}}]).saveView(),/^Error: El plugin m\.js: saveView: valor no serializable \(Vector3\) en \.v$/);
+ assert.throws(()=>combineHooks([{file:'m.js',hooks:{saveView:()=>({v:NaN})}}]).saveView(),/El plugin m\.js: saveView/);
+ for(const k of ['saveView','restoreView'])assert.throws(()=>combineHooks([{file:'r.js',hooks:{[k]:{}}}]),new RegExp('r\\.js: '+k+' no es una función'));
+ assert.ok(CORE_API.includes('saveView'));assert.throws(()=>combineHooks([{file:'p.js',hooks:{expose:{saveView(){}}}}]),/p\.js expone saveView/);assert.throws(()=>assignExpose({},{saveView:1}),/saveView/);});

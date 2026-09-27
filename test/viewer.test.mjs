@@ -13,11 +13,14 @@ fs.mkdirSync(path.join(DATA,id,'ambientes/humo/3d'),{recursive:true});
 fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/humo.js'),"export function build(T, data, kit) { const g = kit.group('humo'); kit.box(g, 'suelo', [-10, 10], [-0.2, 0], [-10, 10], '#777777'); kit.box(g, 'muro', [-10, 10], [0, 3], [-5.2, -5], '#999999'); g.userData = {units: 'metres', ship: {x: [1]}}; return g; }\n");
 const landmarks=[{id:'centro',name:'Centro',view:[0,1.6,4],at:[0,1.5,-10]}];
 fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/model.json'),JSON.stringify({landmarks,walkthrough:[{label:'ping',call:'ping',expect:'pong'},{label:'centro',walk:true,view:'centro'},{label:'marca del plugin',call:'setView',args:['marca-plugin'],expect:true}]}));
+// Constructor con contador de construcciones (la vista guardada no debe construir dos veces) y datos con un estado.
+fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/humo-estado.js'),"let n = 0;\nexport function build(T, data, kit) { const g = kit.group('humo'); kit.box(g, 'suelo', [-10, 10], [-0.2, 0], [-10, 10], '#777777'); kit.box(g, 'muro', [-10, 10], [0, 3], [-5.2, -5], '#999999'); g.userData = {units: 'metres', construcciones: ++n}; return g; }\n");
+fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/model-estado.json'),JSON.stringify({landmarks,states:{luz:{label:'Luz',options:{on:'Encendida',off:'Apagada'}}},defaultState:{luz:'on'}}));
 fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/model-falla.json'),JSON.stringify({landmarks,walkthrough:[{label:'ping',call:'ping',expect:'otro'}]}));
 // Con viewer.caminante el plugin pone su propio caminante (walkKeys con espacio y «c»); cuenta teclas «k», vistas propias y modos.
 fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/visor.js'),`export function plugin(api) {
   const walkerEnPlugin = api.walker, modos = [];
-  let teclas = 0, pasos = 0, vista = null;
+  let teclas = 0, pasos = 0, vista = null, restaurado = null;
   const b = api.ui.button({a: 'humo', text: 'Humo', pressed: false}, () => { b.pressed = !b.pressed; });
   const panel = api.ui.panel({title: 'Panel', html: '<p class="humo-panel">uno</p>'});
   api.ui.overlay('<div class="humo-hud">hud</div>');
@@ -34,11 +37,14 @@ fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/visor.js'),`export functio
     onKey(k, {down}) { if (k !== 'k') return false; if (down) teclas++; return true; },
     view(id) { if (id !== 'marca-plugin') return false; vista = id; return true; },
     onMode(m) { modos.push(m); },
-    expose: {ping: () => 'pong', panel: h => panel.set(h), walkerEnPlugin, mapa: !!mapa, get pasos() { return pasos; }, get teclas() { return teclas; }, get modos() { return [...modos]; }, get vista() { return vista; }}};
+    saveView: () => api.options.malGuardado ? {f: () => 1} : {pulsado: b.pressed},
+    restoreView(s, {mode}) { restaurado = {s, mode}; if (typeof s?.pulsado === 'boolean') b.pressed = s.pulsado; },
+    expose: {get restaurado() { return restaurado; }, ping: () => 'pong', panel: h => panel.set(h), walkerEnPlugin, mapa: !!mapa, get pasos() { return pasos; }, get teclas() { return teclas; }, get modos() { return [...modos]; }, get vista() { return vista; }}};
 }
 `);
 const humo={builder:'ambientes/humo/3d/humo.js',data:'ambientes/humo/3d/model.json'};
-fs.writeFileSync(path.join(DATA,id,'proyecto.json'),JSON.stringify({id,name:'Humo',type:'serie',ideas:[],characters:[],locations:[],episodes:[],environments:[{id:'solo-glb',name:'Humo',glb:'assets/h.glb'},{id:'con-plugin',name:'Con plugin',...humo,viewer:{plugins:['ambientes/humo/3d/visor.js']}},{id:'sin-plugin',name:'Sin plugin',...humo},{id:'plugin-roto',name:'Roto',...humo,viewer:{plugins:['ambientes/humo/3d/roto.js']}},{id:'caminante',name:'Caminante',...humo,viewer:{plugins:['ambientes/humo/3d/visor.js'],caminante:true}},{id:'recorrido-falla',name:'Falla',...humo,data:'ambientes/humo/3d/model-falla.json',viewer:{plugins:['ambientes/humo/3d/visor.js']}}]}));
+fs.writeFileSync(path.join(DATA,id,'proyecto.json'),JSON.stringify({id,name:'Humo',type:'serie',ideas:[],characters:[],locations:[],episodes:[],environments:[{id:'solo-glb',name:'Humo',glb:'assets/h.glb'},{id:'con-plugin',name:'Con plugin',...humo,viewer:{plugins:['ambientes/humo/3d/visor.js']}},{id:'sin-plugin',name:'Sin plugin',...humo},{id:'plugin-roto',name:'Roto',...humo,viewer:{plugins:['ambientes/humo/3d/roto.js']}},{id:'caminante',name:'Caminante',...humo,viewer:{plugins:['ambientes/humo/3d/visor.js'],caminante:true}},{id:'recorrido-falla',name:'Falla',...humo,data:'ambientes/humo/3d/model-falla.json',viewer:{plugins:['ambientes/humo/3d/visor.js']}},
+ {id:'estado',name:'Estado',builder:'ambientes/humo/3d/humo-estado.js',data:'ambientes/humo/3d/model-estado.json'},{id:'mal-guardado',name:'Mal guardado',...humo,viewer:{plugins:['ambientes/humo/3d/visor.js'],malGuardado:true}}]}));
 fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/roto.js'),'export const nada = 1;\n');
 let child;
 test.before(()=>new Promise((resolve,reject)=>{child=spawnServer(process.execPath,[path.join(ROOT,'app/server.mjs')],{cwd:ROOT,env:{...process.env,PORT:String(port),RODAJE_DATA:DATA,RODAJE_LAN:'',RODAJE_TLS_CERT:'',RODAJE_TLS_KEY:''},stdio:['ignore','pipe','pipe']});let out='';
@@ -49,7 +55,7 @@ const get=p=>new Promise((resolve,reject)=>http.get({host:'127.0.0.1',port,path:
 
 test('/viewer/ sirve glb.mjs y kit.mjs como JavaScript',async()=>{const glb=await get('/viewer/glb.mjs');assert.equal(glb.status,200);assert.match(glb.type,/^text\/javascript/);assert.match(glb.body,/export async function mountGlb\(container, \{url, name\}\)/);
  const kit=await get('/viewer/kit.mjs');assert.equal(kit.status,200);assert.match(kit.type,/^text\/javascript/);assert.match(kit.body,/export function createKit/);});
-test('/viewer/ sirve mount.mjs, walk.mjs y plugins.mjs',async()=>{for(const [f,re] of [['mount.mjs',/export async function mountEnvironment\(container, \{project, environment: env\}\)/],['walk.mjs',/export function createWalker/],['plugins.mjs',/export function combineHooks/]]){const r=await get('/viewer/'+f);assert.equal(r.status,200,f);assert.match(r.type,/^text\/javascript/,f);assert.match(r.body,re,f);}});
+test('/viewer/ sirve mount.mjs, walk.mjs y plugins.mjs',async()=>{for(const [f,re] of [['mount.mjs',/export async function mountEnvironment\(container, \{project, environment: env, persist\}\)/],['walk.mjs',/export function createWalker/],['plugins.mjs',/export function combineHooks/]]){const r=await get('/viewer/'+f);assert.equal(r.status,200,f);assert.match(r.type,/^text\/javascript/,f);assert.match(r.body,re,f);}});
 test('/viewer/ sirve el editor de plantas',async()=>{const h=await get('/viewer/planta.html');assert.equal(h.status,200);assert.match(h.type,/^text\/html/);assert.match(h.body,/from '\.\/planta\.mjs'/);
  const m=await get('/viewer/planta.mjs');assert.equal(m.status,200);assert.match(m.type,/^text\/javascript/);assert.match(m.body,/export function validarPlanta\(planta, anterior\)/);});
 test('mount.mjs y walk.mjs no conocen piezas de ningún escenario',()=>{for(const f of ['mount.mjs','walk.mjs','plugins.mjs'])assert.doesNotMatch(fs.readFileSync(path.join(ROOT,'viewer',f),'utf8'),/tejado|bodega|cellar|camino|puerta-fuera|batiente|recinto/,f);});
@@ -113,3 +119,61 @@ test('humo: recorrer.mjs ejecuta call y expect, y sale con 1 si un paso falla',{
    const ok=run('con-plugin');assert.equal(ok.status,0,ok.stdout+ok.stderr);assert.match(ok.stdout,/ping\s+"pong" OK/);assert.match(ok.stdout,/marca del plugin\s+true OK/);assert.match(ok.stdout,/3 de 3 pasos OK/);
    const ko=run('recorrido-falla');assert.equal(ko.status,1,ko.stdout+ko.stderr);assert.match(ko.stdout,/FALLO: valor: "pong" ≠ "otro"/);}
   finally{fs.rmSync(out,{recursive:true,force:true});}});
+
+// Vista guardada (#37): sessionStorage de la pestaña; page.reload() en la misma página. Para dejar un valor a mano sin que
+// pagehide lo pise, antes se desmonta el visor (dispose guarda y retira las escuchas).
+const abrir=async(page,env,extra='')=>{await page.goto(`http://127.0.0.1:${port}/?project=${id}&view=environment&environment=${env}${extra}`);await page.waitForFunction('window.rodaje?.environment?.scene',null,{timeout:30000});};
+const recargar=async page=>{await page.reload();await page.waitForFunction('window.rodaje?.environment?.scene',null,{timeout:30000});};
+const pose=page=>page.evaluate(()=>{const e=window.rodaje.environment,r=new e.camera.rotation.constructor().setFromQuaternion(e.camera.quaternion,'YXZ');return {mode:e.mode,noclip:e.noclip,position:e.camera.position.toArray(),target:e.controls.target.toArray(),euler:[r.x,r.y,r.z],state:e.state};});
+const cerca=(a,b,eps,msg)=>assert.ok(a.length===b.length&&a.every((v,i)=>Math.abs(v-b[i])<eps),`${msg}: ${JSON.stringify(a)} ≠ ${JSON.stringify(b)}`);
+const clave=env=>`rodaje:visor:${id}:${env}`;
+const dejar=(page,env,valor)=>page.evaluate(([k,v])=>{window.rodaje.environment.dispose();sessionStorage.setItem(k,v);},[clave(env),valor]);
+const conPagina=fn=>withChrome(async browser=>{const page=await (await newRenderContext(browser,VIEWPORTS.lineaBase)).newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await fn(page);assert.deepEqual(errors,[]);});
+
+test('vista guardada: órbita con estado sin reconstruir; paseo y «no clip» sin plugins',{skip:SIN_CHROME},()=>conPagina(async page=>{
+  await abrir(page,'estado');
+  await page.evaluate(()=>{const e=window.rodaje.environment;e.setState({luz:'off'});e.camera.position.set(6,5,7);e.controls.target.set(1,0.5,-1);e.controls.update();});
+  await page.waitForTimeout(200);const antes=await pose(page);await recargar(page);const despues=await pose(page);
+  cerca(despues.position,antes.position,1e-3,'posición');cerca(despues.target,antes.target,1e-3,'objetivo');cerca(antes.target,[1,0.5,-1],1e-3,'objetivo pedido');
+  assert.equal(despues.mode,'orbit');assert.deepEqual(despues.state,{luz:'off'});assert.equal(await page.$eval('select[data-state=luz]',s=>s.value),'off');
+  assert.equal(await page.evaluate(()=>window.rodaje.environment.scene.getObjectByName('humo').userData.construcciones),1,'una sola construcción');
+  await abrir(page,'sin-plugin');
+  await page.evaluate(()=>{const e=window.rodaje.environment;e.setWalk(true);e.setView('centro');e.walk(['a'],0.5);e.camera.rotation.set(-10*Math.PI/180,30*Math.PI/180,0,'YXZ');});
+  const paseo=await pose(page);await recargar(page);const tras=await pose(page);
+  assert.equal(tras.mode,'walk');assert.equal(tras.noclip,false);cerca(tras.position,paseo.position,1e-3,'posición a pie');assert.ok(Math.abs(tras.position[1]-1.62)<1e-3,'a la altura de los ojos');
+  cerca(tras.euler,[-10*Math.PI/180,30*Math.PI/180,0],1e-3,'orientación');
+  await page.evaluate(()=>{const e=window.rodaje.environment;e.setNoclip(true);e.walk(['e'],1);});
+  const alto=await pose(page);assert.ok(alto.position[1]>5,'sube con «no clip»: '+alto.position[1]);await recargar(page);const tras2=await pose(page);
+  cerca(tras2.position,alto.position,1e-3,'altura con «no clip»');assert.equal(tras2.noclip,true);assert.equal(tras2.mode,'walk');
+  assert.equal(await page.getAttribute('[data-a=noclip]','aria-pressed'),'true');assert.equal(await page.textContent('[data-a=noclip]'),'No clip · activado');}));
+
+test('vista guardada: formato, parte del plugin y datos dañados',{skip:SIN_CHROME},()=>conPagina(async page=>{
+  await abrir(page,'con-plugin');await page.click('[data-a=humo]');await recargar(page);
+  const guardado=JSON.parse(await page.evaluate(k=>sessionStorage.getItem(k),clave('con-plugin')));
+  assert.deepEqual(Object.keys(guardado),['v','mode','camera','target','noclip','state','plugins']);assert.deepEqual(Object.keys(guardado.plugins),['ambientes/humo/3d/visor.js']);
+  assert.deepEqual(await page.evaluate(()=>window.rodaje.environment.restaurado),{s:{pulsado:true},mode:'orbit'});assert.equal(await page.getAttribute('[data-a=humo]','aria-pressed'),'true');
+  await abrir(page,'estado');const general=await pose(page);
+  await page.evaluate(()=>{const e=window.rodaje.environment;e.camera.position.set(8,8,8);e.controls.update();});
+  const valida=await page.evaluate(()=>JSON.stringify(window.rodaje.environment.saveView()));
+  for(const malo of ['{roto',JSON.stringify({...JSON.parse(valida),v:2})]){await dejar(page,'estado',malo);await recargar(page);const p=await pose(page);cerca(p.position,general.position,1e-3,'vista general con '+malo.slice(0,10));cerca(p.target,general.target,1e-3,'objetivo general');}
+  await dejar(page,'estado',JSON.stringify({...JSON.parse(valida),state:{luz:'fantasma',otra:'x'}}));await recargar(page);
+  const p3=await pose(page);assert.deepEqual(p3.state,{luz:'on'});cerca(p3.position,[8,8,8],1e-2,'la pose sí vale');
+  await abrir(page,'con-plugin');const v2=await page.evaluate(()=>JSON.stringify(window.rodaje.environment.saveView()));
+  await dejar(page,'con-plugin',JSON.stringify({...JSON.parse(v2),plugins:{'ambientes/humo/3d/visor.js':42,'otro.js':{}}}));await recargar(page);
+  assert.equal(await page.evaluate(()=>window.rodaje.environment.restaurado.s),42);}));
+
+test('vista guardada: persist=0, «Visitar estancia», re-montar y valor no serializable',{skip:SIN_CHROME},()=>conPagina(async page=>{
+  await abrir(page,'sin-plugin');const general=await pose(page);
+  await page.evaluate(()=>{const e=window.rodaje.environment;e.camera.position.set(9,6,3);e.controls.target.set(0,1,0);e.controls.update();});const a=await pose(page);
+  await abrir(page,'sin-plugin','&persist=0');const p0=await pose(page);cerca(p0.position,general.position,1e-3,'persist=0 no lee');
+  await page.evaluate(()=>{const e=window.rodaje.environment;e.camera.position.set(-7,2,2);e.controls.update();});
+  await abrir(page,'sin-plugin');cerca((await pose(page)).position,a.position,1e-3,'persist=0 no escribe');
+  await page.evaluate(()=>window.rodaje.act('visit-room:sin-plugin:centro'));const c=await pose(page);cerca(c.position,[0,1.6,4],1e-3,'setView gana');cerca(c.target,[0,1.5,-10],1e-3,'objetivo del lugar');
+  await page.evaluate(()=>{const e=window.rodaje.environment;e.camera.position.set(5,3,-2);e.controls.update();});const m=await pose(page);
+  await page.evaluate(()=>window.rodaje.render());cerca((await pose(page)).position,m.position,1e-3,'re-montar conserva');
+  await abrir(page,'mal-guardado');
+  const err=await page.evaluate(()=>{try{window.rodaje.environment.saveView();return null;}catch(e){return e.message;}});
+  assert.match(err||'',/^El plugin ambientes\/humo\/3d\/visor\.js: saveView.*no serializable/);
+  await recargar(page);assert.equal(await page.evaluate(()=>window.rodaje.environment.mode),'orbit');}));
+
+test('recorrer.mjs, capturar.mjs y linea-base.mjs abren el visor con persist=0',()=>{for(const f of ['scripts/entornos/recorrer.mjs','scripts/entornos/capturar.mjs','scripts/linea-base.mjs'])assert.match(fs.readFileSync(path.join(ROOT,f),'utf8'),/&environment=\$\{encodeURIComponent\([\w.]+\)\}&persist=0`/,f);});

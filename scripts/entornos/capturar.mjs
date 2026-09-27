@@ -1,6 +1,7 @@
 // Captura un entorno del visor desde ángulos dados (docs/ENTORNOS-3D.md), contra una app arrancada (servidor de prueba con otro PORT).
 // Uso: node scripts/entornos/capturar.mjs <carpeta> '[[nombre,azimut,elevación,distancia,fov,tx,ty,tz],...]' --entorno <id> [--project id] [--url http://127.0.0.1:4320]
 // Qué se oculta sale de `capture` en los datos del entorno (model.json): root, group con los hijos visibles en keep y fog.
+// Abre el visor con persist=0: ni lee ni escribe la vista guardada de la pestaña.
 import {withChrome,VIEWPORTS} from '../../lib/chrome.mjs';
 import {parseArgs} from '../../lib/args.mjs';
 import {cliProject,usageExit} from '../../lib/cli.mjs';
@@ -11,7 +12,7 @@ if(!SP||!spec||typeof opts.entorno!=='string'||(opts.url!==undefined&&typeof opt
 let cands;try{cands=JSON.parse(spec);}catch{}if(!Array.isArray(cands))usageExit(USAGE,'Los ángulos van en una lista JSON');
 const {project}=cliProject({usage:USAGE,opts});
 let setup;try{setup=captureSetup(environmentData(project,opts.entorno).data,opts.entorno);}catch(e){console.error(e.message);process.exit(1);}
-const url=`${(opts.url||`http://127.0.0.1:${process.env.PORT||4320}`).replace(/\/$/,'')}/?project=${encodeURIComponent(project)}&view=environment&environment=${encodeURIComponent(opts.entorno)}`;
+const url=`${(opts.url||`http://127.0.0.1:${process.env.PORT||4320}`).replace(/\/$/,'')}/?project=${encodeURIComponent(project)}&view=environment&environment=${encodeURIComponent(opts.entorno)}&persist=0`;
 await withChrome(async b=>{
 const pg=await b.newPage({viewport:VIEWPORTS.captura});
 await pg.goto(url);

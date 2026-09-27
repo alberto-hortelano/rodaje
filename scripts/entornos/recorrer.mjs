@@ -2,6 +2,7 @@
 // Uso: node scripts/entornos/recorrer.mjs <carpeta> --entorno <id> [--project id] [--url http://127.0.0.1:4320]
 // Los pasos salen de `walkthrough` en los datos del entorno (model.json); cada uno registra la posición de la cámara (o el valor de call) y, con snapshot, una captura.
 // Un paso falla si su view no existe, si call lanza o no existe, o si su valor no cumple expect; sale con 1 si falla alguno o hay errores en la página.
+// Abre el visor con persist=0: ni lee ni escribe la vista guardada de la pestaña.
 import {withChrome,VIEWPORTS} from '../../lib/chrome.mjs';
 import {parseArgs} from '../../lib/args.mjs';
 import {cliProject,usageExit} from '../../lib/cli.mjs';
@@ -11,7 +12,7 @@ const {args:[SP],opts}=parseArgs(process.argv.slice(2));
 if(!SP||typeof opts.entorno!=='string'||(opts.url!==undefined&&typeof opts.url!=='string'))usageExit(USAGE);
 const {project}=cliProject({usage:USAGE,opts});
 let steps;try{steps=walkthroughSteps(environmentData(project,opts.entorno).data);}catch(e){console.error(e.message);process.exit(1);}
-const url=`${(opts.url||`http://127.0.0.1:${process.env.PORT||4320}`).replace(/\/$/,'')}/?project=${encodeURIComponent(project)}&view=environment&environment=${encodeURIComponent(opts.entorno)}`;
+const url=`${(opts.url||`http://127.0.0.1:${process.env.PORT||4320}`).replace(/\/$/,'')}/?project=${encodeURIComponent(project)}&view=environment&environment=${encodeURIComponent(opts.entorno)}&persist=0`;
 await withChrome(async b=>{
 const pg=await b.newPage({viewport:VIEWPORTS.recorrido});const errs=[];pg.on('pageerror',e=>errs.push(e.message));
 await pg.goto(url);

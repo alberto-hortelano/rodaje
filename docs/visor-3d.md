@@ -6,7 +6,7 @@ Código de navegador en `viewer/`, servido en `/viewer/<ruta>`: kit de construcc
 
 La app abre un entorno así: `builder` y `data` → `/viewer/mount.mjs`; solo `glb` → `/viewer/glb.mjs`. `viewer` como texto (una ruta a un visor propio) ya no se admite: la app no lo abre, muestra en su lugar un mensaje que pide pasarlo a `builder` + `data` con `viewer.plugins` (la tarjeta del entorno dice «VISOR NO VÁLIDO») y `proyecto-check` lo da como error R-manifest. El visor genérico no sabe nada de ningún escenario: luces, niebla, fondo, cortes, piezas atravesables, entrada del paseo y vista general van en los plugins del proyecto (`ambientes/<id>/3d/visor.js`). Sin plugins pone un fondo `#b9c0c4`, luces como el visor GLB y encuadra la caja del modelo.
 
-El visor importa todos los plugins por `/api/asset` antes de montar; si alguno no exporta `plugin`, el entorno no se abre. Monta el DOM, el renderer, una escena vacía, la cámara y los controles; llama a `plugin(api)` de cada uno en orden (las luces del plugin entran antes que el modelo); completa fondo y luces si faltan; prepara colisión y caminante; construye y va a la vista general.
+El visor importa todos los plugins por `/api/asset` antes de montar; si alguno no exporta `plugin`, el entorno no se abre. Monta el DOM, el renderer, una escena vacía, la cámara y los controles; llama a `plugin(api)` de cada uno en orden (las luces del plugin entran antes que el modelo); completa fondo y luces si faltan; prepara colisión y caminante; construye y va a la vista guardada de la pestaña o, si no la hay, a la vista general (ver «Persistencia de la vista»).
 
 ## Opciones: `environments[].viewer`
 
@@ -24,7 +24,7 @@ El visor importa todos los plugins por `/api/asset` antes de montar; si alguno n
 
 ## API pública: `window.rodaje.environment`
 
-Es el objeto que devuelve `mountEnvironment` y que la app publica en `window.rodaje.environment` mientras la vista es un entorno con visor genérico (con solo `glb` es lo que devuelve `mountGlb`: `{scene, camera, controls, dispose}`). No es la `api` del plugin: tiene las claves de `CORE_API` (`viewer/plugins.mjs`), que son `setView`, `setState`, `setWalk`, `mode`, `walk(keys, seconds)` (→ posición; lo hace el caminante), `state`, `scene`, `camera`, `controls`, `renderer`, `dispose`, `setNoclip` y `noclip`, más lo que añaden los plugins con `expose`. `model`, `walker`, `overview`, `data` y `ui` no se exponen: si un script los necesita, un plugin los expone con un getter. Sobre esta lista trabajan `expose` (no puede pisar ninguna clave de `CORE_API`) y los pasos `call` del recorrido.
+Es el objeto que devuelve `mountEnvironment` y que la app publica en `window.rodaje.environment` mientras la vista es un entorno con visor genérico (con solo `glb` es lo que devuelve `mountGlb`: `{scene, camera, controls, dispose}`). No es la `api` del plugin: tiene las claves de `CORE_API` (`viewer/plugins.mjs`), que son `setView`, `setState`, `setWalk`, `mode`, `walk(keys, seconds)` (→ posición; lo hace el caminante), `state`, `scene`, `camera`, `controls`, `renderer`, `dispose`, `setNoclip`, `noclip` y `saveView()` (guarda la vista ahora y la devuelve; lanza si un plugin da algo no serializable), más lo que añaden los plugins con `expose`. `model`, `walker`, `overview`, `data` y `ui` no se exponen: si un script los necesita, un plugin los expone con un getter. Sobre esta lista trabajan `expose` (no puede pisar ninguna clave de `CORE_API`) y los pasos `call` del recorrido.
 
 ## Modos
 
@@ -38,7 +38,19 @@ Todos opcionales; uno desconocido es un error. Con varios plugins se llama a tod
 - `overview()` → `{position, target, text?}`, `spawn()` → `{position, lookAt}`, `collision({T, step, radius, skip, options})` → `{collect, groundAt, blocked}` y `walker({T, camera, collision, options})` → caminante: gana el primero que devuelve algo.
 - `onKey(key, {down, repeat, mode})` y `view(id, {mode})`: se paran en el primero que devuelve `true`. `onKey` recibe la tecla en minúsculas en keydown y keyup; con `true` el visor la consume. `view` se prueba antes que `data.landmarks` en `setView` y en los botones `data-mark`.
 - `passable(obj)`: basta con que uno diga sí; se prueba en cada antepasado de la malla.
+- `saveView()` → la parte del plugin en la vista guardada (valor serializable; `undefined` = nada) y `restoreView(saved, {mode})` al recuperarla: ver «Persistencia de la vista». `restoreView` no debe llamar a `setState` (el estado ya llegó a la construcción).
 - `expose: {…}`: métodos y getters que se añaden a `window.rodaje.environment` (se copian como descriptores: un `get x()` sigue vivo; usa variables del plugin, no `this`); no pueden pisar los del visor (`CORE_API`).
+
+## Persistencia de la vista
+
+El visor recuerda la vista de cada entorno en `sessionStorage`: solo en esa pestaña (otra pestaña empieza en la vista general) y sin que los plugins toquen el almacenamiento.
+- Clave `rodaje:visor:<proyecto>:<entorno>` (`viewKey`); valor `{v: 1, mode, camera: {position, quaternion}, target, noclip, state, plugins: {<ruta del plugin>: …}}` (`buildSavedView`, `viewer/plugins.mjs`).
+- Se guarda en `pagehide`, al ocultarse la pestaña (`visibilitychange`) y en `dispose()` antes de los `dispose` de los plugins, así que «Guardar cambios» y «Actualizar», que vuelven a montar, la conservan. Nunca por fotograma. Un valor no serializable en un plugin se avisa en la consola y no impide desmontar.
+- Se lee y valida (`parseSavedView`) antes de la primera construcción: su `state` se mezcla en el estado inicial, así que el modelo se construye una sola vez. Después, en lugar de la vista general: `setNoclip`; en `walk`, `setWalk(true)` y la pose con `restoreWalkPose` (`viewer/walk.mjs`: por el suelo que haya debajo salvo con «no clip», sin alabeo); en `orbit`, `onOverview()` y la cámara y el objetivo guardados. Luego `restoreView` de cada plugin con su parte (solo si la tiene; un error se avisa en la consola sin cortar).
+- Se ignora sin error: JSON roto, otra versión, modo desconocido, posición, objetivo o cuaternión no finitos (o cuaternión nulo), `noclip` no booleano → vista general, y se sobrescribe al guardar. Estados u opciones que ya no existen y partes de plugins que ya no están se descartan clave a clave.
+- Precedencia: `persist=0` en la URL (o `persist: false` en `mountEnvironment`) > guardada > vista general. Con `persist=0` no se lee ni se escribe. Un `setView` posterior («Visitar estancia en 3D») gana a lo guardado.
+- Los entornos solo con `glb` (`viewer/glb.mjs`) no guardan nada.
+- Un plugin guarda lo que no se deduce de la cámara (en la nave: su marco de orientación y alabeo, sala, linterna, puertas y el regreso al interior; el autopiloto nunca se reanuda) y en `restoreView` valida cada campo aparte: repone su estado interno, no la cámara si la recalcula en cada fotograma.
 
 ## Teclado
 
@@ -54,7 +66,7 @@ Un constructor puede dejar en `root.userData.<clave>` lo que su visor necesita e
 
 ## Recorrido: `walkthrough` en `model.json`
 
-Lo ejecuta `scripts/entornos/recorrer.mjs <carpeta> --entorno <id> [--project id] [--url …]` contra la app arrancada (un servidor de prueba con otro `PORT`); para qué sirve y cuándo se pasa, en `docs/ENTORNOS-3D.md`. Nunca llama a `dispose`.
+Lo ejecuta `scripts/entornos/recorrer.mjs <carpeta> --entorno <id> [--project id] [--url …]` contra la app arrancada (un servidor de prueba con otro `PORT`); para qué sirve y cuándo se pasa, en `docs/ENTORNOS-3D.md`. Nunca llama a `dispose`. Abre el visor con `persist=0`, así que siempre empieza en la vista general y no toca la vista guardada.
 
 Cada paso: `{label, walk?, view?, position?, yawDeg?, noclip?, keys?, seconds?, call?, args?, expect?, tolerance?, snapshot?}`. Lo valida `walkthroughSteps` (`lib/entorno3d.mjs`) antes de abrir Chrome; un `walkthrough` vacío o ausente es un error:
 - `label` es obligatorio;
@@ -80,7 +92,7 @@ El bucle de la app (`requestAnimationFrame`) sigue corriendo entre pasos: no se 
 
 ## Capturas: `capture` en `model.json`
 
-`scripts/entornos/capturar.mjs` lee `capture` con `captureSetup` (`lib/entorno3d.mjs`): `root` es el nombre del objeto raíz en la escena (por defecto, el id del entorno); `group`, si existe, es un descendiente de la raíz (el primero con ese nombre) del que solo quedan visibles los hijos cuyo nombre está en `keep` (por defecto, ninguno); `fog: false` quita la niebla (por defecto se deja).
+`scripts/entornos/capturar.mjs` (con `persist=0`, como el recorrido y las capturas de `scripts/linea-base.mjs`) lee `capture` con `captureSetup` (`lib/entorno3d.mjs`): `root` es el nombre del objeto raíz en la escena (por defecto, el id del entorno); `group`, si existe, es un descendiente de la raíz (el primero con ese nombre) del que solo quedan visibles los hijos cuyo nombre está en `keep` (por defecto, ninguno); `fog: false` quita la niebla (por defecto se deja).
 
 ## Editor de plantas
 
@@ -100,7 +112,7 @@ El bucle de la app (`requestAnimationFrame`) sigue corriendo entre pasos: no se 
 
 El visor, el ensayo y los scripts crean un kit nuevo en cada construcción con `createKit(T, {state, textures, textureUrl, onSky, palette, tile})` (`viewer/kit.mjs`, sin imports, funciona en Node) y lo pasan como tercer argumento. Todo llega por ahí:
 - `kit.isKit` (`true`), `kit.palette` (copia de la paleta; `{}` por defecto) y `kit.tile` (metros por tesela; 2 por defecto).
-- `kit.state`: el estado pedido (preset, secuencia o controles del visor), sin mezclar; el constructor lo combina con su estado por defecto: `{...data.defaultState, ...kit.state}`. El visor arranca con una copia de `data.defaultState` (`initialState`); el constructor no exporta estado propio.
+- `kit.state`: el estado pedido (preset, secuencia o controles del visor), sin mezclar; el constructor lo combina con su estado por defecto: `{...data.defaultState, ...kit.state}`. El visor arranca con una copia de `data.defaultState` y, encima, el estado de la vista guardada (`initialState`); el constructor no exporta estado propio.
 - `kit.textures`: `true` si se quieren texturas procedurales y de canvas; en Node o al exportar GLB es `false` y no se crea ningún canvas (`kit.canvas` devuelve `null`).
 - `kit.textureUrl(file)`: resuelve las imágenes de `data.textures` respecto a la carpeta de `data`; `kit.onSky(tx)` recibe la del cielo. El constructor solo llama a `kit.applyImageTextures(data.textures)`.
 - Herramientas: `mat`, `materials`, `group`, `box`, `boxGeometry`, `merge`, `canvas`, `wall`, `gableRoof`, `cyl`, `uvMeters`, `scaleUV`, `proceduralTextures`, `loadTexture`; los helpers de polígono (`segDist`, `polyContains`, `polyDist`, `centroid`, `insetPolygon`, `xAtZ`, `zAtX`, `rectMinus`) y `mulberry32` (números pseudoaleatorios con semilla). La paleta y la tesela las fija el constructor con `kit.configure({palette, tile})` (la paleta se mezcla con la que haya).

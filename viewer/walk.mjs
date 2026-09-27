@@ -58,3 +58,13 @@ export function createWalker(T, camera, {collision, eye = 1.62, step = 0.3, walk
   };
   return w;
 }
+
+// Vista guardada (viewer/mount.mjs) sobre un caminante ya colocado: posición (sin «no clip», por el suelo que haya debajo;
+// sin suelo conserva la altura) y orientación sin alabeo y con la inclinación acotada, como look().
+export function restoreWalkPose(T, walker, camera, {position, quaternion}) {
+  if (walker.noclip) camera.position.set(...position);
+  else walker.place(position[0], position[1] - walker.eye, position[2]);
+  const euler = new T.Euler().setFromQuaternion(new T.Quaternion().fromArray(quaternion), 'YXZ');
+  euler.x = Math.max(-1.45, Math.min(1.45, euler.x)); euler.z = 0;
+  camera.quaternion.setFromEuler(euler);
+}

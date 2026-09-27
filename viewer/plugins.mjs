@@ -5,8 +5,8 @@ export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;',
 // data-a de la barra que son del visor; un plugin no puede reutilizarlos.
 export const CORE_ACTIONS = ['overview', 'preset', 'walk', 'noclip', 'fullscreen', 'capture', 'glb'];
 // Claves de window.rodaje.environment que da el visor; expose no puede pisarlas.
-export const CORE_API = ['setView', 'setState', 'setWalk', 'mode', 'walk', 'state', 'scene', 'camera', 'controls', 'renderer', 'dispose', 'setNoclip', 'noclip'];
-export const HOOKS = ['onBuild', 'onSky', 'onOverview', 'overview', 'spawn', 'onView', 'passable', 'collision', 'walker', 'onKey', 'view', 'onMode', 'onFrame', 'dispose', 'expose'];
+export const CORE_API = ['setView', 'setState', 'setWalk', 'mode', 'walk', 'state', 'scene', 'camera', 'controls', 'renderer', 'dispose', 'setNoclip', 'noclip', 'saveView'];
+export const HOOKS = ['onBuild', 'onSky', 'onOverview', 'overview', 'spawn', 'onView', 'passable', 'collision', 'walker', 'onKey', 'view', 'onMode', 'onFrame', 'dispose', 'expose', 'saveView', 'restoreView'];
 // Teclas del paseo por defecto (las mismas que viewer/walk.mjs, que no se importa: este módulo no tiene imports).
 const DEFAULT_WALK_KEYS = ['w', 'a', 's', 'd', 'q', 'e', 'shift', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
 // Claves de root.userData que llegan al GLB como extras de la raíz; el resto son datos de ejecución del visor.
@@ -17,8 +17,8 @@ const WALK_OPTIONS = ['eye', 'step', 'radius', 'walkSpeed', 'flySpeed', 'run', '
 const isObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 export function pluginPaths(env) { const v = env?.viewer; return isObject(v) && Array.isArray(v.plugins) ? v.plugins.filter(p => typeof p === 'string' && p) : []; }
 export function viewerOptions(env) { if (!isObject(env?.viewer)) return {}; const {plugins, ...options} = env.viewer; return options; }
-// Estado inicial del visor: copia de data.defaultState; el constructor lo vuelve a mezclar con kit.state.
-export function initialState(data) { return {...(data?.defaultState ?? {})}; }
+// Estado inicial del visor: copia de data.defaultState con el de la vista guardada encima; el constructor lo vuelve a mezclar con kit.state.
+export function initialState(data, saved = null) { return {...(data?.defaultState ?? {}), ...(saved?.state ?? {})}; }
 export function buttonHTML({a, text, pressed, primary}) { return `<button data-a="${esc(a)}"${primary ? ' class="primary"' : ''}${typeof pressed === 'boolean' ? ` aria-pressed="${pressed}"` : ''}>${esc(text)}</button>`; }
 
 // Une los hooks de varios plugins: los eventos llaman a todos en orden; overview, spawn, collision y walker los da el primero
@@ -49,7 +49,60 @@ export function combineHooks(list, {reserved = CORE_API} = {}) {
     onView: each('onView'), passable: obj => all.some(({hooks}) => !!hooks.passable?.(obj)), collision: first('collision'),
     walker, onKey: handled('onKey'), view: handled('view'), onMode: each('onMode'),
     onFrame: each('onFrame'), dispose: each('dispose'), expose,
+    // Cada plugin guarda y recupera solo su parte, por la ruta de su fichero.
+    saveView() {
+      const out = {};
+      for (const {file, hooks} of all) if (hooks.saveView) { const v = hooks.saveView(); if (v !== undefined) { checkSerializable(v, `El plugin ${file}: saveView`); out[file] = v; } }
+      return out;
+    },
+    restoreView(parts, ctx) {
+      const errors = [];
+      for (const {file, hooks} of all) if (hooks.restoreView && isObject(parts) && Object.hasOwn(parts, file)) { try { hooks.restoreView(parts[file], ctx); } catch (error) { errors.push({file, error}); } }
+      return errors;
+    },
   };
+}
+
+// Vista guardada en sessionStorage por viewer/mount.mjs (docs/visor-3d.md, «Persistencia de la vista»).
+export const VIEW_VERSION = 1;
+export const viewKey = (projectId, envId) => `rodaje:visor:${projectId}:${envId}`;
+// false con persist === false o con persist=0 en la URL.
+export function persistEnabled({persist, search = ''} = {}) { return persist !== false && new URLSearchParams(search).get('persist') !== '0'; }
+// Solo null, booleanos, textos, números finitos, arrays y objetos planos; lanza con la ruta del primer valor que no lo es.
+export function checkSerializable(value, where = 'vista') {
+  const seen = new Set();
+  const walk = (v, at) => {
+    const fail = tipo => { throw Error(`${where}: valor no serializable (${tipo}) en ${at || 'la raíz'}`); };
+    if (v === null || typeof v === 'boolean' || typeof v === 'string') return;
+    if (typeof v === 'number') { if (!Number.isFinite(v)) fail(String(v)); return; }
+    if (typeof v !== 'object') fail(typeof v);
+    if (seen.has(v)) fail('ciclo');
+    if (Array.isArray(v)) { seen.add(v); v.forEach((x, i) => walk(x, `${at}[${i}]`)); seen.delete(v); return; }
+    const proto = Object.getPrototypeOf(v);
+    if (proto !== Object.prototype && proto !== null) fail(v.constructor?.name || 'instancia');
+    seen.add(v); for (const k of Object.keys(v)) walk(v[k], `${at}.${k}`); seen.delete(v);
+  };
+  walk(value, '');
+}
+export function buildSavedView({mode, position, quaternion, target, noclip, state, plugins}) {
+  const view = {v: VIEW_VERSION, mode, camera: {position, quaternion}, target, noclip, state, plugins};
+  checkSerializable(view);
+  return view;
+}
+const finite = (a, n) => Array.isArray(a) && a.length === n && a.every(Number.isFinite);
+// Nunca lanza: null si el texto no es una vista válida; el estado y las partes de plugins que ya no existen se descartan clave a clave.
+export function parseSavedView(text, {data, plugins: files = []} = {}) {
+  if (typeof text !== 'string') return null;
+  let v; try { v = JSON.parse(text); } catch { return null; }
+  if (!isObject(v) || v.v !== VIEW_VERSION || !['orbit', 'walk'].includes(v.mode)) return null;
+  const position = v.camera?.position, quaternion = v.camera?.quaternion;
+  if (!finite(position, 3) || !finite(v.target, 3) || !finite(quaternion, 4) || typeof v.noclip !== 'boolean') return null;
+  const norm = Math.hypot(...quaternion); if (!Number.isFinite(norm) || norm < 1e-6) return null;
+  const states = isObject(data?.states) ? data.states : {}, state = {};
+  if (isObject(v.state)) for (const [k, o] of Object.entries(v.state)) if (Object.hasOwn(states, k) && typeof o === 'string' && isObject(states[k]?.options) && Object.hasOwn(states[k].options, o)) state[k] = o;
+  const plugins = {};
+  if (isObject(v.plugins)) for (const f of Array.isArray(files) ? files : []) if (Object.hasOwn(v.plugins, f)) plugins[f] = v.plugins[f];
+  return {mode: v.mode, position, quaternion: quaternion.map(x => x / norm), target: v.target, noclip: v.noclip, state, plugins};
 }
 
 // Copia las claves de expose como descriptores: un getter sigue vivo en window.rodaje.environment (sin this).

@@ -45,7 +45,7 @@ for (const {projectId, envId} of envs) {
 }
 
 if (shots) {
-  const views = envs.map(({projectId, envId}) => ({name: `entorno-${projectId}-${envId}`, path: `/?project=${encodeURIComponent(projectId)}&view=environment&environment=${encodeURIComponent(envId)}`, ready: 'window.rodaje?.environment', canvas: '#environment-model canvas[data-engine]'}));
+  const views = envs.map(({projectId, envId}) => ({name: `entorno-${projectId}-${envId}`, path: `/?project=${encodeURIComponent(projectId)}&view=environment&environment=${encodeURIComponent(envId)}&persist=0`, ready: 'window.rodaje?.environment', canvas: '#environment-model canvas[data-engine]'}));
   const failures = [];
   await withChrome(async browser => {
     result.chrome = browser.version();
