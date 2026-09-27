@@ -56,3 +56,15 @@ test('loteDetail lee direccion.json en formato nuevo y antiguo con la misma form
   put(`assets/${LOTE}/direccion.json`,{_nota:'x',[block.id]:e});assert.deepEqual(M.loteDetail(P,LOTE).blocks[0].direccion,nuevo);
   put(`assets/${LOTE}/direccion.json`,{blocks:{}});assert.equal(M.loteDetail(P,LOTE).blocks[0].direccion,null);assert.deepEqual(L.direccionFor(out),{blocks:{}});}
  finally{fs.rmSync(f,{force:true});}assert.equal(L.direccionFor(out),null);});
+test('lotes antiguos (#26): listLotes omite plan.json que no es lista o está corrupto, avisa y ordena los sin fecha al final',t=>{
+ const P3='lotes-viejos',b3=path.join(DATA,P3),w3=(rel,v)=>{const f=path.join(b3,rel);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,typeof v==='string'?v:text(v));};
+ fs.rmSync(b3,{recursive:true,force:true});
+ w3('assets/viejo-objeto/plan.json',{blocks:[block]});w3('assets/viejo-corrupto/plan.json','{"no es json');w3('assets/viejo-corrupto/lote.json',meta2);
+ w3('assets/sin-fecha/plan.json',[block]);w3('assets/con-fecha/plan.json',[block]);w3('assets/con-fecha/lote.json',meta);
+ const warn=t.mock.method(console,'warn',()=>{});
+ assert.deepEqual(L.listLotes(P3).map(l=>l.id),['con-fecha','sin-fecha']);
+ const avisos=warn.mock.calls.map(c=>c.arguments.join(' '));assert.equal(avisos.length,2);
+ for(const l of ['viejo-objeto','viejo-corrupto'])assert.ok(avisos.some(a=>a.includes(l)),l);
+ for(const l of ['viejo-objeto','viejo-corrupto'])assert.throws(()=>M.loteDetail(P3,l),e=>e.message==='Lote no válido: plan.json no es una lista de bloques');
+ assert.throws(()=>L.readPlan(path.join(b3,'x.json')),/Lote no válido/);w3('assets/sin-parts/plan.json',[{id:'b1'}]);assert.throws(()=>M.loteDetail(P3,'sin-parts'),/Lote no válido/);
+ fs.rmSync(b3,{recursive:true,force:true});});
