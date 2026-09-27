@@ -128,7 +128,7 @@ export function parseIssues(md){const out=[];let closed=false,severity='medio';f
 // Vuelca pendientes con código en el proyecto: los nuevos se añaden; los existentes actualizan título, texto y gravedad. El estado del documento solo manda cuando dice «cerrado».
 export function upsertIssues(p,items,{newId=()=>crypto.randomUUID(),now=()=>new Date().toISOString()}={}){const list=p.issues||(p.issues=[]);let added=0,updated=0;for(const it of items){const found=it.code&&list.find(x=>x.code===it.code);if(found){Object.assign(found,{title:it.title,text:it.text,severity:it.severity});if(it.status==='cerrado'&&found.status!=='cerrado'){found.status='cerrado';found.closed=now();}found.updated=now();updated++;}else{list.push({id:newId(),code:it.code,title:it.title,text:it.text,status:it.status||'abierto',severity:it.severity||'medio',created:now(),...(it.status==='cerrado'?{closed:now()}:{})});added++;}}return {added,updated};}
 // Entornos 3D de un proyecto: los de p.environments (shipModel ya no es un entorno: la nave es uno más desde #14).
-// Visor de un entorno, en orden de transición: viewer como ruta → visor propio del proyecto (tolerado hasta #36);
+// Visor de un entorno: viewer como ruta → visor propio del proyecto (legacy: se sigue abriendo, pero proyecto-check lo marca como R-manifest);
 // constructor y datos → visor genérico /viewer/mount.mjs (con viewer.plugins si los hay); solo GLB → /viewer/glb.mjs.
 export function environmentViewer(e){if(typeof e?.viewer==='string'&&e.viewer)return {kind:'legacy',module:e.viewer};if(e?.builder&&e?.data)return {kind:'mount'};if(e?.glb)return {kind:'glb',url:e.glb};return {kind:'none'};}
 // Editor de plantas (viewer/planta.html): para entornos con constructor y datos; la planta vive en data → dims.planta.

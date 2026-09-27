@@ -50,7 +50,7 @@ Reglas que costó aprender:
    - comparar y repetir.
 
    Se prueban varias variantes en paralelo y se decide por la imagen, no por la intuición.
-4. **Recorrido a pie automático** (`scripts/entornos/recorrer.mjs <carpeta> --entorno <id> [--project id] [--url …]`): entrar por la puerta, cruzar, subir y bajar escaleras, chocar con un muro. Los pasos van en `walkthrough` dentro de los datos del entorno (`model.json`): `label` y, opcionales, `walk`, `view`, `position` + `yawDeg`, `noclip`, `keys` + `seconds` y `snapshot` (nombre de la captura). Se repite tras cada cambio de planta.
+4. **Recorrido a pie automático** (`scripts/entornos/recorrer.mjs <carpeta> --entorno <id> [--project id] [--url …]`): entrar por la puerta, cruzar, subir y bajar escaleras, chocar con un muro. Los pasos van en `walkthrough` dentro de los datos del entorno (`model.json`): `label` y, opcionales, `walk`, `view`, `position` + `yawDeg`, `noclip`, `keys` + `seconds` y `snapshot` (nombre de la captura). Un paso también puede comprobar algo: `call` es un método o getter de `window.rodaje.environment` (los del visor y los que expone un plugin, p. ej. una auditoría o una ruta), `args` sus argumentos (solo si es un método), `expect` el valor esperado (objetos parciales, listas elemento a elemento) y `tolerance` el margen de los números (por defecto 1e-6). Sin `call`, `expect` se compara con la posición de la cámara tras `keys`. El script marca cada paso `OK` o `FALLO` y sale con 1 si falla alguno o hay errores en la página. El bucle de la app sigue corriendo entre pasos: no se comprueban tiempos, solo estados (una ruta ha llegado cuando su índice iguala su longitud). Se repite tras cada cambio de planta.
 
 ## 5. La planta la corrige el usuario
 
