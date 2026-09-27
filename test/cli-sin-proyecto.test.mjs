@@ -114,8 +114,7 @@ test('app/, lib/, scripts/ y viewer/ no nombran proyectos concretos',()=>{
  for(const d of ['app','lib','scripts','viewer'])for(const f of fs.readdirSync(path.join(ROOT,d),{recursive:true})){
   const rel=d+'/'+f.split(path.sep).join('/'),abs=path.join(ROOT,rel);
   if(!fs.statSync(abs).isFile()||!/\.(mjs|js|html|css|json)$/.test(rel))continue;
-  // Tolerado hasta #14: la clase .toledo-explorer la pinta el visor de la nave que aún carga el proyecto.
-  fs.readFileSync(abs,'utf8').split('\n').forEach((l,i)=>{if(/dead-air|conjurados|caseron|toledo/i.test(rel==='app/style.css'?l.replaceAll('.toledo-explorer',''):l))hits.push(`${rel}:${i+1}`);});
+  fs.readFileSync(abs,'utf8').split('\n').forEach((l,i)=>{if(/dead-air|conjurados|caseron|toledo/i.test(l))hits.push(`${rel}:${i+1}`);});
  }
  assert.deepEqual(hits,[]);
 });

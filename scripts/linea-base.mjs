@@ -45,10 +45,7 @@ for (const {projectId, envId} of envs) {
 }
 
 if (shots) {
-  const views = [
-    ...envs.map(({projectId, envId}) => ({name: `entorno-${projectId}-${envId}`, path: `/?project=${encodeURIComponent(projectId)}&view=environment&environment=${encodeURIComponent(envId)}`, ready: 'window.rodaje?.environment', canvas: '#environment-model canvas[data-engine]'})),
-    ...projects.filter(p => p.shipModel).map(p => ({name: `nave-${p.id}`, path: `/?project=${encodeURIComponent(p.id)}&view=ship`, ready: 'window.rodaje?.ship', canvas: '#ship-model canvas[data-engine]'}))
-  ];
+  const views = envs.map(({projectId, envId}) => ({name: `entorno-${projectId}-${envId}`, path: `/?project=${encodeURIComponent(projectId)}&view=environment&environment=${encodeURIComponent(envId)}`, ready: 'window.rodaje?.environment', canvas: '#environment-model canvas[data-engine]'}));
   const failures = [];
   await withChrome(async browser => {
     result.chrome = browser.version();

@@ -28881,7 +28881,7 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { variants, zones, channels, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl } from "./workflow.mjs";
+import { variants, zones, channels, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView } from "./workflow.mjs";
 import { createStage as createStage2 } from "./stage.js";
 var state;
 var p = null;
@@ -29094,7 +29094,7 @@ async function render() {
   const generation = ++renderGeneration;
   stage?.dispose();
   stage = null;
-  const nav2 = p ? [["overview", "Vista del proyecto"], ["ideas", "Historia e ideas"], ["characters", "Personajes y voces"], ["locations", "Ambientes"], ["environments", "Entornos 3D"], ...p.shipModel ? [["ship", "Nave \xB7 modelo 3D"]] : [], ["storyboards", "Storyboards"], ["outline", "Escaleta"], ["episodes", p?.type === "serie" ? "Cap\xEDtulos" : "Actos"], ["montaje", "Montaje"], ["issues", "Pendientes"], ["jobs", "Generaciones"]] : [["library", "Mis proyectos"], ["jobs", "Generaciones"]];
+  const nav2 = p ? [["overview", "Vista del proyecto"], ["ideas", "Historia e ideas"], ["characters", "Personajes y voces"], ["locations", "Ambientes"], ["environments", "Entornos 3D"], ["storyboards", "Storyboards"], ["outline", "Escaleta"], ["episodes", p?.type === "serie" ? "Cap\xEDtulos" : "Actos"], ["montaje", "Montaje"], ["issues", "Pendientes"], ["jobs", "Generaciones"]] : [["library", "Mis proyectos"], ["jobs", "Generaciones"]];
   $2("#app").innerHTML = `<div class="shell"><aside class="sidebar"><div class="brand"><i class="logo"></i> rodaje<span style="font-size:10px;align-self:end">LOCAL</span></div><div class="eyebrow">Estudio de historias</div>${p ? `<div class="projectname">${esc(p.name)}</div>` : ""}${nav2.map(([v2, l3]) => btn(l3, "nav:" + v2, view === v2 || v2 === "environments" && view === "environment" ? "active" : "")).join("")}<div class="bottom">${p ? btn("\u2190 Todos los proyectos", "library") : ""}${btn("\u2699 Ajustes", "settings")}<small>De la primera idea<br>a la \xFAltima toma.</small></div></aside><main class="main"><header class="topbar"><span>${p ? esc(p.name) + " / " + esc(nav2.find((n) => n[0] === view)?.[1] || (view === "storyboard" ? "Storyboard" : view === "environment" ? "Entornos 3D" : "Estudio de plano")) : "TU ESPACIO DE PRODUCCI\xD3N"}</span><div class="row"><span class="pill">${state.settings.configured ? "\u25CF Generaci\xF3n conectada" : "\u25CB Generaci\xF3n sin configurar"}</span>${p ? btn("Actualizar", "refresh") + btn("Guardar cambios", "save") : ""}</div></header><div class="workspace" id="workspace"></div></main></div>`;
   {
     const a = $2(".sidebar button.active"), s = a?.parentElement;
@@ -29111,7 +29111,7 @@ async function render() {
   }
   if (view === "environments") {
     const list = environmentList(p);
-    html3 = heading2("Entornos 3D.", "Decorados en 3D con medidas reales: exterior, interior y piezas con nombre. Cada entorno se abre en su visor; los planos los usar\xE1n como decorado.", btn("+ Entorno GLB", "new-environment", "primary")) + (list.length ? `<div class="grid">${list.map((e) => `<article class="card">${image(e.image)}<div class="inner"><div class="row between"><h2>${esc(e.name)}</h2><span class="pill">${esc(e.kind === "visor" ? "VISOR PROPIO" : e.kind === "constructor" ? "VISOR 3D" : e.kind === "glb" ? "GLB" : "SIN MODELO")}</span></div><p>${esc(e.description.slice(0, 220))}</p>${e.glb ? `<small>${esc(e.glb)}</small>` : ""}<div class="actions">${btn("Abrir", e.action, "primary")}${e.id !== "ship" ? btn("Editar", "edit-environment:" + e.id) + btn("Subir GLB", "upload-environment:" + e.id) : ""}</div></div></article>`).join("")}</div>` : '<section class="panel"><p>Este proyecto a\xFAn no tiene entornos 3D. Sube un GLB (de Tripo, Meshy, Hunyuan3D\u2026) o a\xF1ade uno con visor propio en <code>environments</code>.</p></section>');
+    html3 = heading2("Entornos 3D.", "Decorados en 3D con medidas reales: exterior, interior y piezas con nombre. Cada entorno se abre en su visor; los planos los usar\xE1n como decorado.", btn("+ Entorno GLB", "new-environment", "primary")) + (list.length ? `<div class="grid">${list.map((e) => `<article class="card">${image(e.image)}<div class="inner"><div class="row between"><h2>${esc(e.name)}</h2><span class="pill">${esc(e.kind === "visor" ? "VISOR PROPIO" : e.kind === "constructor" ? "VISOR 3D" : e.kind === "glb" ? "GLB" : "SIN MODELO")}</span></div><p>${esc(e.description.slice(0, 220))}</p>${e.glb ? `<small>${esc(e.glb)}</small>` : ""}<div class="actions">${btn("Abrir", e.action, "primary")}${btn("Editar", "edit-environment:" + e.id) + btn("Subir GLB", "upload-environment:" + e.id)}</div></div></article>`).join("")}</div>` : '<section class="panel"><p>Este proyecto a\xFAn no tiene entornos 3D. Sube un GLB (de Tripo, Meshy, Hunyuan3D\u2026) o a\xF1ade uno con visor propio en <code>environments</code>.</p></section>');
   }
   if (view === "environment") {
     const e = (p.environments || []).find((x2) => x2.id === environmentId);
@@ -29120,9 +29120,6 @@ async function render() {
       return render();
     }
     html3 = heading2(esc(e.name), esc(e.description || ""), `<div class="row">${btn("\u2190 Entornos 3D", "nav:environments")}${btn("Editar", "edit-environment:" + e.id)}${btn("Subir GLB", "upload-environment:" + e.id)}${hasPlantaEditor(e) ? btn("Editar planta", "edit-planta:" + e.id) : ""}</div>`) + '<section class="panel" id="environment-model"></section>';
-  }
-  if (view === "ship") {
-    html3 = heading2(p.shipModel.name || "Nave \xB7 modelo 3D", p.shipModel.version >= 2 ? "Explora los espacios conectados, elige un destino y recorre la nave. Guarda encuadres para preparar los planos." : "Exterior y distribuci\xF3n estable de escenarios. Selecciona un espacio para inspeccionarlo.") + '<section class="panel" id="ship-model"></section>';
   }
   if (view === "ideas") {
     html3 = heading2("Historia e ideas", "La biblia de la serie: premisa, arcos, reglas del mundo y notas de guion.", `<div class="row">${btn("Importar texto", "import-text")}${btn("+ Documento", "new-idea", "primary")}</div>`) + (p.ideas.length ? `<div class="grid">${p.ideas.map((i2) => `<article class="card"><div class="inner"><span class="pill">DOCUMENTO</span><h2 style="margin-top:16px">${esc(i2.title)}</h2><p>${esc(i2.text.slice(0, 220))}</p>${btn("Editar documento", "idea:" + i2.id)}</div></article>`).join("")}</div>` : '<div class="empty"><h2>La historia antes que los planos.</h2><p>Escribe el argumento general, las reglas del mundo o una idea suelta.</p></div>');
@@ -29137,7 +29134,7 @@ async function render() {
   }
   if (view === "characters" || view === "locations") {
     const chars = view === "characters", list = chars ? p.characters : p.locations;
-    html3 = heading2(chars ? "El reparto." : "Los lugares de la historia.", chars ? "Identidad visual, vestuario y voz de cada personaje." : "Referencias de luz, color y geograf\xEDa para cada escenario.", btn(chars ? "+ Personaje" : "+ Escenario", chars ? "new-character" : "new-location", "primary")) + `<div class="grid${chars ? " cast" : ""}">${list.map((c) => `<article class="card">${image(c.image)}<div class="inner"><div class="row between"><h2>${esc(c.name)}</h2><span class="pill">${chars ? "PERSONAJE" : esc(c.kind)}</span></div><p>${esc(c.description.slice(0, 160))}</p>${chars ? `<small>Voz: ${esc(c.voice || "Sin asignar")}${/^[A-Za-z0-9]{20}$/.test(c.voice || "") ? ` \xB7 <a href="https://elevenlabs.io/app/voice-library?voiceId=${esc(c.voice)}" target="_blank" rel="noopener">escuchar en ElevenLabs \u2197</a>` : ""}</small>${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}` : ""}<div class="actions">${btn("Editar", (chars ? "character:" : "location:") + c.id)}${btn("Subir imagen", (chars ? "upload-character:" : "upload-location:") + c.id)}${btn("Generar hoja", (chars ? "gen-character:" : "gen-location:") + c.id)}</div>${chars ? `<div class="actions">${btn("Probar voz", "voice:" + c.id)}${btn("Subir muestra", "upload-voice:" + c.id)}${c.kind !== "voice" ? btn("Variantes por zona", "variants:" + c.id) : ""}</div>` : ""}${chars && c.variants ? `<div class="actions">${Object.entries(c.variants).map(([v2, x2]) => `<div class="note"><b>${esc(variants.find(([id3]) => id3 === v2)?.[1] || v2)}</b><p>${esc((x2.description || "").slice(0, 85))}</p>${x2.image ? `<img style="height:90px;width:120px;object-fit:cover" src="${media(x2.image)}" alt="${esc(v2)}">` : ""}<div class="row">${btn("Generar", "gen-variant:" + c.id + ":" + v2)}${btn("Subir", "upload-variant:" + c.id + ":" + v2)}</div></div>`).join("")}</div>` : ""}${!chars && c.modelSpace?.snapshot ? `<div class="note"><b>Encuadre 3D</b><p class="tiny">La imagen principal define el aspecto; esta vista fija la distribuci\xF3n y la c\xE1mara.</p><img src="${media(c.modelSpace.snapshot)}" alt="Encuadre 3D de ${esc(c.name)}" style="width:100%;height:auto;object-fit:contain">${c.modelSpace.room !== "exterior" ? btn("Visitar estancia en 3D", "visit-room:" + c.modelSpace.room) : ""}</div>` : ""}${c.images?.length > 1 ? `<label>Versi\xF3n visual<select data-version="${c.id}" data-kind="${view}">${opts(c.images.map((f2, i2) => [f2, "Versi\xF3n " + (i2 + 1)]), c.image)}</select></label>` : ""}</div></article>`).join("") || `<div class="empty"><h2>${chars ? "Presenta a tu protagonista." : "Define el primer escenario."}</h2><p>Puedes generar im\xE1genes o importar las que ya tienes.</p></div>`}</div>`;
+    html3 = heading2(chars ? "El reparto." : "Los lugares de la historia.", chars ? "Identidad visual, vestuario y voz de cada personaje." : "Referencias de luz, color y geograf\xEDa para cada escenario.", btn(chars ? "+ Personaje" : "+ Escenario", chars ? "new-character" : "new-location", "primary")) + `<div class="grid${chars ? " cast" : ""}">${list.map((c) => `<article class="card">${image(c.image)}<div class="inner"><div class="row between"><h2>${esc(c.name)}</h2><span class="pill">${chars ? "PERSONAJE" : esc(c.kind)}</span></div><p>${esc(c.description.slice(0, 160))}</p>${chars ? `<small>Voz: ${esc(c.voice || "Sin asignar")}${/^[A-Za-z0-9]{20}$/.test(c.voice || "") ? ` \xB7 <a href="https://elevenlabs.io/app/voice-library?voiceId=${esc(c.voice)}" target="_blank" rel="noopener">escuchar en ElevenLabs \u2197</a>` : ""}</small>${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}` : ""}<div class="actions">${btn("Editar", (chars ? "character:" : "location:") + c.id)}${btn("Subir imagen", (chars ? "upload-character:" : "upload-location:") + c.id)}${btn("Generar hoja", (chars ? "gen-character:" : "gen-location:") + c.id)}</div>${chars ? `<div class="actions">${btn("Probar voz", "voice:" + c.id)}${btn("Subir muestra", "upload-voice:" + c.id)}${c.kind !== "voice" ? btn("Variantes por zona", "variants:" + c.id) : ""}</div>` : ""}${chars && c.variants ? `<div class="actions">${Object.entries(c.variants).map(([v2, x2]) => `<div class="note"><b>${esc(variants.find(([id3]) => id3 === v2)?.[1] || v2)}</b><p>${esc((x2.description || "").slice(0, 85))}</p>${x2.image ? `<img style="height:90px;width:120px;object-fit:cover" src="${media(x2.image)}" alt="${esc(v2)}">` : ""}<div class="row">${btn("Generar", "gen-variant:" + c.id + ":" + v2)}${btn("Subir", "upload-variant:" + c.id + ":" + v2)}</div></div>`).join("")}</div>` : ""}${!chars && c.modelSpace?.snapshot ? `<div class="note"><b>Encuadre 3D</b><p class="tiny">La imagen principal define el aspecto; esta vista fija la distribuci\xF3n y la c\xE1mara.</p><img src="${media(c.modelSpace.snapshot)}" alt="Encuadre 3D de ${esc(c.name)}" style="width:100%;height:auto;object-fit:contain">${c.modelSpace.room !== "exterior" && modelSpaceEnvironment(p, c.modelSpace) ? btn("Visitar estancia en 3D", "visit-room:" + modelSpaceEnvironment(p, c.modelSpace).id + ":" + c.modelSpace.room) : ""}</div>` : ""}${c.images?.length > 1 ? `<label>Versi\xF3n visual<select data-version="${c.id}" data-kind="${view}">${opts(c.images.map((f2, i2) => [f2, "Versi\xF3n " + (i2 + 1)]), c.image)}</select></label>` : ""}</div></article>`).join("") || `<div class="empty"><h2>${chars ? "Presenta a tu protagonista." : "Define el primer escenario."}</h2><p>Puedes generar im\xE1genes o importar las que ya tienes.</p></div>`}</div>`;
   }
   const sbFrame = (t2) => {
     const main = t2.render || t2.sketch;
@@ -29193,12 +29190,6 @@ async function render() {
   enableImageViewer();
   if (view === "montaje") stage = await mountMontaje($2("#montaje"), { project: p, api, toast });
   if (view === "rehearsal") stage = await mountRehearsal($2("#rehearsal"), { project: p, episode: p.episodes.find((e) => e.id === episodeId) });
-  if (view === "ship") {
-    if (p.shipModel) {
-      const module = await import(media(p.shipModel.viewer));
-      stage = await module.mountShip($2("#ship-model"), { project: p, model: p.shipModel });
-    } else $2("#ship-model").textContent = "Este proyecto no tiene modelo de nave.";
-  }
   if (view === "environment") {
     const e = (p.environments || []).find((x2) => x2.id === environmentId), el = $2("#environment-model");
     try {
@@ -29400,9 +29391,10 @@ async function act(action) {
   }
   if (a === "visit-room") {
     if (dirty) await save();
-    view = "ship";
+    environmentId = b2;
+    view = "environment";
     await render();
-    stage?.setView(b2);
+    stage?.setView(c);
     return;
   }
   if (a === "resume") {
@@ -29926,7 +29918,7 @@ try {
   const params = new URLSearchParams(location.search), project = params.get("project");
   if (project) {
     p = await api("/api/project?id=" + encodeURIComponent(project));
-    view = ["overview", "ideas", "characters", "locations", "episodes", "jobs", "shot", "ship", "rehearsal", "storyboards", "storyboard", "outline", "issues", "environments", "environment", "montaje"].includes(params.get("view")) ? params.get("view") : "overview";
+    view = ["overview", "ideas", "characters", "locations", "episodes", "jobs", "shot", "rehearsal", "storyboards", "storyboard", "outline", "issues", "environments", "environment", "montaje"].includes(routeView(params.get("view"))) ? routeView(params.get("view")) : "overview";
     episodeId = params.get("episode");
     storyboardId = params.get("storyboard");
     environmentId = params.get("environment");
@@ -29957,9 +29949,7 @@ window.addEventListener("beforeunload", (e) => {
     e.returnValue = "";
   }
 });
-window.rodaje = { get ship() {
-  return view === "ship" ? stage : null;
-}, get environment() {
+window.rodaje = { get environment() {
   return view === "environment" ? stage : null;
 }, get project() {
   return p;

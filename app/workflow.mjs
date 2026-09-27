@@ -127,15 +127,19 @@ export function moveIssue(p,id,status,beforeId,now=()=>new Date().toISOString())
 export function parseIssues(md){const out=[];let closed=false,severity='medio';for(const raw of String(md||'').split('\n')){const line=raw.trimEnd();if(/^## /.test(line)){closed=/cerrad/i.test(line);continue;}if(/^### /.test(line)){severity=/grave/i.test(line)?'grave':/ritmo/i.test(line)?'ritmo':/medio/i.test(line)?'medio':'nota';continue;}const m=/^(?:- )?\*\*([A-Z]\d+)\. (.+?)\.?\*\*\s*(.*)$/.exec(line);if(m){out.push({code:m[1],title:m[2].trim(),text:m[3].trim(),status:closed?'cerrado':'abierto',severity:closed?'nota':severity});continue;}if(out.length&&line&&!/^#/.test(line)&&!/^---$/.test(line)){const last=out[out.length-1];if(!/^(?:- )?\*\*/.test(line))last.text+=(last.text?'\n':'')+line;}}return out;}
 // Vuelca pendientes con código en el proyecto: los nuevos se añaden; los existentes actualizan título, texto y gravedad. El estado del documento solo manda cuando dice «cerrado».
 export function upsertIssues(p,items,{newId=()=>crypto.randomUUID(),now=()=>new Date().toISOString()}={}){const list=p.issues||(p.issues=[]);let added=0,updated=0;for(const it of items){const found=it.code&&list.find(x=>x.code===it.code);if(found){Object.assign(found,{title:it.title,text:it.text,severity:it.severity});if(it.status==='cerrado'&&found.status!=='cerrado'){found.status='cerrado';found.closed=now();}found.updated=now();updated++;}else{list.push({id:newId(),code:it.code,title:it.title,text:it.text,status:it.status||'abierto',severity:it.severity||'medio',created:now(),...(it.status==='cerrado'?{closed:now()}:{})});added++;}}return {added,updated};}
-// Entornos 3D de un proyecto: los de p.environments y, si existe, la nave (shipModel) con su vista propia.
-// Visor de un entorno, en orden de transición: viewer como ruta → visor propio del proyecto (hasta #11 y #14);
+// Entornos 3D de un proyecto: los de p.environments (shipModel ya no es un entorno: la nave es uno más desde #14).
+// Visor de un entorno, en orden de transición: viewer como ruta → visor propio del proyecto (tolerado hasta #36);
 // constructor y datos → visor genérico /viewer/mount.mjs (con viewer.plugins si los hay); solo GLB → /viewer/glb.mjs.
 export function environmentViewer(e){if(typeof e?.viewer==='string'&&e.viewer)return {kind:'legacy',module:e.viewer};if(e?.builder&&e?.data)return {kind:'mount'};if(e?.glb)return {kind:'glb',url:e.glb};return {kind:'none'};}
 // Editor de plantas (viewer/planta.html): para entornos con constructor y datos; la planta vive en data → dims.planta.
 export const hasPlantaEditor=e=>!!(e?.builder&&e?.data);
 export const plantaEditorUrl=(projectId,envId)=>'/viewer/planta.html?project='+encodeURIComponent(projectId)+'&env='+encodeURIComponent(envId);
 const VIEWER_KINDS={legacy:'visor',mount:'constructor',glb:'glb',none:'vacío'};
-export function environmentList(p){const list=(p?.environments||[]).map(e=>({id:e.id,name:e.name||e.id,description:e.description||'',image:e.image||'',glb:e.glb||'',viewer:typeof e.viewer==='string'?e.viewer:'',kind:VIEWER_KINDS[environmentViewer(e).kind],action:'env-open:'+e.id}));if(p?.shipModel)list.push({id:'ship',name:p.shipModel.name||'Nave · modelo 3D',description:'Modelo navegable de la nave.',image:p.shipModel.snapshots?.[0]?.file||'',glb:p.shipModel.glb||'',viewer:p.shipModel.viewer||'',kind:'visor',action:'nav:ship'});return list;}
+export function environmentList(p){return (p?.environments||[]).map(e=>({id:e.id,name:e.name||e.id,description:e.description||'',image:e.image||'',glb:e.glb||'',viewer:typeof e.viewer==='string'?e.viewer:'',kind:VIEWER_KINDS[environmentViewer(e).kind],action:'env-open:'+e.id}));}
+// Entorno con constructor cuyos datos son los de un location.modelSpace (modelSpace.model === environment.data), o null.
+export function modelSpaceEnvironment(p,modelSpace){const m=modelSpace?.model;return m?(p?.environments||[]).find(e=>e.builder&&e.data&&e.data===m)||null:null;}
+// Vista pedida en la URL: la antigua vista de la nave (?view=ship) lleva a la lista de entornos.
+export const routeView=v=>v==='ship'?'environments':v;
 // Entorno 3D enlazado a un ambiente (location.environment), o null.
 export function locationEnvironment(p,locationId){const l=(p?.locations||[]).find(l=>l.id===locationId);return l?.environment?(p.environments||[]).find(e=>e.id===l.environment)||null:null;}
 // Elección de entorno de una secuencia a partir del formulario: lugar, estado por secuencia y giro en grados. Vacío → sin elección.

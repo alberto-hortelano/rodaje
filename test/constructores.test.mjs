@@ -1,12 +1,13 @@
-// Constructores declarados en proyectos/*/proyecto.json (environments[].builder y, provisional hasta #14, shipModel.builder), cada uno con su data.
+// Constructores declarados en proyectos/*/proyecto.json (environments[].builder), cada uno con su data, y los plugins del visor (environments[].viewer.plugins).
 // Solo lectura: lee ROOT/proyectos como kit.test.mjs y nunca escribe. Sin proyectos o sin constructores, los tests se saltan.
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import * as T from 'three';
 import {createKit} from '../viewer/kit.mjs';
 const ROOT=path.resolve(import.meta.dirname,'..'),PROJECTS=path.join(ROOT,'proyectos');
 const readJSON=f=>JSON.parse(fs.readFileSync(f,'utf8'));
-const found=[];
+const found=[],plugins=[];
 for(const id of fs.existsSync(PROJECTS)?fs.readdirSync(PROJECTS).sort():[]){const pj=path.join(PROJECTS,id,'proyecto.json');if(!fs.existsSync(pj))continue;let p;try{p=readJSON(pj);}catch{continue;}
- const list=[...(p.environments||[]).map(e=>({at:`${id}/environments/${e.id}`,builder:e.builder,data:e.data})),...(p.shipModel?[{at:`${id}/shipModel`,builder:p.shipModel.builder,data:p.shipModel.data}]:[])];
+ const list=(p.environments||[]).map(e=>({at:`${id}/environments/${e.id}`,builder:e.builder,data:e.data}));
+ for(const e of p.environments||[])for(const f of Array.isArray(e.viewer?.plugins)?e.viewer.plugins:[])if(typeof f==='string'&&fs.existsSync(path.join(PROJECTS,id,f)))plugins.push({at:`${id}/environments/${e.id}: ${f}`,file:path.join(PROJECTS,id,f)});
  for(const c of list){if(typeof c.builder!=='string'||typeof c.data!=='string')continue;const file=path.join(PROJECTS,id,c.builder),data=path.join(PROJECTS,id,c.data);if(fs.existsSync(file)&&fs.existsSync(data))found.push({...c,file,dataFile:data});}}
 
 // Número finito, texto, booleano, null, array u objeto plano de lo mismo: lo que sobrevive a JSON sin perder nada.
@@ -30,4 +31,5 @@ for(const c of found){
   for(const d of ship.doors){assert.equal(d.inverse.length,16);assert.equal(d.position.length,3);unique(d.node);unique(d.leaf);}
   for(const r of rooms)assert.deepStrictEqual(ship.kits[r.id],r.kit,`kit de ${r.id} distinto del de ${path.basename(c.dataFile)}`);});
 }
+for(const c of plugins)test(`${c.at}: se importa en Node y exporta plugin como función`,async()=>{const m=await import(c.file);assert.equal(typeof m.plugin,'function');});
 test('hay constructores declarados que comprobar',{skip:!found.length&&'sin proyectos con constructor'},()=>assert.ok(found.length));

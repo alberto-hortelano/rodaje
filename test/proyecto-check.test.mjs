@@ -64,17 +64,17 @@ test('plugins del visor: R-code, R-builder (contenido) y R-manifest (declaració
  for(const plugins of ['v.js',[1],{a:'v.js'}])assert.ok(rules(mk(env(plugins),{'v.js':''}),'R-manifest').some(x=>x.detail==='environments[0].viewer.plugins no es una lista de rutas'),JSON.stringify(plugins));
  const abs=rules(mk(env(['/home/u/v.js']),{}),'R-abs');assert.deepEqual(abs.map(x=>x.detail),['environments.0.viewer.plugins.0']);});
 
-test('shipModel.builder provisional: constructor declarado hasta #14',()=>{
- const found=mk({shipModel:{builder:'n/t.js',viewer:'n/v.js'}},{'n/t.js':'export function build(T,data,kit){}','n/v.js':''});
- assert.deepEqual(rules(found,'R-code').map(x=>x.file),['n/v.js']);
- assert.deepEqual(rules(found,'R-manifest').map(x=>x.detail),['shipModel','shipModel.viewer: n/v.js']);
+test('shipModel.builder ya no es un constructor declarado',()=>{
+ const found=mk({shipModel:{builder:'n/t.js',viewer:'n/v.js'}},{'n/t.js':'document.x;\nexport function build(T,data,kit){}','n/v.js':''});
+ assert.deepEqual(rules(found,'R-manifest').map(x=>x.detail),['shipModel','shipModel.builder: n/t.js','shipModel.viewer: n/v.js']);
+ assert.deepEqual(rules(found,'R-code').map(x=>x.file),['n/t.js','n/v.js']);
  assert.deepEqual(rules(found,'R-builder'),[]);});
 
-test('shipModel.builder con errores',()=>{
- const found=rules(mk({shipModel:{builder:'n/t.js'}},{'n/t.js':'document.x;\nexport const K=1;\nexport function build(){}'}),'R-builder');
- assert.deepEqual(found.map(x=>[x.file,x.detail]),[['n/t.js','document'],['n/t.js','export K']]);
- assert.deepEqual(rules(mk({shipModel:{builder:'n/t.js'}},{}),'R-builder').map(x=>x.detail),['shipModel.builder no existe: n/t.js']);
- assert.deepEqual(rules(mk({shipModel:{builder:'../t.js'}},{}),'R-builder').map(x=>x.detail),['shipModel.builder fuera del proyecto: ../t.js']);});
+test('shipModel.builder que también es environments[].builder: sin R-code',()=>{
+ const found=mk({shipModel:{builder:'n/t.js'},environments:[{builder:'n/t.js',data:'n/m.json'}]},{'n/t.js':'export function build(T,data,kit){}','n/m.json':'{}'});
+ assert.deepEqual(rules(found,'R-code'),[]);
+ assert.deepEqual(rules(found,'R-manifest').map(x=>x.detail),['shipModel','shipModel.builder: n/t.js']);
+ assert.deepEqual(rules(found,'R-builder'),[]);});
 
 test('R-before',()=>{
  const yes=['before.json','before-explore.js','before','explore.js.before-roll','dir/before.js'],no=['beforehand.md','x-before.json'];

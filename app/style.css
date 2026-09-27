@@ -14,10 +14,6 @@ input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
 input[type="color"]::-webkit-color-swatch{border:0;border-radius:3px}
 input[type="color"]::-moz-color-swatch{border:0;border-radius:3px}
 
-.ship-tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.ship-tools select{width:auto;max-width:310px}.ship-canvas canvas{display:block;width:100%;height:100%;border-radius:8px}.ship-info{margin:14px 0 8px;color:#264839;font-weight:600}
-.toledo-explorer{background:#0e1e26;color:#dce5de;border-radius:14px;padding:20px;margin:-10px}.explorer-bar{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:18px}.explorer-bar h2{color:#f2f3e8;font-size:26px;margin-top:6px}.explorer-kicker{font-size:10px;letter-spacing:1.6px;color:#a8bead}.explorer-actions{display:flex;flex-wrap:wrap;gap:7px}.explorer-actions button{font-size:12px;padding:9px 11px}.explorer-layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px}.explorer-viewport{height:72vh;min-height:470px;position:relative;overflow:hidden;border-radius:8px;background:#090f14;outline:none}.explorer-viewport canvas{display:block;width:100%;height:100%}.explorer-hud{position:absolute;top:15px;left:15px;right:15px;display:flex;justify-content:space-between;gap:10px;pointer-events:none;text-shadow:0 1px 4px #000}.explorer-hud span{background:#0c1b26cc;padding:8px 11px;border:1px solid #71918a44;border-radius:5px;font-size:12px}.explorer-controls{position:absolute;bottom:10px;left:12px;right:12px;color:#cfdbd3;background:#0b1b26d9;padding:9px 12px;border-radius:5px;line-height:1.6;font-size:10px;pointer-events:none}.explorer-crosshair{display:none;position:absolute;top:50%;left:50%;font-size:20px;color:#ecedcf;transform:translate(-50%,-50%);pointer-events:none}.inside .explorer-crosshair{display:block}.explorer-prompt{position:absolute;bottom:94px;left:15px;right:15px;text-align:center;color:#e9d994;font-size:12px;pointer-events:none;text-shadow:0 1px 3px #000}.explorer-loading{position:absolute;inset:0;display:grid;place-content:center;background:#0e1e26;z-index:3}.explorer-sidebar{display:flex;flex-direction:column;gap:12px;min-width:0}.explorer-sidebar input,.explorer-sidebar select{background:#162d36;border-color:#355057;color:#dae5db;font-size:12px;margin:0}.explorer-sidebar select{height:210px;padding:5px}.explorer-sidebar option{padding:7px 5px}.explorer-sidebar option:checked{background:#3b594d;color:#e3f5bd}.explorer-room h3{color:#e5efda;font-size:17px;margin:7px 0}.explorer-room p{font-size:12px;color:#a6bdbb;line-height:1.6}.explorer-room small{color:#d4bc85;display:block;margin-top:8px}.explorer-route{font-size:11px;line-height:1.6;color:#b9cda8;min-height:32px}.explorer-minimap{width:100%;height:auto;max-height:450px;border:1px solid #344d54;border-radius:6px}.explorer-jump{background:transparent;color:#a6b8ba;border-color:#355057;font-size:11px;padding:7px}.explorer-sidebar .tiny{color:#93a9a5;line-height:1.6}@media(max-width:1100px){.explorer-layout{grid-template-columns:1fr}.explorer-sidebar{display:grid;grid-template-columns:1fr 1fr}.explorer-viewport{height:65vh}.explorer-bar{flex-direction:column;align-items:start}}@media(max-width:650px){.explorer-sidebar{display:flex}.explorer-viewport{min-height:400px}.explorer-hud{flex-direction:column}.explorer-controls{font-size:9px}}
-
-.toledo-explorer:fullscreen{padding:20px;overflow:auto;width:100vw;height:100vh;box-sizing:border-box}.toledo-explorer:fullscreen .explorer-viewport{height:calc(100vh - 135px)}
 /* Markdown documents */
 #modal.md-dialog{width:min(1240px,96vw);padding:24px;max-height:95vh} .md-dialog h2{margin-bottom:12px}
 .md-tools,.md-modes{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.md-tools button{min-width:36px;padding:7px 10px}.md-modes button[aria-pressed=true]{background:var(--ink);color:white}.md-panes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden;height:55vh;min-height:260px}.md-source{min-width:0;overflow:hidden}.md-source .cm-editor{height:100%;background:#fafbf7;font-size:14px}.md-source .cm-scroller{overflow:auto;font-family:ui-monospace,monospace;line-height:1.7}.md-source .cm-content{padding:16px 8px}.md-source .cm-gutters{background:#f0f3eb;color:#819078;border:0}.md-preview{overflow:auto;border-left:1px solid var(--line);padding:24px;line-height:1.7;overflow-wrap:anywhere;color:var(--ink);background:white}.md-preview p,.md-preview ul,.md-preview ol,.md-preview blockquote,.md-preview pre,.md-preview table{margin:0 0 16px}.md-preview h1,.md-preview h2,.md-preview h3,.md-preview h4{margin:20px 0 12px}.md-preview>:first-child{margin-top:0}.md-preview pre{overflow:auto;padding:14px;background:#f0f3eb;border-radius:6px}.md-preview code{font-family:ui-monospace,monospace}.md-preview blockquote{border-left:3px solid #9ab873;padding-left:16px}.md-preview img{max-width:100%;height:auto}.md-status{font-size:11px;color:var(--muted);padding-top:10px}[data-md-editor][data-mode=edit] .md-preview,[data-md-editor][data-mode=preview] .md-source{display:none}[data-md-editor]:not([data-mode=split]) .md-panes{grid-template-columns:minmax(0,1fr)}@media(max-width:750px){.md-panes{grid-template-columns:1fr;overflow:auto}.md-source,.md-preview{min-height:250px}.md-preview{border-left:0;border-top:1px solid var(--line)}#modal.md-dialog{padding:16px}}
@@ -110,21 +106,12 @@ td input,td select{min-width:44px;padding:6px 4px}
 .stagefoot{padding:10px 12px}
 .stagefoot button{padding:8px 10px}
 .actions{gap:6px}
-input,textarea,select,.explorer-sidebar input,.explorer-sidebar select{font-size:16px}
+input,textarea,select{font-size:16px}
 dialog{padding:18px;width:min(640px,calc(100vw - 16px));max-height:92dvh}
 dialog h2{margin-bottom:14px}
 #modal.md-dialog{width:calc(100vw - 16px)}
 dialog.image-viewer{width:100vw;max-width:none;height:100dvh;max-height:none;padding:52px 8px 8px;border-radius:0}
 #toast{bottom:16px;max-width:calc(100vw - 32px);padding:11px 16px}
-.toledo-explorer{margin:-6px;padding:12px;border-radius:10px}
-.explorer-bar h2{font-size:22px}
-.explorer-actions{gap:6px}
-.explorer-actions button{padding:8px 9px;font-size:11px}
-.explorer-viewport{height:58vh;min-height:320px}
-.explorer-hud{top:10px;left:10px;right:10px;gap:6px}
-.explorer-hud span{padding:6px 8px;font-size:11px}
-.explorer-controls{display:none}
-.explorer-sidebar select{height:170px}
 #rehearsal [data-viewport]{height:min(40vh,420px)}
 #rehearsal [data-scene]{max-width:100%}
 .rehearsal-subtitle{font-size:15px;padding:12px 14px}
