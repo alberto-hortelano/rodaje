@@ -29,4 +29,4 @@ Cómo se encadenan los pasos:
 - Ninguna generación de pago (fal.ai, ElevenLabs, H3, nano-banana) sin aprobación explícita del usuario.
 - `npm test` en verde al terminar cada issue.
 - Si se toca la UI, ejecutar `npm run build:ui` y hacer commit también de `app/app.js`.
-- Línea base: `node scripts/linea-base.mjs <dir>` sirve para comparar el antes y el después (digests de planos, GLB y coplanares).
+- Línea base: `node scripts/linea-base.mjs <dir> [--url http://127.0.0.1:4320] [--sin-capturas]` sirve para comparar el antes y el después (digests de planos, GLB, coplanares y capturas de las vistas 3D; las capturas necesitan la app arrancada). Compara dos con `diff -r <antes> <después>`.

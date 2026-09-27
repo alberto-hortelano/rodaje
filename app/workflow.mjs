@@ -154,3 +154,5 @@ export function reviewAttempt(list,{attempt,verdict,rules=[],notes='',range,leng
  Object.assign(a,{verdict,failedRules:verdict==='rejected'?rules:[],notes,reviewedAt:now});
  if(range)a.usedRange=range.map(([s,e])=>[Math.round(s*100)/100,Math.round(e*100)/100]);else if(verdict==='accepted'&&!a.usedRange)a.usedRange=[[0,Math.min(max,length||max)]];
  return out;}
+// Copia con las claves de los objetos ordenadas en todos los niveles; los arrays conservan su orden.
+export const sortKeys=v=>Array.isArray(v)?v.map(sortKeys):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,sortKeys(v[k])])):v;
