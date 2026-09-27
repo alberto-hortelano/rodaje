@@ -156,3 +156,26 @@ export function reviewAttempt(list,{attempt,verdict,rules=[],notes='',range,leng
  return out;}
 // Copia con las claves de los objetos ordenadas en todos los niveles; los arrays conservan su orden.
 export const sortKeys=v=>Array.isArray(v)?v.map(sortKeys):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,sortKeys(v[k])])):v;
+
+// ---- Ensayo 3D: configuración por proyecto en stage.rehearsal ({animations:{library,clips}, exteriors, voicePitch}).
+const REHEARSAL_ROLES=['idle','talk','walk'];
+const isObj=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
+// Idioma del proyecto → base para filtrar voces del navegador y locale del SpeechSynthesisUtterance.
+export function speechLocale(language){const l=String(language||'').trim().replace('_','-');if(!l)return {base:'en',locale:'en-US'};const base=l.split('-')[0].toLowerCase();return {base,locale:l.includes('-')?l:({en:'en-US',es:'es-ES'}[base]||base+'-'+base.toUpperCase())};}
+// Lo que el ensayo necesita del proyecto para un plano (o para el capítulo, sin plano). Nunca lanza: una configuración mal formada se trata como ausente.
+export function rehearsalConfig(project,shot=null){const c=isObj(project?.stage?.rehearsal)?project.stage.rehearsal:{};const lib=c.animations?.library,clips=c.animations?.clips;
+ const animations=typeof lib==='string'&&isObj(clips)&&REHEARSAL_ROLES.every(r=>typeof clips[r]==='string')&&(!shot||shot.rehearsal)?{files:Object.fromEntries(REHEARSAL_ROLES.map(r=>[r,lib+'/'+clips[r]+'.fbx']))}:null;
+ const key=shot?.rehearsal&&typeof shot.staging?.exterior==='string'?shot.staging.exterior:null;const ext=key&&isObj(c.exteriors)&&Object.hasOwn(c.exteriors,key)&&isObj(c.exteriors[key])&&Array.isArray(c.exteriors[key].parts)?c.exteriors[key]:null;
+ return {animations,exterior:ext?{background:ext.background,parts:ext.parts}:null,exteriorKey:ext?key:null,voicePitch:isObj(c.voicePitch)?{...c.voicePitch}:{},speech:speechLocale(project?.language)};}
+export function rehearsalStageErrors(cfg){const errors=[];if(cfg===undefined||cfg===null)return errors;if(!isObj(cfg))return ['stage.rehearsal debe ser un objeto'];
+ const vec3=v=>Array.isArray(v)&&v.length===3&&v.every(Number.isFinite),color=v=>typeof v==='string'&&/^#[0-9a-f]{6}$/i.test(v);
+ if(cfg.animations!==undefined){const a=cfg.animations;if(!isObj(a))errors.push('animations debe ser un objeto');else{if(typeof a.library!=='string'||!a.library)errors.push('animations.library debe ser una ruta');for(const r of REHEARSAL_ROLES)if(typeof a.clips?.[r]!=='string'||!a.clips[r])errors.push(`animations.clips.${r} debe ser un nombre de clip`);}}
+ if(cfg.exteriors!==undefined){if(!isObj(cfg.exteriors))errors.push('exteriors debe ser un objeto');else for(const [k,e] of Object.entries(cfg.exteriors)){const at=`exteriors.${k}`;if(!isObj(e)){errors.push(at+' debe ser un objeto');continue;}if(!color(e.background))errors.push(at+'.background debe ser #rrggbb');if(!Array.isArray(e.parts)){errors.push(at+'.parts debe ser una lista');continue;}
+  e.parts.forEach((p,i)=>{const w=`${at}.parts[${i}]`;if(!isObj(p))return errors.push(w+' debe ser un objeto');if(!['box','cylinder','sphere'].includes(p.shape))errors.push(w+'.shape debe ser box, cylinder o sphere');if(!color(p.color))errors.push(w+'.color debe ser #rrggbb');if(!vec3(p.position))errors.push(w+'.position debe tener 3 números');for(const f of ['rotation','drift','spin'])if(p[f]!==undefined&&!vec3(p[f]))errors.push(`${w}.${f} debe tener 3 números`);
+   if(p.shape==='box'&&!vec3(p.size))errors.push(w+'.size debe tener 3 números');if((p.shape==='cylinder'||p.shape==='sphere')&&!(Number.isFinite(p.radius)&&p.radius>0))errors.push(w+'.radius debe ser mayor que 0');if(p.shape==='cylinder'&&!(Number.isFinite(p.height)&&p.height>0))errors.push(w+'.height debe ser mayor que 0');});}}
+ if(cfg.voicePitch!==undefined){if(!isObj(cfg.voicePitch))errors.push('voicePitch debe ser un objeto');else for(const [k,v] of Object.entries(cfg.voicePitch))if(!(Number.isFinite(v)&&v>=0&&v<=2))errors.push(`voicePitch.${k} debe ser un número entre 0 y 2`);}
+ return errors;}
+// Posición y giro de una pieza de exterior tras `elapsed` segundos de secuencia: position + drift·t; rotation + spin·t solo si gira.
+export function exteriorPartAt(part,elapsed){return {position:part.position.map((v,i)=>v+(part.drift?.[i]??0)*elapsed),rotation:part.spin?part.spin.map((v,i)=>(part.rotation?.[i]??0)+v*elapsed):null};}
+// Instantánea de un lote o trabajo anterior a stage: se completa con la configuración del proyecto vivo.
+export function stageFallback(snapshot,live){return snapshot?.stage?snapshot:{...snapshot,stage:live?.stage};}

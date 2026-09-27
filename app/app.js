@@ -2,10 +2,12 @@
 
 // app/rehearsal.source.js
 import { createStage } from "./stage.js";
+import { rehearsalConfig } from "./workflow.mjs";
 async function mountRehearsal(root, { project, episode }) {
   const esc2 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const shots = episode.sequences.flatMap((s, si) => s.shots.map((t2, ti) => ({ s, t: t2, si, ti })));
   let index = 0, stage2, disposed = false, playing = false, token = 0, raf, abortWait, loadVersion = 0, stageKey = null;
+  const cfg = rehearsalConfig(project), speech = cfg.speech;
   const synth = window.speechSynthesis;
   let voices = [];
   let saved = {};
@@ -18,7 +20,7 @@ async function mountRehearsal(root, { project, episode }) {
   const speakerIds = [...new Set(shots.flatMap((x2) => x2.t.lines.map((l3) => l3.character)))];
   function refreshVoices() {
     voices = synth?.getVoices() || [];
-    const english = voices.filter((v2) => /^en\b/i.test(v2.lang));
+    const english = voices.filter((v2) => new RegExp("^" + speech.base + "\\b", "i").test(v2.lang));
     $3("[data-voices]").innerHTML = speakerIds.map((id3, i2) => {
       const c = project.characters.find((c2) => c2.id === id3);
       const selected = saved[id3] || english[i2 % Math.max(1, english.length)]?.voiceURI || "";
@@ -55,7 +57,7 @@ async function mountRehearsal(root, { project, episode }) {
     const { s, t: t2, si, ti } = shots[index];
     $3("[data-scene]").value = si;
     $3("[data-shot]").innerHTML = s.shots.map((shot, j) => `<option value="${j}" ${j === ti ? "selected" : ""}>${j + 1} \xB7 ${esc2(shot.title)}</option>`).join("");
-    $3("[data-title]").textContent = `${si + 1}/15 \xB7 Plano ${ti + 1}/${s.shots.length} \xB7 ${s.title}`;
+    $3("[data-title]").textContent = `${si + 1}/${episode.sequences.length} \xB7 Plano ${ti + 1}/${s.shots.length} \xB7 ${s.title}`;
     $3("[data-script]").textContent = t2.description;
     $3("[data-subtitle]").textContent = t2.lines.length ? "Pulsa Ensayar para escuchar el di\xE1logo." : "ACCI\xD3N \xB7 " + t2.description;
     const key = [s.id, t2.location || s.location, t2.variant || s.variant, !!t2.detail].join(":");
@@ -115,11 +117,11 @@ ${l3.spokenText || l3.text}`;
     }
     await new Promise((resolve, reject) => {
       const u = new SpeechSynthesisUtterance(l3.spokenText || l3.text);
-      u.lang = "en-US";
+      u.lang = speech.locale;
       u.rate = Number($3("[data-rate]").value);
       const uri = root.querySelector(`[data-person="${l3.character}"]`)?.value;
       u.voice = voices.find((v2) => v2.voiceURI === uri) || null;
-      u.pitch = l3.character === "pa" ? 1.12 : ["earl", "ted", "hutch"].includes(l3.character) ? 0.88 : 1;
+      u.pitch = cfg.voicePitch[l3.character] ?? 1;
       let done = false;
       const timeout = setTimeout(() => finish(new Error("La voz del navegador no ha terminado. Selecciona otra voz o usa Solo subt\xEDtulos.")), Math.max(3e4, duration * 4e3));
       function finish(err) {
