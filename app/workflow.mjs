@@ -78,7 +78,7 @@ return {prompt,refs,warnings,duration,requested,budget};}
 
 // Prompt de un bloque en modo «fotograma» (image-to-video): el fotograma del storyboard ES el primer fotograma; no hay vídeo guía ni hojas adjuntas, así que la identidad se sostiene con los descriptores del registro. Los huecos [[CAMERA]] y [[ACTION]] se rellenan con la skill director-h3 salvo que el plano traiga cameraEn/actionEn.
 export function framePrompt({project,sequence,shots,block,registry,map,scene,cast=[]}){const warnings=[];const part=block.parts?.[0];const t=shots[part?.shot];if(!t)throw Error('El bloque no tiene planos');if((block.parts||[]).length>1)warnings.push('Modo fotograma: el bloque tiene más de un plano; solo el primero tiene fotograma inicial');const image=t.storyboardRender||null;if(!image)warnings.push(`El plano ${t.title} no tiene fotograma de storyboard`);const duration=block.duration??Math.ceil(block.length||5);const requested=Math.max(5,Math.ceil(duration));const spoken=spokenLines(block,shots);const budget=dialogueBudget(spoken);if(spoken.length&&budget>duration-1+.01)warnings.push(`Diálogo de ${budget.toFixed(1)} s no cabe en ${duration} s − 1 s de cola (R12)`);
-const assets=Object.entries(registry?.assets||{});const person=id=>assets.find(([,a])=>a.kind==='character'&&a.character===id&&!a.variant)||assets.find(([,a])=>a.kind==='character'&&a.character===id);const voice=id=>assets.find(([,a])=>a.kind==='voice'&&a.character===id)?.[1];const nameOf=id=>/^([A-Z][A-Z' -]+):/.exec(person(id)?.[1]?.descriptor||'')?.[1]||shortName(project,id);
+const assets=Object.entries(registry?.assets||{});const person=id=>assets.find(([,a])=>a.kind==='character'&&a.character===id&&!a.variant)||assets.find(([,a])=>a.kind==='character'&&a.character===id);const voice=id=>assets.find(([,a])=>a.kind==='voice'&&a.character===id)?.[1];const nameOf=id=>characterName(registry,project,id);
 const people=cast.map(id=>{const e=person(id);if(!e)warnings.push(`Sin entrada de registro para ${id}`);else if(e[1].status!=='approved')warnings.push(`Tag sin aprobar: ${e[0]}`);return e?e[1].descriptor||'[[DESCRIPTOR]]':`${nameOf(id)}: [[DESCRIPTOR]]`;});
 const lines=[];for(const p of block.parts||[])for(const l of p.lines||[]){const at=(p.at+l.start).toFixed(2);if(l.offscreen)lines.push(`${at}s: ${nameOf(l.character)} is heard offscreen; nobody in frame mouths the words.`);else lines.push(`At approximately ${at}s, ${nameOf(l.character)} says exactly: <d>[English] ${(l.spokenText||l.text).trim()}</d>`);}
 const axis=[map?.side?`Camera side: ${map.side.replace(/\.+$/,'')}.`:'',map?.axis?`The 180° line is ${map.axis.replace(/\.+$/,'')}; the camera stays on its side of that line.`:''].filter(Boolean).join(' ');const acting=scene?actingText(scene,cast,project):'';const local='';const light=registry?.lighting?.default||'[[LIGHTING]]';
@@ -88,7 +88,7 @@ const detailed=[`LOCATION MAP: ${map?.prompt||'[[LOCATION MAP]]'}${axis?' '+axis
 const sound=[sequence.ambiencePrompt||'Natural exterior sound.',...[...new Set(spoken.map(l=>l.character))].map(id=>voice(id)?.descriptor?`${nameOf(id)}'s voice: ${voice(id).descriptor}`:'')].filter(Boolean).join(' ');
 const prompt=`summary:\n${summary}\nretention_analysis:\n${retention}\ndetailed_description:\n${detailed}\noverall_soundscape:\n${sound}\nnon_diegetic_music:\nNone.`;
 const emo=forbiddenEmotionWords(acting+' '+local);if(emo.length)warnings.push(`Palabras de emoción en la interpretación: ${emo.join(', ')} (skill interpretacion)`);
-return {prompt,image,warnings,duration,requested,budget};}
+return {prompt,image,warnings,duration,requested,budget,names:cast.map(nameOf)};}
 
 // ---- Escaleta: secuencias en orden con número, minutos y una carátula (imagen) por secuencia.
 export function outlineSequence(p,id){for(const e of p.episodes||[])for(const s of e.sequences||[])if(s.id===id)return {episode:e,sequence:s};throw Error('Secuencia no encontrada');}
@@ -143,7 +143,7 @@ export function chosenAttempt(list,has=()=>true){const ok=a=>a.video&&has(a);con
 // Tramo de cada bloque en el vídeo montado: `at`/`length` del cut.json o, en cortes antiguos, la suma de usedRange (o la duración del plan).
 export function cutTimeline(cut,plan=[]){let at=0;return (cut?.blocks||[]).map(b=>{const length=b.length??(b.usedRange?.length?b.usedRange.reduce((n,[s,e])=>n+e-s,0):plan.find(x=>x.id===b.block)?.length||0);const start=b.at??at;at=start+length;return {...b,start,end:at};});}
 export const blockAt=(timeline,t)=>timeline.find(b=>t>=b.start&&t<b.end)||(t>=(timeline.at(-1)?.end??0)?timeline.at(-1):timeline[0])||null;
-// Reglas de REGLAS.md: «### C04 · Nadie mira a cámara».
+// Reglas de REGLAS.md: «### R04 · Nadie mira a cámara».
 export function parseRules(md){return [...String(md||'').matchAll(/^###\s+([A-Z]\d+)\s*·\s*(.+)$/gm)].map(m=>({id:m[1],title:m[2].trim()}));}
 // Veredicto de un intento (como estado.mjs --verdict). accepted deja de aceptar las demás tomas del bloque; null borra la revisión.
 // Un rechazo cita al menos una regla conocida. Rango: tramos [inicio, fin] en segundos del vídeo generado.
@@ -183,3 +183,42 @@ export function rehearsalStageErrors(cfg){const errors=[];if(cfg===undefined||cf
 export function exteriorPartAt(part,elapsed){return {position:part.position.map((v,i)=>v+(part.drift?.[i]??0)*elapsed),rotation:part.spin?part.spin.map((v,i)=>(part.rotation?.[i]??0)+v*elapsed):null};}
 // Instantánea de un lote o trabajo anterior a stage: se completa con la configuración del proyecto vivo.
 export function stageFallback(snapshot,live){return snapshot?.stage?snapshot:{...snapshot,stage:live?.stage};}
+
+// ── Dirección por lote (assets/<lote>/direccion.json, modo fotograma) y estados de personaje del registro ──
+// Nombre en mayúsculas del personaje: prefijo «NOMBRE:» de su descriptor (base antes que variante); si no, shortName.
+const characterAsset=(registry,id)=>{const assets=Object.entries(registry?.assets||{});return assets.find(([,a])=>a.kind==='character'&&a.character===id&&!a.variant)||assets.find(([,a])=>a.kind==='character'&&a.character===id)||null;};
+export function characterName(registry,project,id){return /^([A-Z][A-Z' -]+):/.exec(characterAsset(registry,id)?.[1]?.descriptor||'')?.[1]||shortName(project,id);}
+const DIR_TEXT=['camera','action','acting','local','people'];
+// Rellena los huecos del esqueleto de framePrompt con la entrada del bloque. [[LOCAL]] = frase de reparto + local + locks aplicables.
+export function applyDireccion(prompt,d,{names=[],locks=[],image=null}={}){const warnings=[];let p=prompt;const who=d.people||names.join(', ');
+ if(d.people)p=p.replace(/Exactly \d+ (people|person) in the scene[^.]*\./,()=>`People in the scene: ${d.people}.`);
+ const L=(locks||[]).map(l=>typeof l==='string'?{text:l}:l).filter(l=>l.when!=='cast'||names.length).map(l=>l.text);
+ const local=[who?`The people in the scene are only ${who}; nobody else enters the frame.`:'',d.local,...L].filter(Boolean).join(' ');
+ for(const [k,h,v] of [['camera','[[CAMERA]]',d.camera],['action','[[ACTION]]',d.action],['local','[[LOCAL]]',local]]){if(!v)continue;if(p.includes(h))p=p.replace(h,()=>v);else if(d[k])warnings.push(`direccion.${k} no se aplica: el esqueleto ya trae ${k.toUpperCase()}`);}
+ if(d.acting){const re=/^CHARACTER ACTING: [\s\S]*?(?=^PHYSICS: )/m;if(re.test(p))p=p.replace(re,()=>`CHARACTER ACTING: ${d.acting}\n`);else warnings.push('direccion.acting no se aplica: falta CHARACTER ACTING antes de PHYSICS');}
+ if(d.fin&&!image)warnings.push('direccion.fin sin fotograma: no hay endImage');
+ const emo=forbiddenEmotionWords((d.acting||'')+' '+(d.local||''));if(emo.length)warnings.push(`Palabras de emoción en la dirección: ${emo.join(', ')} (skill interpretacion)`);
+ return {prompt:p,refsPatch:d.fin?{endImage:image}:{},warnings};}
+export function direccionErrors(d){if(!isObj(d))return ['debe ser un objeto'];const errors=[];
+ if(d.blocks===undefined&&Object.keys(d).some(k=>/^b\d+$/.test(k)))return ['formato antiguo: mueve los bloques a "blocks" y las coletillas a "locks"'];
+ if(d.blocks!==undefined&&!isObj(d.blocks))errors.push('blocks debe ser un objeto {bNN: {...}}');
+ for(const [id,b] of Object.entries(isObj(d.blocks)?d.blocks:{})){if(!isObj(b)){errors.push(`blocks.${id} debe ser un objeto`);continue;}for(const k of DIR_TEXT)if(b[k]!==undefined&&typeof b[k]!=='string')errors.push(`blocks.${id}.${k} debe ser texto`);if(b.fin!==undefined&&typeof b.fin!=='boolean')errors.push(`blocks.${id}.fin debe ser true o false`);}
+ if(d.locks!==undefined){if(!Array.isArray(d.locks))errors.push('locks debe ser una lista');else d.locks.forEach((l,i)=>{if(typeof l==='string')return;if(!isObj(l)||typeof l.text!=='string'||(l.when!==undefined&&!['cast','always'].includes(l.when)))errors.push(`locks[${i}] debe ser texto o {text, when: "cast"|"always"}`);});}
+ return errors;}
+// Entrada de un bloque; lee también el formato antiguo (bNN en la raíz) para la vista Montaje.
+export function direccionBlock(d,blockId){return d?.blocks?.[blockId]??(d?.blocks?null:d?.[blockId])??null;}
+// Dónde escribe prompt.mjs: con direccion.json, un bloque sin entrada y con prompt.txt no se toca salvo que se nombre.
+export function promptTargets({exists,force,hasDireccion,directed,named}){if(hasDireccion&&!directed&&exists&&!named)return {skip:true,promptFile:null,writeRefs:false};return {skip:false,promptFile:exists&&!force?'prompt.generated.txt':'prompt.txt',writeRefs:true};}
+// refs.json nuevo: con dirección manda fin; sin dirección se conserva el endImage anterior. endImage siempre al final.
+export function mergeRefs(fresh,old,{directed=false,patch={}}={}){const {endImage:_,...out}=fresh||{};const end=directed?patch.endImage:old?.endImage;return end?{...out,endImage:end}:out;}
+export function parseCastRef(ref){const s=String(ref||''),i=s.indexOf('@');return i<0?{id:s,state:null}:{id:s.slice(0,i),state:s.slice(i+1)};}
+// Estados en el asset del personaje: "states": {"a-pie": {"drop": [", on horseback"], "note": "on foot, …"}}. Sin herencia.
+function applyState(descriptor,st){let d=descriptor;const missing=[];for(const x of st.drop||[]){if(d.includes(x))d=d.replace(x,'');else missing.push(x);}if(st.note)d=d.replace(/\.\s*$/,'')+'; '+st.note;return {descriptor:d,missing};}
+export function resolveDescriptor(registry,ref){const {id,state}=parseCastRef(ref);const e=characterAsset(registry,id);const out={id,state,tag:e?.[0]||null,name:characterName(registry,null,id),descriptor:e?.[1]?.descriptor||'',errors:[]};
+ if(!e){out.errors.push(`Sin entrada de registro para ${id}`);return out;}if(!state)return out;
+ const st=e[1].states?.[state];if(!isObj(st)){out.errors.push(`${e[0]}: estado desconocido «${state}»${Object.keys(e[1].states||{}).length?` (hay ${Object.keys(e[1].states).join(', ')})`:''}`);return out;}
+ const r=applyState(out.descriptor,st);for(const x of r.missing)out.errors.push(`${e[0]}@${state}: no se encuentra «${x}» en el descriptor`);out.descriptor=r.descriptor;return out;}
+export function stateErrors(tag,asset){const errors=[];if(asset?.states===undefined)return errors;if(!isObj(asset.states))return [`${tag}: states debe ser un objeto`];
+ for(const [s,st] of Object.entries(asset.states)){if(!isObj(st)){errors.push(`${tag}@${s}: debe ser un objeto {drop, note}`);continue;}if(st.drop!==undefined&&(!Array.isArray(st.drop)||st.drop.some(x=>typeof x!=='string'||!x)))errors.push(`${tag}@${s}: drop debe ser una lista de textos`);if(st.note!==undefined&&typeof st.note!=='string')errors.push(`${tag}@${s}: note debe ser texto`);if(!st.drop?.length&&!st.note)errors.push(`${tag}@${s}: sin drop ni note`);
+  if(Array.isArray(st.drop))for(const x of applyState(asset.descriptor||'',{drop:st.drop.filter(x=>typeof x==='string'&&x)}).missing)errors.push(`${tag}@${s}: no se encuentra «${x}» en el descriptor`);}
+ return errors;}

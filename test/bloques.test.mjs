@@ -37,6 +37,6 @@ const r=framePrompt({project,sequence:{title:'El Ahorcado',ambiencePrompt:'Wind.
 assert.equal(r.image,'storyboards/sb/render/A23.png');assert.equal(r.requested,5);
 assert.match(r.prompt,/The supplied image IS frame zero/);assert.match(r.prompt,/At approximately 0\.50s, ODILA says exactly: <d>\[English\] Not there\.<\/d>/);
 assert.match(r.prompt,/\[\[CAMERA\]\]/);assert.match(r.prompt,/\[\[ACTION\]\]/);assert.match(r.prompt,/PEOPLE: ODILA: a laundress\./);assert.match(r.prompt,/ODILA's voice: Matte dry voice\./);
-assert.match(r.prompt,/\[\[LOCAL\]\]/);assert.match(r.prompt,/Shot A23\. The supplied/);assert.doesNotMatch(r.prompt,/@ODILA|«/);assert.doesNotMatch(r.prompt,/No birds\.|horses? shift/);assert.doesNotMatch(r.prompt,/helmet|gravity|Video 1/i);assert.deepEqual(r.warnings,[]);
+assert.match(r.prompt,/\[\[LOCAL\]\]/);assert.match(r.prompt,/Shot A23\. The supplied/);assert.doesNotMatch(r.prompt,/@ODILA|«/);assert.doesNotMatch(r.prompt,/No birds\.|horses? shift/);assert.doesNotMatch(r.prompt,/helmet|gravity|Video 1/i);assert.deepEqual(r.warnings,[]);assert.deepEqual(r.names,['ODILA']);
 const noFrame=framePrompt({project,sequence:{title:'x'},shots:{s1:{...shots.s1,storyboardRender:undefined,cameraEn:'Static.',actionEn:'She speaks.'}},block,registry,map:null,scene:null,cast:['odila','ancel']});
 assert.ok(noFrame.warnings.some(w=>/fotograma/.test(w)));assert.ok(noFrame.warnings.some(w=>/ancel/.test(w)));assert.doesNotMatch(noFrame.prompt,/\[\[CAMERA\]\]|\[\[ACTION\]\]/);});

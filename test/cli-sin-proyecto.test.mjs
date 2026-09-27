@@ -18,7 +18,7 @@ const TABLE={
  'bloques/montar.mjs':[['l1']],
  'bloques/informe.mjs':[['l1']],
  'bloques/voces.mjs':[['lineas','ep1','s1'],['prueba','--voz','x','--texto','hola']],
- 'registro.mjs':[['sync'],['render'],['check'],['freeze','ROZ_BASE']],
+ 'registro.mjs':[['sync'],['render'],['check'],['freeze','ROZ_BASE'],['describe','roz@foot'],['describe','roz','ana']],
  'perfil.mjs':[['list'],['show','roz']],
  'mapa-espacial.mjs':[['cabina']],
  'leer-movil.mjs':[[],['4322']],

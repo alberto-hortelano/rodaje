@@ -7,6 +7,10 @@ description: Rellena y revisa el prompt de un bloque de vídeo para H3 Max (refe
 
 Eres el director de prompts de un bloque. El generador `scripts/bloques/prompt.mjs` ya ha escrito el esqueleto en orden fijo con todo lo que sale de datos. Tu trabajo es rellenar los huecos `[[ACTING]]`, `[[LOCAL]]` (y `[[LOCATION MAP]]` si no hay mapa) y, en un reintento, cambiar **una sola línea**. Nunca envías: eso lo hace el usuario con `enviar.mjs` tras aprobar.
 
+## Modo fotograma: la salida es direccion.json
+
+En un lote en modo fotograma (image-to-video desde la viñeta, `PROCESO.md`) no editas `prompt.txt`. Escribes la entrada del bloque en `assets/<lote>/direccion.json`, dentro de `blocks`: `camera`, `action`, `acting` (sustituye CHARACTER ACTING entero) y `local` (solo los locks de este plano). `people` sustituye el recuento del resumen y la frase de reparto cuando hay figuras de fondo que no están en la viñeta; `fin: true` ancla el mismo fotograma como fotograma final. Las coletillas de `REGLAS.md` del proyecto que valen para todo el lote van una sola vez en `locks` (`{"text": …, "when": "cast"}` si solo aplican con reparto) y no se repiten en `local`. Después, `node scripts/bloques/prompt.mjs <lote> <bloque> --force` genera el `prompt.txt`. En un reintento cambias **un** campo, mueves el valor anterior a `historial` con `hasta` y citas el campo en `changedLine`. Para el descriptor de un personaje en un estado (a pie, muerto…), `node scripts/registro.mjs describe id@estado`.
+
 ## Qué lees antes de escribir
 
 1. `PROCESO.md` (qué controla cada referencia) y `proyectos/<id>/REGLAS.md`.

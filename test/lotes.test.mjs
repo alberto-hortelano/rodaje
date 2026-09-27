@@ -51,3 +51,8 @@ test('review exige attempts.json, no escribe si el veredicto no vale y guarda co
  assert.throws(()=>M.review(P,LOTE,'b77',{attempt:1,verdict:'accepted'}),/El bloque no tiene intentos/);assert.equal(fs.existsSync(path.join(out,'b77')),false);
  assert.throws(()=>M.review(P,LOTE,block.id,{attempt:2,verdict:'rejected',rules:['X9']}),/desconocida/);assert.equal(fs.readFileSync(f,'utf8'),before);
  const list=M.review(P,LOTE,block.id,{attempt:2,verdict:'accepted'});assert.equal(list[1].verdict,'accepted');assert.equal(list[0].replacedBy,2);assert.equal(fs.readFileSync(f,'utf8'),text(list));});
+test('loteDetail lee direccion.json en formato nuevo y antiguo con la misma forma',()=>{const f=path.join(out,'direccion.json'),e={camera:'Static.',action:'She waits.',acting:'x',local:'y'};
+ try{put(`assets/${LOTE}/direccion.json`,{_nota:'x',locks:['L'],blocks:{[block.id]:e}});const nuevo=M.loteDetail(P,LOTE).blocks[0].direccion;assert.deepEqual(nuevo,e);
+  put(`assets/${LOTE}/direccion.json`,{_nota:'x',[block.id]:e});assert.deepEqual(M.loteDetail(P,LOTE).blocks[0].direccion,nuevo);
+  put(`assets/${LOTE}/direccion.json`,{blocks:{}});assert.equal(M.loteDetail(P,LOTE).blocks[0].direccion,null);assert.deepEqual(L.direccionFor(out),{blocks:{}});}
+ finally{fs.rmSync(f,{force:true});}assert.equal(L.direccionFor(out),null);});

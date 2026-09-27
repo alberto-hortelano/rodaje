@@ -1,5 +1,5 @@
 // Lista los prompts de imagen (.prompt.txt con cabecera «Destino:») cuya imagen aún no existe, para generarlos con ChatGPT.
-// Uso: node scripts/prompts-pendientes.mjs [proyecto] [filtro] [--project id]   (filtro: trozo de ruta, p. ej. «09-girart» o «ambientes/cruce»)
+// Uso: node scripts/prompts-pendientes.mjs [proyecto] [filtro] [--project id]   (filtro: trozo de ruta, p. ej. «personajes/01-ana» o «ambientes/plaza»)
 //      Sin proyecto posicional: --project, RODAJE_PROJECT o el activo en la app; para filtrar sin nombrar el proyecto, --project id filtro.
 //      --todos  lista también los ya generados
 import fs from 'node:fs';
