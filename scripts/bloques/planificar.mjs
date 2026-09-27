@@ -5,7 +5,7 @@
 // los planos MASTER van solos; corte preferente donde cambia la cobertura.
 import fs from 'node:fs';import path from 'node:path';
 import {load} from '../../app/store.mjs';import {dialogueBudget} from '../../app/workflow.mjs';
-import {parseArgs,lotePaths,writeJSON,cliProject,usageExit} from './lib.mjs';
+import {parseArgs,writeJSON,cliProject,usageExit} from './lib.mjs';import {lotePaths} from '../../lib/lotes.mjs';
 const USAGE='Uso: planificar.mjs <lote> <episodio> <secuencia> [--project id] [--max 15] [--min 5] [--por-plano] [--force]';
 const {args:[lote,episodeId,sequenceId],opts}=parseArgs(process.argv.slice(2));
 if(!lote||!episodeId||!sequenceId)usageExit(USAGE);

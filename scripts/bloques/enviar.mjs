@@ -7,7 +7,7 @@
 // Sin --yes es un ensayo: muestra lo que enviaría y no gasta créditos. Cada envío crea prompt-vNN.txt, request-vNN.json
 // y una entrada en attempts.json. A partir del segundo intento exige --changed (una línea); rechaza el séptimo.
 import fs from 'node:fs';import path from 'node:path';import {execFileSync} from 'node:child_process';
-import {parseArgs,loadLote,loadAttempts,saveAttempts,readJSON,writeJSON,falClient,cliProject,usageExit} from './lib.mjs';
+import {parseArgs,readJSON,writeJSON,falClient,cliProject,usageExit} from './lib.mjs';import {loadLote,loadAttempts,saveAttempts} from '../../lib/lotes.mjs';
 const USAGE='Uso: enviar.mjs <lote> <bloque> [--project id] [--changed "línea"] [--changed-ref "…"] [--modelo h3] [--yes]';
 const {args:[lote,blockId],opts}=parseArgs(process.argv.slice(2));if(!lote||!blockId)usageExit(USAGE);
 const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);const block=L.plan.find(b=>b.id===blockId);if(!block)throw Error('Bloque desconocido: '+blockId);

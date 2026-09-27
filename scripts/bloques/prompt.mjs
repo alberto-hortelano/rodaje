@@ -5,7 +5,7 @@
 // Si prompt.txt ya existe (rellenado a mano), escribe prompt.generated.txt para comparar, salvo --force.
 import fs from 'node:fs';import path from 'node:path';
 import {blockPrompt,framePrompt} from '../../app/workflow.mjs';
-import {parseArgs,loadLote,writeJSON,cliProject,usageExit} from './lib.mjs';
+import {parseArgs,writeJSON,cliProject,usageExit} from './lib.mjs';import {loadLote} from '../../lib/lotes.mjs';
 const USAGE='Uso: prompt.mjs <lote> [bloque] [--project id] [--force]';
 const {args:[lote,only],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
 const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);let gaps=0;

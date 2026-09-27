@@ -4,7 +4,7 @@
 // Necesita la app abierta (./abrir.sh) porque renderiza con /stage.js en Chrome headless. No genera nada de pago.
 import fs from 'node:fs';import path from 'node:path';import {spawn} from 'node:child_process';import {once} from 'node:events';
 import {chromium} from 'playwright';
-import {parseArgs,loadLote,cliProject,usageExit} from './lib.mjs';import {load} from '../../app/store.mjs';import {stageFallback} from '../../app/workflow.mjs';
+import {parseArgs,cliProject,usageExit} from './lib.mjs';import {loadLote} from '../../lib/lotes.mjs';import {load} from '../../app/store.mjs';import {stageFallback} from '../../app/workflow.mjs';
 const USAGE='Uso: render.mjs <lote> [bloque] [--project id] [--labels] [--force]';
 const {args:[lote,only],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
 const {project:id}=cliProject({usage:USAGE,opts});

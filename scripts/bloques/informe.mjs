@@ -3,7 +3,7 @@
 //   node scripts/bloques/informe.mjs <lote> [--project id]
 // Falla si un intento rechazado no cita reglas o si un reintento no declara su línea cambiada (R26).
 import fs from 'node:fs';import path from 'node:path';
-import {parseArgs,loadLote,loadAttempts,prices,cliProject,usageExit} from './lib.mjs';
+import {parseArgs,prices,cliProject,usageExit} from './lib.mjs';import {loadLote,loadAttempts} from '../../lib/lotes.mjs';
 const USAGE='Uso: informe.mjs <lote> [--project id]';
 const {args:[lote],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
 const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);const price=prices();const rate=e=>price[e]?.price||0;

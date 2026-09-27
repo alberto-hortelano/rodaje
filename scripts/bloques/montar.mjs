@@ -6,7 +6,7 @@
 // Salida: assets/<lote>/montaje/<nombre>.mp4 y cut.json (qué bloque viene de qué fuente y su tramo at/length en el montaje).
 // Los edit.mp4 cuya toma y tramo no han cambiado (edit.json) no se vuelven a codificar.
 import fs from 'node:fs';import path from 'node:path';
-import {parseArgs,loadLote,loadAttempts,ff,readJSON,writeJSON,ffprobeDuration,cliProject,usageExit} from './lib.mjs';import {chosenAttempt} from '../../app/workflow.mjs';
+import {parseArgs,ff,readJSON,writeJSON,ffprobeDuration,cliProject,usageExit} from './lib.mjs';import {loadLote,loadAttempts} from '../../lib/lotes.mjs';import {chosenAttempt} from '../../app/workflow.mjs';
 const USAGE='Uso: montar.mjs <lote> [--project id] [--out nombre]';
 const {args:[lote],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
 const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);const outDir=path.join(L.paths.out,'montaje');fs.mkdirSync(outDir,{recursive:true});
