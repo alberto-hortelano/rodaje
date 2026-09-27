@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Planifica los bloques de una secuencia (PROCESO.md, paso 5) y congela el snapshot del proyecto en el lote.
+// Planifica los bloques de una secuencia (docs/PROCESO.md, paso 5) y congela el snapshot del proyecto en el lote.
 //   node scripts/bloques/planificar.mjs <lote> <episodio> <secuencia> [--project id] [--max 15] [--min 5] [--por-plano] [--force]
 // Reglas: bloque 5–15 s; nunca parte una línea; presupuesto de diálogo ≤ duración − 1 (R12); un trayecto por bloque (R10);
 // los planos MASTER van solos; corte preferente donde cambia la cobertura.

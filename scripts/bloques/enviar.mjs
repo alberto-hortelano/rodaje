@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Envía un bloque a H3 Max y registra el intento (PROCESO.md, paso 7; REGLAS R23, R26).
+// Envía un bloque a H3 Max y registra el intento (docs/PROCESO.md, paso 7; REGLAS R23, R26).
 // Bloques en modo fotograma (planificar --por-plano): image-to-video con el fotograma del storyboard como primer fotograma y la voz de la línea como target_audio.
 // Si refs.json trae endImage, va como end_image_url (fotograma final): con el mismo fotograma ancla el encuadre en planos casi quietos.
 // --changed-ref "…": en un reintento, el cambio es de referencias (p. ej. fotograma final) y no de una línea del prompt.

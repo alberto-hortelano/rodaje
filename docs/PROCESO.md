@@ -10,14 +10,22 @@ Los scripts no suponen ningún proyecto. Lo toman, por este orden, de `--project
 
 ## Los ocho pasos
 
-1. **Guion → capítulo de ensayo.** `storyboardToEpisode()` o un importador como `assets/ep01-rehearsal-v01/import.mjs`. Cada plano lleva `gravity`, `variant`, `staging` (tareas, movimientos, estado de props) y `coverage`.
+1. **Guion → capítulo de ensayo.** `storyboardToEpisode()` (la vista Storyboards lo hace con un clic) o un importador de un solo uso escrito para el guion del proyecto. Cada plano lleva `gravity`, `variant`, `staging` (tareas, movimientos, estado de props) y `coverage`.
 2. **Ensayo 3D con voz del navegador y rough cut v0.** Coste cero. Mide duraciones reales y deja el episodio completo visible desde el primer día (`scripts/bloques/montar.mjs` con guía + TTS).
 3. **Registro de assets.** Cada personaje por variante, cada voz, cada ambiente y cada sonido firma tiene un tag fijo y un descriptor congelado en `proyectos/<id>/registro.json`. **Si no está en el registro, no entra en el prompt.** `node scripts/registro.mjs sync|freeze|render|check [proyecto]` (con `freeze`, los TAG van detrás; un proyecto con id en mayúsculas va con `--project`).
 4. **Mapa espacial y master shot por ambiente.** `ambientes/<id>/MAPA.md`: landmarks en orden de lectura, lado de cámara, línea de 180°, vocabulario de posiciones (nunca metros). Un plano `MASTER · <ambiente>` de 1 s, gran angular y sin líneas, abre la primera secuencia de cada ambiente; su primer fotograma aceptado pasa a ser la plate del registro (continuidad por referencia, no por extensión).
 5. **Planificación de bloques.** `node scripts/bloques/planificar.mjs <lote> <episodio> <secuencia> [--project id]` produce `assets/<lote>/plan.json`: bloques 5–15 s, nunca parte una línea, presupuesto de diálogo ≤ duración−1 s, un ambiente y un trayecto por bloque, corte preferente en cambio de cobertura.
 6. **Guía por bloque.** `node scripts/bloques/render.mjs <lote> [--project id]` → `motion.mp4` (sin rótulos), `frame-start.png`, `frame-mid.png`.
-7. **Prompt, envío, intento, revisión.** `node scripts/bloques/prompt.mjs <lote> [bloque] [--project id]` genera el esqueleto en orden fijo con huecos `[[ACTING]]` y `[[LOCAL]]` que rellena la skill `director-h3`. `enviar.mjs` rechaza prompts con huecos, resuelve referencias por tag y **registra el intento** en `attempts.json`. La revisión cita reglas de `REGLAS.md` o crea una nueva. Reintento = una línea cambiada; al quinto intento se cambia el bloque (R26).
+7. **Prompt, envío, intento, revisión.** `node scripts/bloques/prompt.mjs <lote> [bloque] [--project id]` genera el esqueleto en orden fijo con huecos `[[ACTING]]` y `[[LOCAL]]` que rellena la skill `director-h3`. `enviar.mjs` rechaza prompts con huecos, resuelve referencias por tag y **registra el intento** en `attempts.json`. La revisión (`estado.mjs --verdict` o la vista Montaje) cita reglas de `docs/REGLAS.md` o de `proyectos/<id>/REGLAS.md`, o crea antes una nueva en el del proyecto. Reintento = una línea cambiada; al quinto intento se cambia el bloque (R26).
 8. **Montaje incremental y sonido.** `montar.mjs` sustituye cada hueco del rough cut por el bloque aceptado (`edit.mp4` con `usedRange`). Voces off (PA, radio remota) y sonidos firma se generan aparte y se mezclan en post. Música: un tema recurrente, fuera del prompt. La vista **Montaje** de la app reproduce cada corte con el plano, la toma, la viñeta y la escena de cada momento; desde ahí se acepta o rechaza cada toma (con sus reglas), se recorta el tramo usado y se vuelve a montar (solo se recodifican los bloques que cambian).
+
+## Montaje y sonido
+
+- **Cortes J y L.** El sonido cruza el corte: en un corte L la voz del plano anterior sigue sobre el siguiente (la reacción del que escucha); en un J la del siguiente entra antes de que cambie la imagen (la voz que abre el contraplano). La reacción empieza antes de que acabe la frase del otro.
+- **Eje de 180°.** Todas las cámaras de una conversación quedan del mismo lado de la línea que une a los personajes; el lado se fija en el `MAPA.md` del ambiente y en el `coverage` del plano. Cruzarlo exige un plano que lo motive.
+- **Una sola cama de ambiente.** El ambiente es una pista continua por escena, aparte del vídeo, que no se reinicia en los cortes; al cambiar de sala cambia el tono con un fundido corto (unos 0,6 s). Bajo el diálogo, atenuación suave.
+- **Diálogo.** Voces con el nivel activo igualado; radio, megafonía o teléfono con su filtrado propio, aplicado después de limpiar la voz (`docs/mixamo.md`, «Limpieza de voces»). Las pausas entre réplicas son decisiones de cada escena, no reglas.
+- **Pistas separadas.** Ambiente, efectos, diálogo y mezcla en ficheros aparte, con un informe de niveles (RMS, pico) y tiempos; la aprobación de la escucha es del usuario.
 
 ## Modo fotograma (sin guía 3D)
 
@@ -38,21 +46,23 @@ Para escenas que el visor 3D no puede representar, como exteriores a caballo, ca
     "blocks": {"b02": {"camera": "…", "action": "…", "acting": "…", "local": "…", "fin": true}}}
    ```
 
-   Los estados de un personaje (a pie, muerto, sin cinto…) se guardan en `registro.json`, en `states` del asset (`{"a-pie": {"drop": [", on horseback"], "note": "on foot, …"}}`); `node scripts/registro.mjs describe [proyecto] <id>@a-pie` imprime el descriptor que se pega en la viñeta o en `people`, y `check` avisa si una frase quitada ya no está en el descriptor. `[[LOCAL]]` lleva solo las restricciones que tocan a ese plano, nunca las de toda la escena: una restricción que describe otra acción («los seis se van a caballo») hace que el modelo la pinte (ahorcado-v01, b25, intentos 1 y 2).
-5. `enviar.mjs`: como siempre. Por defecto usa H3 Max. Con `--modelo h3` usa el H3 original, que respeta mucho mejor el encuadre del fotograma. En el Ahorcado, H3 Max cortaba a otro plano o se acercaba a una cara en los planos de la fosa, el colgado y los grupos, aunque se le prohibiera y se anclara el fotograma final. H3 original los sacó a la primera. Los planos largos (12 s) siguen invitando a cortes, así que conviene no pasar de unos 8 s. Exige el fotograma y los descriptores del reparto congelados, y monta `voz.wav` con silencio hasta el inicio de la línea.
+   Los estados de un personaje (a pie, muerto, sin cinto…) se guardan en `registro.json`, en `states` del asset (`{"a-pie": {"drop": [", on horseback"], "note": "on foot, …"}}`); `node scripts/registro.mjs describe [proyecto] <id>@a-pie` imprime el descriptor que se pega en la viñeta o en `people`, y `check` avisa si una frase quitada ya no está en el descriptor. `[[LOCAL]]` lleva solo las restricciones que tocan a ese plano, nunca las de toda la escena: una restricción que describe otra acción («los seis se van a caballo») hace que el modelo la pinte.
+5. `enviar.mjs`: como siempre. Por defecto usa H3 Max. Con `--modelo h3` usa el H3 original, que respeta mucho mejor el encuadre del fotograma. En producción, H3 Max cortaba a otro plano o se acercaba a una cara en los planos de grupo y en los de una figura lejana, aunque se le prohibiera y se anclara el fotograma final; H3 original los sacó a la primera. Los planos largos (12 s) siguen invitando a cortes, así que conviene no pasar de unos 8 s. Exige el fotograma y los descriptores del reparto congelados, y monta `voz.wav` con silencio hasta el inicio de la línea.
 
 ## Qué controla cada referencia
 
 | Referencia | Controla | No controla |
 |---|---|---|
 | Video 1 (guía 3D) | Encuadre, trayectoria de cámara, posiciones y rutas, contacto con props, estado de gravedad, tiempos de habla | Aspecto de personas y materiales |
-| Imagen de personaje (tag `<ID>_<VARIANTE>`) | Identidad, traje, estado de casco | Posición, encuadre |
+| Imagen de personaje (tag `<ID>_<VARIANTE>`) | Identidad, vestuario y su estado | Posición, encuadre |
 | Imagen de ambiente (tag `<AMBIENTE>_PLATE`) | Geometría, materiales, luz y atmósfera **solamente** | Encuadre (nunca es un ángulo de cámara) |
 | Audio n (tag `<ID>_VOICE`) | Timbre y acento del hablante n | Texto, tiempos (van en el prompt) |
 
+**La guía no elige quién habla.** H3 no ofrece control del hablante por máscaras ni por una boca dibujada en la guía: se probaron rótulos, luces de pecho y bocas guía que se abrían con el audio, y el modelo los pinta en vez de obedecerlos. La guía va limpia (R04) y quién habla se fija en ACTION TIMING y con las referencias de voz. Si el modelo intercambia hablantes, se divide la conversación por intervención, con un solo hablante visible por plano.
+
 ## Orden del prompt
 
-Se conservan los nombres de sección que H3 Max ya respeta (`subject_definitions`, `summary`, `retention_analysis`, `detailed_description`, `overall_soundscape`, `non_diegetic_music`). Dentro de `detailed_description` los bloques van siempre en este orden: LOCATION MAP → FIRST FRAME → OPTICS → CAMERA → ACTION TIMING → CHARACTER ACTING → PHYSICS → LIGHTING → STYLE → QUALITY → POSITIVE CONSTRAINTS. Las prohibiciones se escriben como resultados ("visors stay closed and reflective"), no como bans; solo se admiten tres negativos literales (ver `blockPrompt()` en `app/workflow.mjs`).
+Se conservan los nombres de sección que H3 Max ya respeta (`subject_definitions`, `summary`, `retention_analysis`, `detailed_description`, `overall_soundscape`, `non_diegetic_music`). Dentro de `detailed_description` los bloques van siempre en este orden: LOCATION MAP → FIRST FRAME → OPTICS → CAMERA → ACTION TIMING → CHARACTER ACTING → PHYSICS → LIGHTING → STYLE → QUALITY → POSITIVE CONSTRAINTS. Las prohibiciones se escriben como resultados ("the table stays clear"), no como bans; solo se admiten tres negativos literales (ver `blockPrompt()` en `app/workflow.mjs`).
 
 ## Límites del adaptador
 
@@ -69,7 +79,10 @@ Migrar a Seedance 2.5 (hasta 50 referencias, voz nativa) **solo** si, tras repet
 ## Documentos relacionados
 
 - `README.md`: cómo abrir y usar la app.
-- `proyectos/dead-air/REGLAS.md`: reglas con condición de fallo.
-- `proyectos/dead-air/REGISTRO.md`: registro legible de assets (generado).
+- `docs/REGLAS.md`: reglas generales con condición de fallo; las de cada proyecto, en `proyectos/<id>/REGLAS.md`, que las hereda.
+- `proyectos/<id>/REGISTRO.md`: registro legible de assets (generado).
 - `.claude/skills/director-h3/SKILL.md` y `.claude/skills/interpretacion/SKILL.md`.
-- Guía de mezcla: `proyectos/dead-air/assets/chapter0-edit-v04/NOTES.md`.
+- `docs/mixamo.md`: figuras del ensayo 3D y limpieza de voces.
+- `docs/ENTORNOS-3D.md`: cómo se hace un escenario 3D.
+- `docs/scripts.md`: catálogo de scripts.
+- `GENERAR-IMAGENES.md`: imágenes que genera el usuario con ChatGPT.

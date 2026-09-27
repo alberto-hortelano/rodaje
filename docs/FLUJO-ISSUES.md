@@ -3,7 +3,7 @@
 Todo trabajo en la app se apunta en una issue de GitHub:
 
 - **Código y arquitectura:** van a `alberto-hortelano/rodaje`. El repo es público, así que no se copian textos de guion ni detalles de producción.
-- **Contenido de un proyecto:** va a su propio repo (`alberto-hortelano/dead-air`, privado; `alberto-hortelano/conjurados`). Si una issue de la app tiene una parte en un proyecto, se abre una issue compañera allí y las dos se enlazan.
+- **Contenido de un proyecto:** va al repositorio del propio proyecto (`git -C proyectos/<id> remote -v`; puede ser privado). Si una issue de la app tiene una parte en un proyecto, se abre una issue compañera allí y las dos se enlazan.
 
 Etiquetas: `arquitectura`, `3d`, `limpieza`, `contenido`, `flujo-agentes`.
 
@@ -29,4 +29,4 @@ Cómo se encadenan los pasos:
 - Ninguna generación de pago (fal.ai, ElevenLabs, H3, nano-banana) sin aprobación explícita del usuario.
 - `npm test` en verde al terminar cada issue.
 - Si se toca la UI, ejecutar `npm run build:ui` y hacer commit también de `app/app.js`.
-- Línea base: `node scripts/linea-base.mjs <dir> [--url http://127.0.0.1:4320] [--sin-capturas]` sirve para comparar el antes y el después (digests de planos, GLB, coplanares y capturas de las vistas 3D; las capturas necesitan la app arrancada). Compara dos con `diff -r <antes> <después>`. La referencia vigente es `pruebas-desarrollo/linea-base-1` (tras #14: la nave es el entorno `dead-air/toledo`).
+- Línea base: `node scripts/linea-base.mjs <dir> [--url http://127.0.0.1:4320] [--sin-capturas]` sirve para comparar el antes y el después (digests de planos, GLB, coplanares y capturas de las vistas 3D; las capturas necesitan la app arrancada). Compara dos con `diff -r <antes> <después>`. La referencia vigente es `pruebas-desarrollo/linea-base-1`.

@@ -17,7 +17,7 @@ Al abrir un proyecto en la vista Proyectos, la app lo guarda como activo en `pro
 La app se puede instalar en el móvil como PWA y guardar en él un proyecto entero (interfaz, datos, imágenes, audios, vídeos y el visor 3D) para verlo con el servidor apagado. La copia es de **solo lectura**: sin servidor, guardar o generar devuelve «Sin conexión con el servidor: la copia del móvil es de solo lectura».
 
 1. `npm run start:lan` y, en el móvil (misma wifi), abre la dirección que imprime como «Copia para el móvil» (`http://<ip>:4320/movil.html`).
-2. Pulsa **Guardar en este dispositivo** en el proyecto que quieras (Los conjurados ocupa unos 120 MB). La misma página permite actualizar la copia o quitarla.
+2. Pulsa **Guardar en este dispositivo** en el proyecto que quieras (un proyecto con storyboards y entornos 3D puede ocupar más de 100 MB). La misma página permite actualizar la copia o quitarla.
 3. Añádela a la pantalla de inicio (Chrome: menú ⋮ → *Añadir a pantalla de inicio*; Safari: Compartir → *Añadir a pantalla de inicio*). Después abre esa app aunque el ordenador esté apagado.
 
 El navegador solo permite guardar la app sin conexión en una dirección segura, y `http://192.168…` no lo es. Hay que resolverlo una vez:
@@ -35,12 +35,12 @@ Cómo funciona: `app/sw.js` (service worker) guarda la interfaz y todo lo que se
 3. Crea **Personajes y voces**. Describe apariencia y vestuario; genera una hoja o importa referencias. Asigna un nombre/ID de voz ElevenLabs y escucha muestras antes de producir diálogos.
 4. Crea **Ambientes** con referencias visuales. Elige una base 3D: bosque, interior, ciudad o espacio libre.
 5. Dibuja **Storyboards**: viñetas con código, duración, zona, cámara, acción, diálogo por canal y sonido. Sube un boceto o un fotograma, o genera el fotograma con el modelo de imagen a partir del boceto, las referencias y un prompt (explícito o compuesto). Un storyboard se exporta e importa en JSON y se convierte en capítulo con un clic.
-5b. **Entornos 3D**: decorados en 3D con medidas reales. Pueden ser un GLB subido (de Tripo, Meshy o Hunyuan3D, visto en un visor genérico) o un entorno del proyecto con constructor, datos y visor propio (`environments`: `builder`, `data`, `viewer`, `glb`), como el caserón de Los conjurados. Un ambiente enlaza su entorno (`environment`). Cada secuencia elige el lugar que queda en el centro del reparto, el estado y el giro, y el escenario de los planos lo usa en lugar de la base procedural. `node scripts/entorno-glb.mjs [proyecto] <entorno> [preset]` exporta el GLB (con preset, el proyecto va como posicional o con `--project`).
+5b. **Entornos 3D**: decorados en 3D con medidas reales. Pueden ser un GLB subido (de Tripo, Meshy o Hunyuan3D, visto en un visor genérico) o un entorno del proyecto con constructor, datos y visor propio (`environments`: `builder`, `data`, `viewer`, `glb`). Un ambiente enlaza su entorno (`environment`). Cada secuencia elige el lugar que queda en el centro del reparto, el estado y el giro, y el escenario de los planos lo usa en lugar de la base procedural. `node scripts/entorno-glb.mjs [proyecto] <entorno> [preset]` exporta el GLB (con preset, el proyecto va como posicional o con `--project`). Proceso en `docs/ENTORNOS-3D.md`.
 6. Mira la **Escaleta**: cada secuencia de los capítulos o actos en orden, con su número, minutos, texto y una carátula. El prompt de la carátula se edita en la propia tarjeta (o se compone con el estilo del proyecto y el texto), y la imagen se genera con el modelo de imagen o se sube; las versiones se conservan.
 7. Crea capítulos y secuencias manualmente, o genera un borrador de desglose a partir de la biblia con IA. El borrador siempre es editable.
 8. Abre cada plano. Coloca al reparto de la secuencia, elige postura, añade volúmenes y define cámara inicial/final orbitando el visor. Ajusta duración e intervenciones con sus silencios. Genera/importa voz por intervención y ambiente por secuencia.
 9. Ensaya con audio, renderiza el vídeo 3D, revísalo y apruébalo. El servidor comprueba que las frases completas caben y que no se solapan.
-10. Producción real: sigue `PROCESO.md` (bloques de 5–15 s con guía 3D y diálogo nativo de H3 Max, registro de assets, reglas con condición de fallo). Los botones **Generar fotograma** y **Convertir con H3 Max** de la app son el flujo antiguo (fotograma nano-banana + audio pregrabado remuxado); se conservan para pruebas y no se usan en producción.
+10. Producción real: sigue `docs/PROCESO.md` (bloques de 5–15 s con guía 3D y diálogo nativo de H3 Max, registro de assets, reglas con condición de fallo). Los botones **Generar fotograma** y **Convertir con H3 Max** de la app son el flujo antiguo (fotograma nano-banana + audio pregrabado remuxado); se conservan para pruebas y no se usan en producción.
 11. Revisa los resultados y monta el capítulo. Versiones anteriores y solicitudes remotas quedan guardadas.
 
 ## Generación
@@ -66,14 +66,14 @@ proyectos/<id>/
   trabajos/               solicitudes, estados y resultados
 ```
 
-El ejemplo Conjurados contiene copias locales de sus referencias y audios. No modifica ni depende del proyecto original.
+Cada proyecto guarda copias locales de sus referencias y audios; no depende de las carpetas de origen.
 
 ## Proceso de producción
 
-El proceso canónico, las reglas y el registro de assets están en `PROCESO.md`, `proyectos/dead-air/REGLAS.md` y `proyectos/dead-air/REGISTRO.md`. Los agentes de IA leen `CLAUDE.md`.
+El proceso canónico está en `docs/PROCESO.md`; las reglas generales, en `docs/REGLAS.md`, y las de cada proyecto, en `proyectos/<id>/REGLAS.md`, que las hereda; el registro de assets, en `proyectos/<id>/REGISTRO.md` (generado). Más documentación: `docs/ARQUITECTURA.md`, `docs/FLUJO-ISSUES.md`, `docs/ENTORNOS-3D.md`, `docs/mixamo.md`, `docs/UI.md`, `docs/scripts.md` y `GENERAR-IMAGENES.md`. Los agentes de IA leen `CLAUDE.md`.
 
 ## Alcance actual
 
-Aplicación local, para un usuario. Figuras Y-Bot con respiración, miradas y gestos procedurales, de pie o sentadas; cámara interpolada entre dos posiciones. No es un editor de animación esquelética completo ni un rig facial. Las bases 3D son esquemáticas y se completan con volúmenes; no reconstruyen automáticamente una fotografía. Máximo 15 segundos y 8 referencias de personajes por plano para el adaptador actual. Los diálogos no se estiran: hay que alargar/dividir el plano cuando no caben.
+Aplicación local, para un usuario. Figuras Y-Bot (`docs/mixamo.md`) con respiración, miradas y gestos procedurales, de pie o sentadas; cámara interpolada entre dos posiciones. No es un editor de animación esquelética completo ni un rig facial. Las bases 3D son esquemáticas y se completan con volúmenes; no reconstruyen automáticamente una fotografía. Máximo 15 segundos y 8 referencias de personajes por plano para el adaptador actual. Los diálogos no se estiran: hay que alargar/dividir el plano cuando no caben.
 
 Pruebas: `npm test`. La validación de integración usa render local y proveedores simulados; no consume generaciones de pago.

@@ -1,6 +1,6 @@
 # Entornos 3D: cómo se hace un escenario
 
-Proceso fijado con el caserón de Los conjurados (`proyectos/conjurados/ambientes/caseron/`), el 2026-09-25. Para cada escenario nuevo se sigue el mismo orden.
+Proceso fijado el 2026-09-25 con el primer escenario con constructor. Para cada escenario nuevo se sigue el mismo orden.
 
 ## 1. Datos del guion
 
@@ -27,7 +27,7 @@ Carpeta `ambientes/<id>/3d/`:
   - `states` y `presets`;
   - `textures`.
 - **Constructor** (`<id>.js`): `export function build(T, data, kit)`, sin imports. Trabaja en metros, con piezas con nombre y una marca por lugar. El estado por defecto va en `model.json` → `defaultState` y el constructor lo mezcla: `{...data.defaultState, ...kit.state}`.
-- **Visor:** lo da la app (`/viewer/mount.mjs`): orbitar, lugares, estados, recorrido a pie con colisiones y escaleras, «no clip», pantalla completa, captura y GLB. Lo propio del escenario (luces y niebla, cortes, piezas atravesables, entrada del paseo, vista general) va en un plugin `ambientes/<id>/3d/visor.js` con `export function plugin(api)` (modelo: el `visor.js` del caserón; contrato en `docs/ARQUITECTURA.md`).
+- **Visor:** lo da la app (`/viewer/mount.mjs`): orbitar, lugares, estados, recorrido a pie con colisiones y escaleras, «no clip», pantalla completa, captura y GLB. Lo propio del escenario (luces y niebla, cortes, piezas atravesables, entrada del paseo, vista general) va en un plugin `ambientes/<id>/3d/visor.js` con `export function plugin(api)` (modelo: el `visor.js` de cualquier entorno existente; contrato en `docs/ARQUITECTURA.md`).
 - **Registro:** en `proyecto.json`, `environments[]` con `data`, `builder`, `viewer: {plugins: ["ambientes/<id>/3d/visor.js"]}` y `glb`, y el ambiente con `environment: <id>` para usarlo en los planos. Tras escribirlo, `node scripts/proyecto-check.mjs <proyecto>`.
 
 Reglas que costó aprender:
@@ -40,7 +40,7 @@ Reglas que costó aprender:
 ## 4. Comparar con la referencia: bucle, no a ojo
 
 1. **Calibrar la cámara** de la imagen A con puntos conocidos del edificio principal (esquinas, puerta, vértices del tejado): `node scripts/entornos/calibrar.mjs '[[nombre,[x,y,z],[px,py]],…]'`. Poner una rejilla sobre la imagen para leer los píxeles. Error aceptable: unos 20 px sobre 1254.
-2. **Leer la planta real** proyectando al suelo puntos de la imagen: esquinas del recinto, puertas, esquinas de los añadidos. Se usa `node scripts/entornos/retroproyectar.mjs`, con la cámara calibrada escrita dentro. No hay que suponer orientaciones: en el caserón leí mal la cocina tres veces antes de medirla.
+2. **Leer la planta real** proyectando al suelo puntos de la imagen: esquinas del recinto, puertas, esquinas de los añadidos. Se usa `node scripts/entornos/retroproyectar.mjs`, con la cámara calibrada escrita dentro. No hay que suponer orientaciones: en el primer escenario un ala se leyó mal tres veces antes de medirla.
 3. **Bucle:**
    - cambiar un parámetro;
    - regenerar el GLB;
@@ -62,6 +62,6 @@ Reglas que costó aprender:
 
 ## 6. Cierre
 
-- **Lugares:** recolocar los que dependen de la planta leyéndolos del modelo construido. En el caserón, `pruebas-desarrollo/env-lugares.mjs`; se adapta para cada entorno.
+- **Lugares:** recolocar los que dependen de la planta leyéndolos del modelo construido, con un script de un solo uso que lea las marcas de lugar del grupo construido (no se versiona).
 - **`LEEME.md` del entorno:** qué fija el guion, qué es propuesta, planta, recorrido y comparación (en `capturas/`).
 - **Tests:** `npm test`, y commit cuando lo pida el usuario.

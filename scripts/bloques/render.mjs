@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Guía 3D por bloque (PROCESO.md, paso 6): motion.mp4 sin rótulos, frame-start.png y frame-mid.png.
+// Guía 3D por bloque (docs/PROCESO.md, paso 6): motion.mp4 sin rótulos, frame-start.png y frame-mid.png.
 //   node scripts/bloques/render.mjs <lote> [bloque] [--project id] [--labels] [--force]
 // Necesita la app abierta (./abrir.sh) porque renderiza con /stage.js en Chrome headless. No genera nada de pago.
 import fs from 'node:fs';import path from 'node:path';import {spawn} from 'node:child_process';import {once} from 'node:events';

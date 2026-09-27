@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Registro de assets con descriptores congelados (PROCESO.md, paso 3).
+// Registro de assets con descriptores congelados (docs/PROCESO.md, paso 3).
 //   node scripts/registro.mjs sync   [proyecto]        crea entradas draft para lo que existe en proyecto.json y aún no está registrado
 //   node scripts/registro.mjs freeze [proyecto] TAG… fija sha256 y marca approved (el descriptor no puede estar vacío)
 //   node scripts/registro.mjs render [proyecto]       escribe REGISTRO.md

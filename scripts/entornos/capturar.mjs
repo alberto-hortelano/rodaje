@@ -1,4 +1,4 @@
-// Captura un entorno del visor desde ángulos dados (ENTORNOS-3D.md), contra una app arrancada (servidor de prueba con otro PORT).
+// Captura un entorno del visor desde ángulos dados (docs/ENTORNOS-3D.md), contra una app arrancada (servidor de prueba con otro PORT).
 // Uso: node scripts/entornos/capturar.mjs <carpeta> '[[nombre,azimut,elevación,distancia,fov,tx,ty,tz],...]' --entorno <id> [--project id] [--url http://127.0.0.1:4320]
 // Qué se oculta sale de `capture` en los datos del entorno (model.json): root, group con los hijos visibles en keep y fog.
 import {withChrome,VIEWPORTS} from '../../lib/chrome.mjs';

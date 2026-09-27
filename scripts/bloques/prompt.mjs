@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Esqueleto del prompt de cada bloque en orden fijo (PROCESO.md, paso 7).
+// Esqueleto del prompt de cada bloque en orden fijo (docs/PROCESO.md, paso 7).
 //   node scripts/bloques/prompt.mjs <lote> [bloque] [--project id] [--force]
 // Escribe <bloque>/prompt.txt (con huecos [[ACTING]] / [[LOCAL]] si la escena no los aporta) y refs.json.
 // Si prompt.txt ya existe (rellenado a mano), escribe prompt.generated.txt para comparar, salvo --force.

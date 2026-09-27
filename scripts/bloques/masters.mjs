@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Inserta el plano MASTER de 1 s al inicio de la primera secuencia de cada ambiente del episodio (PROCESO.md, paso 4).
+// Inserta el plano MASTER de 1 s al inicio de la primera secuencia de cada ambiente del episodio (docs/PROCESO.md, paso 4).
 //   node scripts/bloques/masters.mjs <episodio> [--project id] [--fov 65]
 // Idempotente: si la secuencia ya tiene un plano con master:true no añade otro. Guarda con store.save() (nueva revisión).
 import {load,save} from '../../app/store.mjs';import {parseArgs,cliProject,usageExit} from './lib.mjs';

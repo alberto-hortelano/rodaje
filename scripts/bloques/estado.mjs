@@ -1,17 +1,17 @@
 #!/usr/bin/env node
-// Estado de los intentos y registro del veredicto (PROCESO.md, paso 7).
+// Estado de los intentos y registro del veredicto (docs/PROCESO.md, paso 7).
 //   node scripts/bloques/estado.mjs <lote> [bloque] [--project id]                   consulta la cola, descarga generated-vNN.mp4 y result-vNN.json
 //   node scripts/bloques/estado.mjs <lote> <bloque> --verdict accepted|rejected \
 //        [--attempt N] [--rules R13,R15] [--notes "…"] [--range 0-9.6,11-14]       registra la revisión (un rechazo exige reglas)
 import fs from 'node:fs';import path from 'node:path';
-import {parseArgs,readJSON,writeJSON,ffprobeDuration,falClient,cliProject,usageExit} from './lib.mjs';import {loadLote,loadAttempts,saveAttempts,updateAttempts} from '../../lib/lotes.mjs';import {status,result,download} from '../../lib/fal.mjs';
+import {parseArgs,readJSON,writeJSON,ffprobeDuration,falClient,cliProject,usageExit} from './lib.mjs';import {loadLote,loadAttempts,saveAttempts,updateAttempts,projectRules} from '../../lib/lotes.mjs';import {status,result,download} from '../../lib/fal.mjs';
 const USAGE='Uso: estado.mjs <lote> [bloque] [--project id] [--verdict accepted|rejected --rules R13 --notes "…" --range 0-9.6]';
 const {args:[lote,only],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
-const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);
-if(opts.verdict){if(!only)throw Error('Indica el bloque');let a,rules;updateAttempts(L.paths.out,only,list=>{a=opts.attempt?list.find(x=>x.n===Number(opts.attempt)):list.at(-1);if(!a)throw Error('No hay intentos');if(a.status!=='done')throw Error(`El intento ${a.n} no está descargado (estado ${a.status})`);
+const project=cliProject({usage:USAGE,opts}).project;const L=loadLote(project,lote);
+if(opts.verdict){if(!only)throw Error('Indica el bloque');const known=projectRules(project).map(r=>r.id);let a,rules;updateAttempts(L.paths.out,only,list=>{a=opts.attempt?list.find(x=>x.n===Number(opts.attempt)):list.at(-1);if(!a)throw Error('No hay intentos');if(a.status!=='done')throw Error(`El intento ${a.n} no está descargado (estado ${a.status})`);
  if(!['accepted','rejected'].includes(opts.verdict))throw Error('--verdict accepted|rejected');rules=String(opts.rules||'').split(',').map(s=>s.trim()).filter(Boolean);
- if(opts.verdict==='rejected'&&!rules.length)throw Error('Un rechazo cita al menos una regla (R-número) o crea una nueva en REGLAS.md');
- const known=fs.existsSync(path.join(L.paths.base,'REGLAS.md'))?[...fs.readFileSync(path.join(L.paths.base,'REGLAS.md'),'utf8').matchAll(/^### (R\d+)/gm)].map(m=>m[1]):[];for(const r of rules)if(known.length&&!known.includes(r))throw Error(`Regla desconocida ${r}: añádela a REGLAS.md antes de citarla`);
+ if(opts.verdict==='rejected'&&!rules.length)throw Error('Un rechazo cita al menos una regla (docs/REGLAS.md o REGLAS.md del proyecto)');
+ for(const r of rules)if(!known.includes(r))throw Error(`Regla desconocida ${r}: añádela al REGLAS.md del proyecto antes de citarla`);
  a.verdict=opts.verdict;a.failedRules=rules;a.notes=opts.notes||'';a.reviewedAt=new Date().toISOString();if(opts.range)a.usedRange=String(opts.range).split(',').map(r=>r.split('-').map(Number));else if(opts.verdict==='accepted')a.usedRange=[[0,Math.min(a.durationReturned||a.durationRequested,L.plan.find(b=>b.id===only).length)]];
  return list;});console.log(`${only} intento ${a.n}: ${a.verdict}${rules.length?' ('+rules.join(', ')+')':''}${a.usedRange?' rango '+JSON.stringify(a.usedRange):''}`);process.exit(0);}
 const client=await falClient();

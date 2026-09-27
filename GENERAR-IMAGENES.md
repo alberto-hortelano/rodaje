@@ -10,14 +10,14 @@ node scripts/prompts-pendientes.mjs [proyecto] [filtro]
 
 Sin proyecto usa el activo en la app (o `RODAJE_PROJECT`) y lo imprime como «Proyecto: X»; para filtrar sin nombrar el proyecto, `--project <id> <filtro>`.
 
-Lista los prompts cuya imagen todavía no existe, con sus adjuntos. El filtro es un trozo de ruta: `sb-00`, `ambientes/cruce`, `09-girart`, etc. Genera solo lo que pida el usuario; si no concreta, todo lo que salga en la lista.
+Lista los prompts cuya imagen todavía no existe, con sus adjuntos. El filtro es un trozo de ruta: `sb-00`, `ambientes/<ambiente>`, `personajes/<personaje>`, etc. Genera solo lo que pida el usuario; si no concreta, todo lo que salga en la lista.
 
 ## Formato de un `.prompt.txt`
 
 ```
-Destino: proyectos/conjurados/storyboards/sb-00-ahorcado/render/A23.png
-Adjuntar: proyectos/.../ref-A.png (Odila), proyectos/.../render/A01.png (misma luz y mismo sitio)
-Uso: A23 · «Ahí no» (4 s). Para qué sirve la imagen, en español.
+Destino: proyectos/<proyecto>/storyboards/<storyboard>/render/A23.png
+Adjuntar: proyectos/<proyecto>/.../ref-A.png (personaje), proyectos/<proyecto>/.../render/A01.png (misma luz y mismo sitio)
+Uso: A23 · «frase de la viñeta» (4 s). Para qué sirve la imagen, en español.
 
 <prompt en inglés>
 
@@ -50,11 +50,11 @@ Negative: <lo que no debe aparecer>
 - **Rechazo del filtro de contenido.** Reintenta una vez desde cero con el mismo prompt, porque el filtro no es constante. Si vuelve a rechazarlo, sáltalo y di en el informe qué frase crees que lo dispara. No reescribas el prompt por tu cuenta.
 - **Referencia que no existe porque se ha rechazado o saltado:**
   - Si es de **luz o de sitio** (`render/A01.png`, la imagen base de un ambiente), genera igualmente sin ella y avisa.
-  - Si es de **personaje u objeto** (hojas `ref-*.png`, `anillo.png`), no generes: sáltalo y avisa.
+  - Si es de **personaje u objeto** (hojas `ref-*.png`, `<objeto>.png`), no generes: sáltalo y avisa.
 - Al terminar, informa:
   - qué has generado;
   - qué te has saltado y por qué;
-  - cualquier imagen en la que no se haya cumplido algo del prompt: una persona de más, un pájaro, texto, un anacronismo o un personaje que no se parece a su hoja.
+  - cualquier imagen en la que no se haya cumplido algo del prompt: una persona de más, texto, algo que prohíban las reglas del proyecto o un personaje que no se parece a su hoja.
   - Después, `node scripts/prompts-pendientes.mjs [proyecto] [filtro]` debe dar 0 pendientes en lo generado.
 
 ## Después (lo hace el usuario o Claude)

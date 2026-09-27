@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Montaje incremental del lote (PROCESO.md, paso 8): rough cut desde el primer día.
+// Montaje incremental del lote (docs/PROCESO.md, paso 8): rough cut desde el primer día.
 //   node scripts/bloques/montar.mjs <lote> [--project id] [--out nombre]
 // Por bloque: el intento aceptado (recortado por usedRange) → edit.mp4; si no hay, el último generado sin rechazar (pendiente de
 // revisión) y, si tampoco, la guía 3D con las líneas rotuladas.

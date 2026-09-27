@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Borrador de mapa espacial por landmarks para un ambiente (PROCESO.md, paso 4).
+// Borrador de mapa espacial por landmarks para un ambiente (docs/PROCESO.md, paso 4).
 //   node scripts/mapa-espacial.mjs [proyecto] <ambiente> [--project id]   escribe ambientes/<ambiente>/MAPA.md si no existe (o MAPA.borrador.md si ya existe)
 // Lee modelSpace.kit del escenario (y la sala de model.json si la hay), agrupa las piezas por nombre y las sitúa por
 // signo de X/Z respecto al centro de la sala. Claude convierte la tabla en el párrafo ```prompt``` (skill director-h3).

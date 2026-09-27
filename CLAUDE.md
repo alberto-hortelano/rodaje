@@ -1,10 +1,10 @@
 # Rodaje · instrucciones para agentes
 
-Aplicación local (Node 24, ESM, Three.js, fal.ai) para producir series con IA. Proyecto real: `proyectos/dead-air`.
+Aplicación local (Node 24, ESM, Three.js, fal.ai) para producir series y películas con IA. Cada proyecto vive en `proyectos/<proyecto>/`, con su propio repositorio; el código de la app nunca nombra un proyecto concreto.
 
 ## Antes de escribir un prompt
 
-Lee, en este orden: `PROCESO.md`, `proyectos/dead-air/REGLAS.md`, `proyectos/dead-air/REGISTRO.md` y el `MAPA.md` del ambiente del bloque. Usa las skills `director-h3` (prompts de vídeo) e `interpretacion` (conducta de personajes). Un prompt solo referencia assets por su tag del registro y pega el descriptor tal cual.
+Lee, en este orden: `docs/PROCESO.md`, `docs/REGLAS.md` (reglas generales), `proyectos/<proyecto>/REGLAS.md` (las propias, que heredan las generales), `proyectos/<proyecto>/REGISTRO.md` y el `MAPA.md` del ambiente del bloque. Usa las skills `director-h3` (prompts de vídeo) e `interpretacion` (conducta de personajes). Un prompt solo referencia assets por su tag del registro y pega el descriptor tal cual. Las imágenes que genera el usuario con ChatGPT siguen `GENERAR-IMAGENES.md`: tú dejas el `.prompt.txt` con su destino.
 
 ## Idioma
 
@@ -12,30 +12,24 @@ Todo en español (España) con ortografía completa. Los prompts para los modelo
 
 ## Generaciones de pago
 
-Nunca lances una generación (fal.ai, ElevenLabs, H3 Max, nano-banana) sin aprobación explícita del usuario en la conversación. Todo envío deja su entrada en `assets/<lote>/<bloque>/attempts.json`. Un reintento cambia **una** línea del prompt y la cita en `changedLine`.
+Nunca lances una generación (fal.ai, ElevenLabs, H3, nano-banana) sin aprobación explícita del usuario en la conversación. ElevenLabs, siempre a través de fal. Todo envío deja su entrada en `assets/<lote>/<bloque>/attempts.json`; un reintento cambia **una** línea del prompt y la cita en `changedLine` (R26). Los límites del modelo de vídeo están en `docs/PROCESO.md`.
 
 ## Ficheros generados: no editar a mano
 
 `personajes/<id>/hoja.md`, `personaje.json`, `ambientes/<id>/escenario.json`, `capitulos/<id>/capitulo.json` y `REGISTRO.md` se regeneran desde `proyecto.json` o `registro.json`. Cambia la fuente con un script (`scripts/perfil.mjs`, `scripts/registro.mjs`) o con la app. Los ficheros extra en esas carpetas (`ref/`, `MAPA.md`) sí se conservan.
 
-## Límites del adaptador H3 Max
-
-15 s por bloque · 8 imágenes de referencia · 768P · mínimo 5 s pedidos · devuelve 0,15–0,7 s de más · ~4 palabras por segundo de diálogo más 1 s de cola.
-
-## Entornos 3D
-
-Para crear o corregir un escenario 3D, seguir `ENTORNOS-3D.md` (constructor en código, cámara calibrada con la referencia, bucle de comparación, planta editable por el usuario).
-
 ## Cambios en la app
 
-Lógica nueva = funciones puras en `app/workflow.mjs` con test en `test/*.test.mjs`. `npm test` antes de cerrar. No tocar `app/app.source.js` ni `app/stage.js` salvo petición expresa (`npm run build:ui` tras editar la UI). Rutas y resolución del proyecto en `lib/paths.mjs` (proyecto activo de la app en `lib/proyecto-activo.mjs`, CLI en `lib/cli.mjs`), JSON atómico en `lib/json.mjs`, argumentos en `lib/args.mjs`; `lib/` no importa de `app/`.
+- Todo cambio va por una issue y sigue `docs/FLUJO-ISSUES.md` (agentes en `.claude/agents/`: crítico, arquitecto, ingeniero y QA).
+- Arquitectura y contratos: `docs/ARQUITECTURA.md`. `app/` es servidor e interfaz; `lib/`, el núcleo de Node (no importa de `app/`); `viewer/`, el visor 3D del navegador; `scripts/`, órdenes finas sobre `lib/`. El único código de un proyecto son sus constructores de escenario y sus plugins del visor, declarados en `environments[]`.
+- Lógica nueva: funciones puras con test en `test/*.test.mjs`. `npm test` en verde antes de cerrar.
+- Interfaz: se editan los `app/*.source.js`, nunca `app/app.js`; después, `npm run build:ui` y commit también de `app/app.js` (`docs/UI.md`). `app/stage.js` (ensayo 3D, `docs/mixamo.md`) solo cuando la issue lo pida.
+- Escenarios 3D: `docs/ENTORNOS-3D.md`.
 
-## Scripts de producción
+## Scripts
 
-Ningún script supone un proyecto: lo toman de `--project <id>`, del posicional `[proyecto]` donde lo había, de `RODAJE_PROJECT` o del proyecto activo en la app (el último abierto en la vista Proyectos), e imprimen `Proyecto: X (fuente)` en stderr; compruébalo antes de dejar que un script escriba.
-
-`scripts/registro.mjs` (sync · freeze · render · check · describe `id@estado`), `scripts/perfil.mjs` (perfiles de interpretación y voice prompt), `scripts/mapa-espacial.mjs` (borrador de mapa por landmarks), `scripts/pendientes.mjs` (importar · listar el tablero de pendientes), `scripts/entorno-glb.mjs` (exporta a GLB un entorno 3D con constructor), `scripts/entorno-coplanares.mjs` (detecta caras coplanarias que parpadean; pasarlo tras tocar un constructor), `scripts/prompts-pendientes.mjs` (lista los `.prompt.txt` de imagen cuya imagen aún no existe, con sus adjuntos), `scripts/storyboard-a-secuencia.mjs` (rellena una secuencia con las viñetas de un storyboard, para el modo fotograma de `PROCESO.md`), `scripts/storyboard-prompts.mjs` (exporta las viñetas de un storyboard a `.prompt.txt` para ChatGPT y, con `--enlazar`, enlaza los fotogramas generados), `scripts/fusionar.mjs` (herramienta web en :4398 para fusionar una edición de ChatGPT con su original a pincel; guarda la edición cruda como `.chatgpt.png` y la máscara; registro en `<proyecto>/fusiones.json`, `--migrar` reparte el antiguo `proyectos/fusiones.json`), `scripts/bloques/{masters,planificar,render,prompt,enviar,estado,montar,informe,voces}.mjs` (en modo fotograma `prompt.mjs` aplica `assets/<lote>/direccion.json`), `scripts/entornos/{capturar,recorrer}.mjs` (capturas y recorrido a pie de un entorno 3D contra un servidor de prueba; `--entorno`, `--url`), `scripts/linea-base.mjs` (instantánea de digests, GLB, coplanares y capturas 3D para detectar regresiones; comparar dos con `diff -r`), `scripts/stage-config.mjs` (show · check · set de la configuración del ensayo 3D, `proyecto.stage.rehearsal`), `scripts/proyecto-check.mjs` (valida un proyecto o `--all`: código fuera de constructores, constructores con globales o exports extra, rutas de código en el manifiesto, copias `before` y rutas absolutas; `npm run check:proyectos` lo pasa en modo informe). La vista Montaje de la app (`app/montaje.source.js`, `app/montaje.mjs`) revisa y remonta lotes con los mismos `attempts.json`.
+Ningún script supone un proyecto: lo toman de `--project <id>`, del posicional `[proyecto]` donde lo había, de `RODAJE_PROJECT` o del proyecto activo en la app, e imprimen `Proyecto: X (fuente)` en stderr; compruébalo antes de dejar que un script escriba. Catálogo completo en `docs/scripts.md`.
 
 ## Git
 
-Dos repositorios: `rodaje/` (código y docs; `proyectos/` ignorado) y `proyectos/dead-air/` (solo texto: reglas, registro, prompts, planes, intentos). Commit solo cuando el usuario lo pida.
+Un repositorio para la app (`rodaje/`, con `proyectos/` ignorado) y uno por proyecto en `proyectos/<proyecto>/` (texto: reglas, registro, prompts, planes, intentos; los binarios se ignoran). Commit solo cuando el usuario lo pida.

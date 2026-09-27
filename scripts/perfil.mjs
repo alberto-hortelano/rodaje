@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Perfil maestro de interpretación y voice prompt por personaje (PROCESO.md, paso 3; skill `interpretacion`).
+// Perfil maestro de interpretación y voice prompt por personaje (docs/PROCESO.md, paso 3; skill `interpretacion`).
 // La fuente de verdad es proyecto.json: este script la edita con store.save(), que regenera hoja.md.
 //   node scripts/perfil.mjs show [proyecto] <id>
 //   node scripts/perfil.mjs set  [proyecto] <id> --acting <fichero.txt> --voice "<voice prompt>"

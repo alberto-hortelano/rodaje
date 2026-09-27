@@ -118,3 +118,14 @@ test('app/, lib/, scripts/ y viewer/ no nombran proyectos concretos',()=>{
  }
  assert.deepEqual(hits,[]);
 });
+
+// «caser» también atrapa «casero»/«caserío»: se evita en la documentación pública aunque no sea un nombre de proyecto.
+test('la documentación pública no nombra proyectos concretos',()=>{
+ const walkMd=d=>fs.existsSync(path.join(ROOT,d))?fs.readdirSync(path.join(ROOT,d),{recursive:true}).map(f=>d+'/'+f.split(path.sep).join('/')).filter(f=>f.endsWith('.md')):[];
+ const files=['README.md','CLAUDE.md','GENERAR-IMAGENES.md',...walkMd('docs'),...walkMd('.claude')];
+ const allowed=/proyectos\/(<id>|<proyecto>)\/|proyectos\/\.activo\.json|proyectos\/fusiones\.json/g;
+ const hits=[];
+ for(const rel of files)fs.readFileSync(path.join(ROOT,rel),'utf8').split('\n').forEach((l,i)=>{
+  if(/dead-air|conjurados|caser|toledo|ahorcado|girart/i.test(l)||/proyectos\/(?!<)[\w-]+\//.test(l.replace(allowed,'')))hits.push(`${rel}:${i+1}`);});
+ assert.deepEqual(hits,[]);
+});

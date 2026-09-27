@@ -1,4 +1,4 @@
-// Recorrido a pie automático por un entorno 3D (ENTORNOS-3D.md), contra una app arrancada (servidor de prueba con otro PORT).
+// Recorrido a pie automático por un entorno 3D (docs/ENTORNOS-3D.md), contra una app arrancada (servidor de prueba con otro PORT).
 // Uso: node scripts/entornos/recorrer.mjs <carpeta> --entorno <id> [--project id] [--url http://127.0.0.1:4320]
 // Los pasos salen de `walkthrough` en los datos del entorno (model.json); cada uno registra la posición de la cámara (o el valor de call) y, con snapshot, una captura.
 // Un paso falla si su view no existe, si call lanza o no existe, o si su valor no cumple expect; sale con 1 si falla alguno o hay errores en la página.

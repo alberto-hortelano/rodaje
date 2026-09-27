@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';
+import test from 'node:test';import {spawnSync} from 'node:child_process';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';
 const {DATA}=await import('../lib/paths.mjs'),L=await import('../lib/lotes.mjs'),M=await import('../app/montaje.mjs'),w=await import('../app/workflow.mjs');
 // Lote temporal en RODAJE_DATA (test/setup.mjs) construido con la fixture ep01-s01-b02.
 const fx=path.join(import.meta.dirname,'fixtures/ep01-s01-b02');const j=f=>JSON.parse(fs.readFileSync(path.join(fx,f),'utf8'));
@@ -14,7 +14,7 @@ fs.rmSync(base,{recursive:true,force:true});
 put(`assets/${LOTE}/plan.json`,[block]);put(`assets/${LOTE}/project-snapshot.json`,snapshot);put(`assets/${LOTE}/lote.json`,meta);put(`assets/${LOTE}/${block.id}/attempts.json`,attempts);
 put(`assets/${LOTE2}/plan.json`,[block]);put(`assets/${LOTE2}/lote.json`,meta2);put(`assets/${LOTE2}/montaje/corte.cut.json`,cut);put(`assets/${LOTE2}/montaje/corte.mp4`,'');
 fs.mkdirSync(path.join(base,'assets','sin-plan'),{recursive:true});
-put('REGLAS.md','# Reglas\n### R12 · Sin guía\n');
+put('REGLAS.md','# Reglas\n### C01 · Regla de prueba\n');
 put('registro.json',{assets:{HOLD11_PLATE:{kind:'location',location:'cargo',aliases:[sequence.location]}}});
 put('ambientes/cargo/MAPA.md','# Mapa\n\n```prompt\nThe MURAL at frame-left.\n```\n');
 const ep=snapshot.episodes[0],seq=ep.sequences[0],scene={characters:{},local_constraints:['x']};
@@ -43,7 +43,8 @@ test('listLotes: solo lotes con plan, del más reciente al más antiguo, con sus
  assert.equal(M.listLotes,L.listLotes);assert.deepEqual(L.listLotes('no-existe'),[]);});
 test('loteDetail: misma forma y orden de claves; lote sin plan es desconocido',()=>{
  const d=M.loteDetail(P,LOTE);assert.deepEqual(Object.keys(d),['id','meta','rules','cuts','montando','blocks']);
- assert.deepEqual(d,{id:LOTE,meta,rules:[{id:'R12',title:'Sin guía'}],cuts:[],montando:null,blocks:[{id:block.id,length:block.length,duration:block.duration,mode:block.mode,shots:block.parts.map(x=>x.shot),refs:null,attempts,direccion:null}]});
+ assert.deepEqual(d,{id:LOTE,meta,rules:L.projectRules(P),cuts:[],montando:null,blocks:[{id:block.id,length:block.length,duration:block.duration,mode:block.mode,shots:block.parts.map(x=>x.shot),refs:null,attempts,direccion:null}]});
+ assert.deepEqual(d.rules.find(r=>r.id==='C01'),{id:'C01',title:'Regla de prueba'});assert.ok(d.rules.some(r=>r.id==='R12'));
  assert.deepEqual(M.loteDetail(P,LOTE2).cuts,[{name:'corte',file:`assets/${LOTE2}/montaje/corte.mp4`,at:cut.at,duration:cut.duration,blocks:w.cutTimeline(cut,[block])}]);
  assert.throws(()=>M.loteDetail(P,'sin-plan'),/Lote desconocido/);});
 test('review exige attempts.json, no escribe si el veredicto no vale y guarda con updateAttempts',()=>{
@@ -68,3 +69,35 @@ test('lotes antiguos (#26): listLotes omite plan.json que no es lista o está co
  for(const l of ['viejo-objeto','viejo-corrupto'])assert.throws(()=>M.loteDetail(P3,l),e=>e.message==='Lote no válido: plan.json no es una lista de bloques');
  assert.throws(()=>L.readPlan(path.join(b3,'x.json')),/Lote no válido/);w3('assets/sin-parts/plan.json',[{id:'b1'}]);assert.throws(()=>M.loteDetail(P3,'sin-parts'),/Lote no válido/);
  fs.rmSync(b3,{recursive:true,force:true});});
+
+// Reglas heredadas (#19): docs/REGLAS.md + REGLAS.md del proyecto.
+const GENERALES=['R01','R02','R03','R04','R05','R06','R09','R10','R11','R12','R21','R22','R23','R26'];
+test('mergeRules une, ordena por id numérico, rechaza repetidos y no muta',()=>{
+ const g=[{id:'R12',title:'b'},{id:'R02',title:'a'}],o=[{id:'C01',title:'c'}],gc=structuredClone(g),oc=structuredClone(o);
+ assert.deepEqual(L.mergeRules(g,o).map(r=>r.id),['C01','R02','R12']);assert.deepEqual(g,gc);assert.deepEqual(o,oc);
+ assert.deepEqual(L.mergeRules([{id:'R2',title:'x'},{id:'R10',title:'y'}],[]).map(r=>r.id),['R2','R10']);
+ assert.throws(()=>L.mergeRules(g,[{id:'R12',title:'x'}]),e=>e.message==='Regla R12 repetida: ya es general (docs/REGLAS.md); quítala del REGLAS.md del proyecto');
+ assert.throws(()=>L.mergeRules([...g,{id:'R12',title:'x'}],[]),e=>e.message==='Regla R12 repetida en docs/REGLAS.md');
+ assert.throws(()=>L.mergeRules([],[...o,{id:'C01',title:'x'}]),e=>e.message==='Regla C01 repetida en el REGLAS.md del proyecto');});
+test('projectRules hereda las generales de docs/REGLAS.md y añade las propias',()=>{
+ assert.equal(L.GENERAL_RULES_FILE,path.join(path.resolve(import.meta.dirname,'..'),'docs','REGLAS.md'));
+ const ids=L.projectRules(P).map(r=>r.id);assert.deepEqual(ids,['C01',...GENERALES]);assert.equal(new Set(ids).size,ids.length);
+ const P2='lotes-sin-reglas';fs.rmSync(path.join(DATA,P2),{recursive:true,force:true});fs.mkdirSync(path.join(DATA,P2));
+ try{assert.deepEqual(L.projectRules(P2).map(r=>r.id),GENERALES);assert.deepEqual(L.rulesAt(path.join(DATA,P2)),L.projectRules(P2));}finally{fs.rmSync(path.join(DATA,P2),{recursive:true,force:true});}});
+test('un id general repetido en el REGLAS.md del proyecto lanza y el lote no carga',()=>{
+ const P2='lotes-dup',b2=path.join(DATA,P2);fs.rmSync(b2,{recursive:true,force:true});
+ const w2=(rel,v)=>{const f=path.join(b2,rel);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,typeof v==='string'?v:text(v));};
+ try{w2('REGLAS.md','# Reglas\n### R12 · Otra vez\n');w2(`assets/${LOTE}/plan.json`,[block]);w2(`assets/${LOTE}/lote.json`,meta);
+  assert.throws(()=>L.projectRules(P2),/Regla R12 repetida/);assert.throws(()=>L.loteDetail(P2,LOTE),/R12 repetida/);}
+ finally{fs.rmSync(b2,{recursive:true,force:true});}});
+test('estado.mjs --verdict valida las reglas contra las generales y las propias sin escribir si falla',()=>{
+ const P2='lotes-estado',b2=path.join(DATA,P2);fs.rmSync(b2,{recursive:true,force:true});
+ const w2=(rel,v)=>{const f=path.join(b2,rel);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,typeof v==='string'?v:text(v));};
+ const run=(...a)=>spawnSync(process.execPath,[path.join(import.meta.dirname,'..','scripts','bloques','estado.mjs'),LOTE,block.id,'--project',P2,'--verdict','rejected',...a],{encoding:'utf8',timeout:30000});
+ const f=path.join(b2,'assets',LOTE,block.id,'attempts.json');
+ try{w2(`assets/${LOTE}/plan.json`,[block]);w2(`assets/${LOTE}/project-snapshot.json`,snapshot);w2(`assets/${LOTE}/lote.json`,meta);w2(`assets/${LOTE}/${block.id}/attempts.json`,attempts);
+  w2('proyecto.json',{id:P2});w2('registro.json',{assets:{}});w2('REGLAS.md','# Reglas\n### C01 · Regla de prueba\n');
+  let before=fs.readFileSync(f,'utf8'),r=run('--rules','X9');assert.notEqual(r.status,0);assert.match(r.stderr,/Regla desconocida X9/);assert.equal(fs.readFileSync(f,'utf8'),before);
+  r=run('--rules','R12,C01');assert.equal(r.status,0,r.stderr);assert.deepEqual(JSON.parse(fs.readFileSync(f,'utf8')).at(-1).failedRules,['R12','C01']);
+  w2('REGLAS.md','# Reglas\n### R12 · Otra vez\n');before=fs.readFileSync(f,'utf8');r=run('--rules','R12');assert.notEqual(r.status,0);assert.match(r.stderr,/R12 repetida/);assert.equal(fs.readFileSync(f,'utf8'),before);}
+ finally{fs.rmSync(b2,{recursive:true,force:true});}});

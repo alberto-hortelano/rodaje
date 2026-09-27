@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Informe del lote (PROCESO.md, paso 7): intentos, aceptación, reglas más violadas, segundos y coste.
+// Informe del lote (docs/PROCESO.md, paso 7): intentos, aceptación, reglas más violadas, segundos y coste.
 //   node scripts/bloques/informe.mjs <lote> [--project id]
 // Falla si un intento rechazado no cita reglas o si un reintento no declara su línea cambiada (R26).
 import fs from 'node:fs';import path from 'node:path';
