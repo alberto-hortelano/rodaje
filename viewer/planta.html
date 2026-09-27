@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="/icon.svg">
+<title>Planta</title>
+<style>
+:root{--bg:#f4f1ea;--ink:#2b2824;--muted:#7a746a;--grid:#e2ddd2;--grid2:#cfc8ba;--panel:#fffdf8;--sel:#c2410c;--warn:#fff4e5}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px system-ui,sans-serif;display:grid;grid-template-columns:1fr 320px;height:100vh}
+#lienzo{width:100%;height:100vh;display:block;cursor:crosshair;touch-action:none}
+aside{background:var(--panel);border-left:1px solid var(--grid2);padding:14px;overflow:auto}
+h1{font-size:17px;margin:6px 0}p,li{color:var(--muted);font-size:12.5px;line-height:1.45}ul{padding-left:18px;margin:6px 0}
+a.volver{color:var(--ink);font-size:13px}
+.forma{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;margin:2px 0}.forma.act{background:#f3e7dc}
+.forma i{width:14px;height:14px;border-radius:3px;display:inline-block;border:1px solid #0003}
+button{font:inherit;padding:6px 10px;border:1px solid var(--grid2);background:#fff;border-radius:6px;cursor:pointer;margin:3px 3px 3px 0}
+button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}button:disabled{opacity:.45;cursor:default}
+#info{font:12px ui-monospace,monospace;color:var(--ink);min-height:18px;margin:6px 0}
+#estado{font-size:12.5px;color:var(--muted)}
+#aviso{background:var(--warn);border:1px solid #f0c48a;border-radius:6px;padding:8px;margin:8px 0;font-size:12.5px}#aviso:empty{display:none}
+#aviso.error{background:#fdecec;border-color:#e8a3a3}
+</style></head><body>
+<svg id="lienzo" xmlns="http://www.w3.org/2000/svg"></svg>
+<aside>
+<a class="volver" id="volver" href="/">← Volver al entorno</a>
+<h1 id="titulo">Planta</h1>
+<p>Vista desde arriba, en metros. x crece hacia la derecha y z hacia abajo.</p>
+<ul>
+<li><b>Arrastra</b> un vértice para moverlo (se ajusta a 10 cm; con Mayús, a 1 cm).</li>
+<li><b>Doble clic</b> sobre un lado, o <b>+ Vértice</b> y un clic en el lado: añade un vértice.</li>
+<li><b>Clic derecho</b> (o Alt + clic) en un vértice: lo quita.</li>
+<li>Arrastra el fondo para desplazar la vista; la rueda acerca y aleja.</li>
+<li>Pulsa una forma de la lista para resaltarla; sus lados muestran la longitud y su papel.</li>
+</ul>
+<div id="aviso"></div>
+<div id="formas"></div>
+<div id="info"></div>
+<div id="estado"></div>
+<div>
+<button id="anadir">+ Vértice</button><button id="deshacer" title="Ctrl+Z">Deshacer</button><button class="primary" id="guardar">Guardar</button><button id="descartar">Descartar cambios</button>
+</div>
+<div><button id="copiar">Copiar</button><button id="abrir">Abrir…</button><button id="descargar">Descargar copia</button></div>
+<p>«Guardar» escribe la planta en los datos del entorno (<code>dims.planta</code>) y sube su revisión. Después conviene revisar el entorno en 3D y regenerar su GLB.</p>
+</aside>
+<script type="module">
+import {colorForma, contenedora, numLados, snap, moverVertice, anadirVertice, quitarVertice, ladoMasCercano, encuadre, aPantalla, aMundo, validarPlanta, centroid} from './planta.mjs';
+
+const $ = s => document.querySelector(s), svg = $('#lienzo'), NS = 'http://www.w3.org/2000/svg';
+const q = new URLSearchParams(location.search), project = q.get('project') || '', envId = q.get('env') || '';
+const clave = `rodaje-planta:${project}:${envId}`, texto = p => JSON.stringify(p, null, 2);
+let token = '', servidor = null, revision = 0, planta = null, activa = 0, hist = [], vista = {x: -22, z: -20, s: 22};
+let arrastre = null, pan = null, modoAnadir = false;
+
+const el = (t, a, p = svg) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); p.appendChild(e); return e; };
+const info = t => { $('#info').textContent = t; };
+const aviso = (t, error = false, botones = []) => { const a = $('#aviso'); a.textContent = t; a.className = error ? 'error' : ''; for (const [label, fn] of botones) { const b = document.createElement('button'); b.textContent = label; b.onclick = fn; a.append(document.createElement('br'), b); } };
+const cambios = () => !!planta && texto(planta) !== texto(servidor);
+const pos = e => { const r = svg.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+function estado() {
+  $('#estado').textContent = planta ? `Revisión ${revision}${cambios() ? ' · cambios sin guardar' : ' · guardada'}` : '';
+  for (const b of ['guardar', 'descartar']) $('#' + b).disabled = !cambios();
+  $('#deshacer').disabled = !hist.length;
+}
+// Borrador en localStorage: sobrevive a una recarga; se borra al guardar o descartar.
+function borrador() { try { if (cambios()) localStorage.setItem(clave, JSON.stringify({revision, planta})); else localStorage.removeItem(clave); } catch {} estado(); }
+function cambiar(nueva) { hist.push(planta); planta = nueva; borrador(); lista(); pintar(); }
+
+function pintar() {
+  svg.innerHTML = '';
+  if (!planta) return;
+  const W = svg.clientWidth, H = svg.clientHeight, [x0, z0] = aMundo(vista, 0, 0), [x1, z1] = aMundo(vista, W, H), P = p => aPantalla(vista, p);
+  const paso = vista.s < 12 ? 5 : 1;
+  for (let x = Math.floor(x0 / paso) * paso; x <= x1; x += paso) el('line', {x1: P([x, 0])[0], x2: P([x, 0])[0], y1: 0, y2: H, stroke: x % 5 ? 'var(--grid)' : 'var(--grid2)', 'stroke-width': 1});
+  for (let z = Math.floor(z0 / paso) * paso; z <= z1; z += paso) el('line', {y1: P([0, z])[1], y2: P([0, z])[1], x1: 0, x2: W, stroke: z % 5 ? 'var(--grid)' : 'var(--grid2)', 'stroke-width': 1});
+  for (let x = Math.ceil(x0 / 5) * 5; x <= x1; x += 5) el('text', {x: P([x, 0])[0] + 3, y: 14, fill: '#9a927f', 'font-size': 11}).textContent = x + ' m';
+  for (let z = Math.ceil(z0 / 5) * 5; z <= z1; z += 5) el('text', {x: 3, y: P([0, z])[1] - 3, fill: '#9a927f', 'font-size': 11}).textContent = z + ' m';
+  planta.formas.forEach((f, fi) => {
+    const act = fi === activa, pts = f.puntos.map(P), color = colorForma(fi), cont = contenedora(f, planta.formas);
+    const poly = el(f.cerrada ? 'polygon' : 'polyline', {points: pts.map(p => p.join(',')).join(' '), fill: cont || !f.cerrada ? 'none' : color, 'fill-opacity': act ? 0.45 : 0.25, stroke: color, 'stroke-width': cont ? 7 : act ? 3 : 2, 'stroke-linejoin': 'round', 'stroke-opacity': cont ? 0.7 : 1, 'data-forma': fi});
+    poly.addEventListener('mousedown', e => { if (e.button === 0 && activa !== fi && !modoAnadir) { activa = fi; lista(); pintar(); e.stopPropagation(); } });
+    const c = P(centroid(f.puntos));
+    el('text', {x: c[0], y: c[1], 'text-anchor': 'middle', fill: '#2b2824', 'font-size': 12, 'pointer-events': 'none'}).textContent = f.nombre || f.id;
+    if (act) for (let i = 0; i < numLados(f); i++) {
+      const a = f.puntos[i], b = f.puntos[(i + 1) % f.puntos.length], m = P([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]);
+      el('text', {x: m[0], y: m[1] - 5, 'text-anchor': 'middle', fill: 'var(--sel)', 'font-size': 11, 'pointer-events': 'none', class: 'longitud'}).textContent = Math.hypot(b[0] - a[0], b[1] - a[1]).toFixed(1) + ' m';
+      if (f.lados?.[i] !== undefined) el('text', {x: m[0], y: m[1] + 12, 'text-anchor': 'middle', fill: '#5b544b', 'font-size': 10.5, 'font-style': 'italic', 'pointer-events': 'none', class: 'papel'}).textContent = f.lados[i];
+    }
+    f.puntos.forEach((p, i) => {
+      const [px, py] = P(p), h = el('circle', {cx: px, cy: py, r: act ? 7 : 4.5, fill: act ? 'var(--sel)' : '#fff', stroke: color, 'stroke-width': 2, 'data-forma': fi, 'data-i': i});
+      h.style.cursor = 'move';
+      h.addEventListener('mousedown', e => { e.stopPropagation(); if (e.button === 2 || e.altKey) return quitar(fi, i); if (e.button !== 0) return; activa = fi; arrastre = {fi, i, antes: planta, movido: false}; lista(); });
+      h.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); });
+      h.addEventListener('mouseenter', () => info(`${f.nombre || f.id} · vértice ${i + 1}: x ${p[0].toFixed(2)}  z ${p[1].toFixed(2)}`));
+    });
+  });
+  for (const m of planta.marcas || []) { const [px, py] = P(m.punto); el('rect', {x: px - 6, y: py - 6, width: 12, height: 12, fill: '#2b2824', transform: `rotate(45 ${px} ${py})`}); el('text', {x: px + 10, y: py + 4, fill: '#2b2824', 'font-size': 11}).textContent = m.nombre || m.id; }
+}
+function lista() {
+  const box = $('#formas'); box.textContent = '';
+  planta?.formas.forEach((f, fi) => {
+    const d = document.createElement('div'), i = document.createElement('i');
+    d.className = 'forma' + (fi === activa ? ' act' : ''); d.dataset.forma = fi; i.style.background = colorForma(fi);
+    d.append(i, `${f.nombre || f.id} · ${f.puntos.length} vértices`); d.onclick = () => { activa = fi; lista(); pintar(); };
+    box.append(d);
+  });
+}
+function anadir(e) {
+  const hit = ladoMasCercano(planta, aMundo(vista, ...pos(e)), 18 / vista.s, activa);
+  if (!hit) return info('Pulsa justo encima de un lado.');
+  activa = hit.forma; modoAnadir = false; $('#anadir').classList.remove('primary'); svg.style.cursor = 'crosshair';
+  cambiar(anadirVertice(planta, hit.forma, hit.lado, [snap(hit.punto[0]), snap(hit.punto[1])]));
+  info(`Vértice añadido a ${planta.formas[hit.forma].nombre || planta.formas[hit.forma].id}. Ahora puedes arrastrarlo.`);
+}
+function quitar(fi, i) { const r = quitarVertice(planta, fi, i); if (r.error) return info(r.error); activa = fi; cambiar(r.planta); info('Vértice quitado.'); }
+
+svg.addEventListener('dblclick', e => { e.preventDefault(); if (planta) anadir(e); });
+svg.addEventListener('mousedown', e => { if (!planta) return; if (modoAnadir && e.button === 0) return anadir(e); if (!arrastre && e.button === 0) pan = {x: e.clientX, y: e.clientY, vx: vista.x, vz: vista.z}; });
+window.addEventListener('mousemove', e => {
+  if (arrastre) {
+    const [x, z] = aMundo(vista, ...pos(e)), p = [snap(x, e.shiftKey), snap(z, e.shiftKey)], f = planta.formas[arrastre.fi];
+    if (f.puntos[arrastre.i][0] === p[0] && f.puntos[arrastre.i][1] === p[1]) return;
+    if (!arrastre.movido) { hist.push(arrastre.antes); arrastre.movido = true; }
+    planta = moverVertice(planta, arrastre.fi, arrastre.i, p);
+    info(`${f.nombre || f.id} · vértice ${arrastre.i + 1}: x ${p[0].toFixed(2)}  z ${p[1].toFixed(2)}`); pintar();
+  } else if (pan) { vista.x = pan.vx - (e.clientX - pan.x) / vista.s; vista.z = pan.vz - (e.clientY - pan.y) / vista.s; pintar(); }
+});
+window.addEventListener('mouseup', () => { if (arrastre?.movido) borrador(); arrastre = null; pan = null; });
+svg.addEventListener('wheel', e => { e.preventDefault(); const [px, py] = pos(e), [mx, mz] = aMundo(vista, px, py); vista.s = Math.max(6, Math.min(120, vista.s * (e.deltaY < 0 ? 1.12 : 1 / 1.12))); vista.x = mx - px / vista.s; vista.z = mz - py / vista.s; pintar(); }, {passive: false});
+svg.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('resize', pintar);
+window.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); deshacer(); } });
+window.addEventListener('beforeunload', e => { if (cambios()) { e.preventDefault(); e.returnValue = ''; } });
+
+function deshacer() { if (!hist.length) return; planta = hist.pop(); borrador(); lista(); pintar(); }
+$('#deshacer').onclick = deshacer;
+$('#anadir').onclick = () => { if (!planta) return; modoAnadir = !modoAnadir; $('#anadir').classList.toggle('primary', modoAnadir); svg.style.cursor = modoAnadir ? 'copy' : 'crosshair'; info(modoAnadir ? 'Pulsa sobre un lado para añadir un vértice.' : ''); };
+$('#copiar').onclick = async () => { try { await navigator.clipboard.writeText(texto(planta)); info('Copiada al portapapeles.'); } catch { info('No se pudo copiar; usa «Descargar copia».'); } };
+$('#descargar').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([texto(planta) + '\n'], {type: 'application/json'})); a.download = `${envId}-planta.json`; a.click(); info(`Descargada ${envId}-planta.json`); };
+$('#abrir').onclick = () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = async () => {
+  let nueva; try { nueva = JSON.parse(await i.files[0].text()); } catch { return aviso('El fichero no es un JSON válido.', true); }
+  const errores = validarPlanta(nueva, servidor); if (errores.length) return aviso('No se puede abrir: ' + errores.join(' '), true);
+  aviso(''); activa = Math.min(activa, nueva.formas.length - 1); cambiar(nueva); info('Planta abierta. Guarda para escribirla en el entorno.');
+}; i.click(); };
+$('#descartar').onclick = () => { if (!cambios()) return; cambiar(structuredClone(servidor)); info('Cambios descartados.'); };
+$('#guardar').onclick = async () => {
+  const errores = validarPlanta(planta, servidor); if (errores.length) return aviso(errores.join(' '), true);
+  $('#guardar').disabled = true;
+  try {
+    const r = await fetch('/api/planta', {method: 'POST', headers: {'Content-Type': 'application/json', 'x-rodaje-token': token}, body: JSON.stringify({project, environment: envId, revision, planta})}), d = await r.json();
+    if (!r.ok) return aviso(r.status === 409 ? d.error : 'No se pudo guardar: ' + d.error, true);
+    servidor = d.planta; revision = d.revision; planta = structuredClone(servidor); aviso(''); borrador(); lista(); pintar(); info(`Guardada: revisión ${revision}.`);
+  } catch (e) { aviso('No se pudo guardar: ' + e.message, true); }
+  finally { estado(); }
+};
+
+async function iniciar() {
+  $('#volver').href = `/?project=${encodeURIComponent(project)}&view=environment&environment=${encodeURIComponent(envId)}`;
+  if (!project || !envId) return aviso('Falta el proyecto o el entorno en la dirección (?project=…&env=…).', true);
+  try {
+    token = (await (await fetch('/api/state')).json()).token;
+    const r = await fetch(`/api/planta?project=${encodeURIComponent(project)}&environment=${encodeURIComponent(envId)}`), d = await r.json();
+    if (!r.ok) throw Error(d.error);
+    servidor = d.planta; revision = d.revision; planta = structuredClone(servidor);
+    document.title = $('#titulo').textContent = 'Planta · ' + d.environment.name;
+  } catch (e) { estado(); return aviso('No se pudo abrir la planta: ' + e.message, true); }
+  try {
+    const g = JSON.parse(localStorage.getItem(clave) || 'null');
+    if (g && g.revision === revision && texto(g.planta) !== texto(servidor) && !validarPlanta(g.planta, servidor).length)
+      aviso('Hay cambios sin guardar de una sesión anterior.', false, [['Recuperar', () => { aviso(''); cambiar(g.planta); info('Borrador recuperado.'); }], ['Descartar', () => { aviso(''); try { localStorage.removeItem(clave); } catch {} }]]);
+  } catch {}
+  vista = encuadre(planta, svg.clientWidth, svg.clientHeight); lista(); pintar(); estado();
+}
+iniciar();
+</script></body></html>

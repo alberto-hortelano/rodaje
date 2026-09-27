@@ -28881,7 +28881,7 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { variants, zones, channels, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice } from "./workflow.mjs";
+import { variants, zones, channels, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl } from "./workflow.mjs";
 import { createStage as createStage2 } from "./stage.js";
 var state;
 var p = null;
@@ -29119,7 +29119,7 @@ async function render() {
       view = "environments";
       return render();
     }
-    html3 = heading2(esc(e.name), esc(e.description || ""), `<div class="row">${btn("\u2190 Entornos 3D", "nav:environments")}${btn("Editar", "edit-environment:" + e.id)}${btn("Subir GLB", "upload-environment:" + e.id)}</div>`) + '<section class="panel" id="environment-model"></section>';
+    html3 = heading2(esc(e.name), esc(e.description || ""), `<div class="row">${btn("\u2190 Entornos 3D", "nav:environments")}${btn("Editar", "edit-environment:" + e.id)}${btn("Subir GLB", "upload-environment:" + e.id)}${hasPlantaEditor(e) ? btn("Editar planta", "edit-planta:" + e.id) : ""}</div>`) + '<section class="panel" id="environment-model"></section>';
   }
   if (view === "ship") {
     html3 = heading2(p.shipModel.name || "Nave \xB7 modelo 3D", p.shipModel.version >= 2 ? "Explora los espacios conectados, elige un destino y recorre la nave. Guarda encuadres para preparar los planos." : "Exterior y distribuci\xF3n estable de escenarios. Selecciona un espacio para inspeccionarlo.") + '<section class="panel" id="ship-model"></section>';
@@ -29392,6 +29392,11 @@ async function act(action) {
     episodeId = b2;
     view = "rehearsal";
     return render();
+  }
+  if (a === "edit-planta") {
+    if (dirty) await save();
+    location.href = plantaEditorUrl(p.id, b2);
+    return;
   }
   if (a === "visit-room") {
     if (dirty) await save();

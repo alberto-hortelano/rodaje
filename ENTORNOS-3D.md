@@ -54,10 +54,11 @@ Reglas que costó aprender:
 
 ## 5. La planta la corrige el usuario
 
-- `ambientes/<id>/3d/planta.html` es un editor de siluetas: arrastrar vértices, doble clic para añadir, clic derecho para quitar. Guarda `planta.json` en Descargas.
-- Se copia en `model.json` → `dims.planta`, conservando `lados` (el papel de cada lado de los añadidos: `fachada`, `alero`, `hastial`, `chimenea`, `casa`) y subiendo `revision`.
-- Se vuelve a pasar el bucle del punto 4.
-- Para un escenario nuevo se copia `planta.html` del caserón y se regenera su `ORIGINAL` desde la planta.
+- La planta vive solo en los datos del entorno (`model.json` → `dims.planta`): formas con `id`, `nombre`, `cerrada`, `puntos` y, si hace falta, `lados` (el papel de cada lado, p. ej. `fachada`, `alero`, `hastial`, `chimenea`, `casa`), y marcas.
+- Se edita en la app: **Entornos 3D → el entorno → Editar planta** (`viewer/planta.html`, genérico para cualquier entorno con constructor). Arrastrar vértices, doble clic en un lado para añadir, clic derecho para quitar. Al añadir o quitar vértices los `lados` siguen alineados; no se crean, borran ni renombran formas.
+- **Guardar** escribe solo el tramo de `dims.planta` en `model.json` y sube `revision`; si otra pestaña guardó antes, avisa (revisión distinta) y conviene **Descargar copia** y recargar.
+- Después se vuelve a pasar el bucle del punto 4 y se regenera el GLB.
+- Un escenario nuevo solo necesita su `dims.planta` en los datos del entorno; el editor lo encuadra solo.
 
 ## 6. Cierre
 

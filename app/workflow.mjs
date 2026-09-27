@@ -131,6 +131,9 @@ export function upsertIssues(p,items,{newId=()=>crypto.randomUUID(),now=()=>new 
 // Visor de un entorno, en orden de transición: viewer como ruta → visor propio del proyecto (hasta #11 y #14);
 // constructor y datos → visor genérico /viewer/mount.mjs (con viewer.plugins si los hay); solo GLB → /viewer/glb.mjs.
 export function environmentViewer(e){if(typeof e?.viewer==='string'&&e.viewer)return {kind:'legacy',module:e.viewer};if(e?.builder&&e?.data)return {kind:'mount'};if(e?.glb)return {kind:'glb',url:e.glb};return {kind:'none'};}
+// Editor de plantas (viewer/planta.html): para entornos con constructor y datos; la planta vive en data → dims.planta.
+export const hasPlantaEditor=e=>!!(e?.builder&&e?.data);
+export const plantaEditorUrl=(projectId,envId)=>'/viewer/planta.html?project='+encodeURIComponent(projectId)+'&env='+encodeURIComponent(envId);
 const VIEWER_KINDS={legacy:'visor',mount:'constructor',glb:'glb',none:'vacío'};
 export function environmentList(p){const list=(p?.environments||[]).map(e=>({id:e.id,name:e.name||e.id,description:e.description||'',image:e.image||'',glb:e.glb||'',viewer:typeof e.viewer==='string'?e.viewer:'',kind:VIEWER_KINDS[environmentViewer(e).kind],action:'env-open:'+e.id}));if(p?.shipModel)list.push({id:'ship',name:p.shipModel.name||'Nave · modelo 3D',description:'Modelo navegable de la nave.',image:p.shipModel.snapshots?.[0]?.file||'',glb:p.shipModel.glb||'',viewer:p.shipModel.viewer||'',kind:'visor',action:'nav:ship'});return list;}
 // Entorno 3D enlazado a un ambiente (location.environment), o null.
