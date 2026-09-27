@@ -1,5 +1,6 @@
 // Recorrido a pie de viewer/mount.mjs: primera persona con colisiones, suelo por rayo (escaleras peldaño a peldaño) y «no clip».
 // Sin imports: recibe three como T y funciona en Node. La colisión es inyectable: {collect(root), groundAt(x, y, z), blocked(from, dir, dist, floorY)}.
+// Las opciones de createWalker son las de walkOptions (viewer/plugins.mjs); walkKeys son las teclas que el visor le pasa.
 
 export const WALK_KEYS = ['w', 'a', 's', 'd', 'q', 'e', 'shift', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
 
@@ -28,7 +29,7 @@ export function createWalker(T, camera, {collision, eye = 1.62, step = 0.3, walk
   const keys = new Set(), euler = new T.Euler(0, 0, 0, 'YXZ');
   let floorY = 0;
   const w = {
-    keys, noclip: false, eye, collision,
+    keys, walkKeys: WALK_KEYS, noclip: false, eye, collision,
     get floorY() { return floorY; },
     place(x, y, z) { const g = w.collision.groundAt(x, y, z); floorY = g ?? y; camera.position.set(x, floorY + eye, z); },
     aim(from, to) { const dx = to[0] - from[0], dy = to[1] - (from[1]), dz = to[2] - from[2]; euler.set(Math.atan2(dy, Math.hypot(dx, dz)) * 0.6, Math.atan2(-dx, -dz), 0); camera.quaternion.setFromEuler(euler); },

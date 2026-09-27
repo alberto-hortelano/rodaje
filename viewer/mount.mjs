@@ -1,13 +1,13 @@
 // Visor genérico de entornos con constructor: órbita, lugares, estados, recorrido a pie, «no clip», pantalla completa, captura y GLB.
-// mountEnvironment(container, {project, environment}) → {setView, setState, setWalk, mode, walk, state, scene, camera, controls, renderer, dispose}.
+// mountEnvironment(container, {project, environment}) → {setView, setState, setWalk, setNoclip, mode, noclip, walk, state, scene, camera, controls, renderer, dispose}.
 // Lo propio de cada escenario (luces, cortes, piezas atravesables, entrada del paseo, vista general) llega por los plugins
 // del proyecto (environments[].viewer.plugins); sin plugins pone luces y fondo por defecto y encuadra la caja del modelo.
 import * as T from 'three';
 import {OrbitControls} from '/three/examples/jsm/controls/OrbitControls.js';
 import {GLTFExporter} from '/three/examples/jsm/exporters/GLTFExporter.js';
 import {createKit} from './kit.mjs';
-import {createWalker, raycastCollision, WALK_KEYS} from './walk.mjs';
-import {esc, pluginPaths, viewerOptions, initialState, buttonHTML, combineHooks, defaultSpawn, framePose, CORE_ACTIONS} from './plugins.mjs';
+import {createWalker, raycastCollision} from './walk.mjs';
+import {esc, pluginPaths, viewerOptions, initialState, buttonHTML, combineHooks, defaultSpawn, framePose, CORE_ACTIONS, assignExpose, walkOptions, handleKey, withGlbUserData} from './plugins.mjs';
 
 const CSS = `.env3d{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px}.env3d-view{position:relative;background:#1b2126;border-radius:10px;overflow:hidden;aspect-ratio:16/9}.env3d-view canvas{width:100%;height:100%;display:block}.env3d-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;align-items:center}.env3d-bar select{max-width:260px}.env3d-side{display:flex;flex-direction:column;gap:10px;max-height:78vh;overflow:auto}.env3d-side h4{margin:4px 0}.env3d-marks button{display:block;width:100%;text-align:left;margin:2px 0;padding:6px 8px}.env3d-marks small{display:block;opacity:.7;font-size:11px;line-height:1.3}.env3d-note{position:absolute;left:12px;bottom:10px;right:12px;color:#e8e4da;font-size:13px;text-shadow:0 1px 3px #000;pointer-events:none}.env3d-state label{display:block;font-size:12px;margin:4px 0}.env3d-cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;font:18px monospace;text-shadow:0 0 3px #000;pointer-events:none;display:none}.env3d-hint{position:absolute;left:12px;top:10px;right:12px;color:#f1eee6;font-size:12px;text-shadow:0 1px 3px #000;pointer-events:none;display:none}.env3d-walk .env3d-cross,.env3d-walk .env3d-hint{display:block}.env3d-view:fullscreen{aspect-ratio:auto}.env3d-state select{width:100%}.env3d-overlay{position:absolute;inset:0;pointer-events:none}@media(max-width:900px){.env3d{grid-template-columns:1fr}}`;
 
@@ -38,6 +38,8 @@ export async function mountEnvironment(container, {project, environment: env}) {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.96;
   let model = null, mode = 'orbit', drag = false, raf, stopped = false;
+  // Se crean en el paso 4, después de los plugins: api.walker es null mientras corre plugin(api).
+  let collision = null, walker = null;
 
   // 2 · Plugins: cada uno recibe la API y devuelve sus hooks.
   const actions = new Map();
@@ -58,15 +60,15 @@ export async function mountEnvironment(container, {project, environment: env}) {
     panel({title = '', html = ''} = {}) {
       side.insertAdjacentHTML('beforeend', `<div class="env3d-panel">${title ? `<h4>${esc(title)}</h4>` : ''}<div></div></div>`);
       const body = side.lastElementChild.lastElementChild; body.innerHTML = html;
-      return {set(h) { body.innerHTML = h; }};
+      return {el: body, set(h) { body.innerHTML = h; }};
     },
-    overlay(html = '') { view.insertAdjacentHTML('beforeend', '<div class="env3d-overlay"></div>'); const o = view.lastElementChild; o.innerHTML = html; return {set(h) { o.innerHTML = h; }}; },
+    overlay(html = '') { view.insertAdjacentHTML('beforeend', '<div class="env3d-overlay"></div>'); const o = view.lastElementChild; o.innerHTML = html; return {el: o, set(h) { o.innerHTML = h; }}; },
   };
   const api = {
     T, scene, camera, controls, renderer, data, environment: env, options: viewerOptions(env), ui,
     get model() { return model; }, get state() { return {...state}; }, setState: next => setState(next),
     get mode() { return mode; }, setWalk: on => setWalk(on), setView: id => setView(id), overview: () => overviewAction(),
-    get walker() { return walker; },
+    get walker() { return walker; }, get noclip() { return !!walker?.noclip; }, setNoclip: on => setNoclip(on),
   };
   const hooks = combineHooks(plugins.map(p => ({file: p.file, hooks: p.plugin(api)})));
 
@@ -78,8 +80,11 @@ export async function mountEnvironment(container, {project, environment: env}) {
   }
 
   // 4 · Colisión y caminante.
-  const collision = hooks.collision({T, step: 0.3, radius: 0.32, skip: q => !q.visible || hooks.passable(q)}) ?? raycastCollision(T, {skip: q => !q.visible || hooks.passable(q)});
-  const walker = createWalker(T, camera, {collision});
+  const w = walkOptions(api.options), skip = q => !q.visible || hooks.passable(q);
+  collision = hooks.collision({T, step: w.step, radius: w.radius, skip, options: api.options})
+    ?? raycastCollision(T, {step: w.step, radius: w.radius, skip});
+  walker = hooks.walker({T, camera, collision, options: api.options})
+    ?? createWalker(T, camera, {collision, ...w});
 
   const onSky = tx => { const sky = tx.clone(); sky.mapping = T.EquirectangularReflectionMapping; sky.needsUpdate = true; scene.background = sky; hooks.onSky(tx); };
   const rebuild = () => {
@@ -97,24 +102,32 @@ export async function mountEnvironment(container, {project, environment: env}) {
   };
   const walkButton = container.querySelector('[data-a=walk]');
   function setWalk(on) {
-    mode = on ? 'walk' : 'orbit'; controls.enabled = !on; view.classList.toggle('env3d-walk', on);
+    mode = on ? 'walk' : 'orbit'; hooks.onMode(mode); controls.enabled = !on; view.classList.toggle('env3d-walk', on);
     walkButton.setAttribute('aria-pressed', String(on));
     walkButton.textContent = on ? 'Salir del recorrido' : 'Recorrer a pie';
     if (on) { collision.collect(model); const s = hooks.spawn() ?? defaultSpawn(marks); walker.place(s.position[0], s.position[1], s.position[2]); walker.aim(camera.position.toArray(), s.lookAt); note.textContent = 'Recorrido a pie · ' + env.name; view.focus(); }
-    else { if (document.pointerLockElement) document.exitPointerLock(); controls.target.copy(camera.position).add(camera.getWorldDirection(new T.Vector3()).multiplyScalar(5)); controls.update(); }
+    else { if (document.pointerLockElement) document.exitPointerLock(); camera.up.set(0, 1, 0); controls.target.copy(camera.position).add(camera.getWorldDirection(new T.Vector3()).multiplyScalar(5)); controls.update(); }
   }
+  // true si un plugin (hook view) o un lugar de data.landmarks atiende id; false si no existe.
   function setView(id) {
-    const m = marks.find(x => x.id === id); if (!m) return;
+    if (hooks.view(id, {mode})) return true;
+    const m = marks.find(x => x.id === id); if (!m) return false;
     hooks.onView(m, {mode});
     const text = m.name + (m.note ? ' — ' + m.note : '');
-    if (mode === 'walk') { walker.place(m.view[0], m.view[1] - walker.eye + 0.2, m.view[2]); walker.aim(camera.position.toArray(), m.at); note.textContent = text; return; }
+    if (mode === 'walk') { walker.place(m.view[0], m.view[1] - walker.eye + 0.2, m.view[2]); walker.aim(camera.position.toArray(), m.at); note.textContent = text; return true; }
     go(m.view, m.at, text);
+    return true;
   }
+  const noclipButton = container.querySelector('[data-a=noclip]');
+  function setNoclip(on) { walker.noclip = !!on; noclipButton.setAttribute('aria-pressed', String(walker.noclip)); noclipButton.textContent = 'No clip · ' + (walker.noclip ? 'activado' : 'desactivado'); }
   function setState(next) { state = {...state, ...next}; rebuild(); }
   function overviewAction() { if (mode === 'walk') setWalk(false); hooks.onOverview(); goOverview(); }
 
-  const onKey = e => { if (mode !== 'walk') return; const k = e.key.toLowerCase(); if (WALK_KEYS.includes(k)) { walker.keys.add(k); e.preventDefault(); } };
-  const onKeyUp = e => walker.keys.delete(e.key.toLowerCase());
+  const key = down => e => {
+    const used = handleKey({key: e.key, down, repeat: e.repeat, tag: e.target?.tagName, editable: e.target?.isContentEditable}, {mode, onKey: hooks.onKey, walker, walkKeys: walker.walkKeys});
+    if (used) e.preventDefault();
+  };
+  const onKey = key(true), onKeyUp = key(false);
   const onBlur = () => { walker.keys.clear(); drag = false; };
   const onMouse = e => { if (mode !== 'walk' || !(document.pointerLockElement === renderer.domElement || drag)) return; walker.look(e.movementX, e.movementY); };
   const onUp = () => { drag = false; };
@@ -129,10 +142,10 @@ export async function mountEnvironment(container, {project, environment: env}) {
     if (actions.has(a)) return actions.get(a)(e);
     if (a === 'overview') overviewAction();
     if (a === 'walk') setWalk(mode !== 'walk');
-    if (a === 'noclip') { walker.noclip = !walker.noclip; b.setAttribute('aria-pressed', String(walker.noclip)); b.textContent = 'No clip · ' + (walker.noclip ? 'activado' : 'desactivado'); }
+    if (a === 'noclip') setNoclip(!walker.noclip);
     if (a === 'fullscreen') { if (document.fullscreenElement) document.exitFullscreen(); else view.requestFullscreen?.(); }
     if (a === 'capture') { renderer.render(scene, camera); renderer.domElement.toBlob(bl => download(bl, env.id + '-vista.png')); }
-    if (a === 'glb') { const s2 = new T.Scene(); s2.add(builder.build(T, data, createKit(T, {state, textures: false}))); const glb = await new GLTFExporter().parseAsync(s2, {binary: true}); download(new Blob([glb], {type: 'model/gltf-binary'}), env.id + '.glb'); }
+    if (a === 'glb') { const s2 = new T.Scene(), root = builder.build(T, data, createKit(T, {state, textures: false})); s2.add(root); const glb = await withGlbUserData(root, () => new GLTFExporter().parseAsync(s2, {binary: true})); download(new Blob([glb], {type: 'model/gltf-binary'}), env.id + '.glb'); }
   });
   container.querySelector('[data-a=preset]').onchange = e => { const p = (data.presets || []).find(x => x.id === e.target.value); if (p) setState(p.state); };
   container.querySelectorAll('[data-state]').forEach(s => { s.onchange = () => setState({[s.dataset.state]: s.value}); });
@@ -144,8 +157,8 @@ export async function mountEnvironment(container, {project, environment: env}) {
   const loop = () => { if (stopped) return; const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000); last = now; if (mode === 'walk') walker.update(dt); else controls.update(); hooks.onFrame(dt, {mode}); renderer.render(scene, camera); raf = requestAnimationFrame(loop); };
   loop();
   const stage = {
-    setView, setState, setWalk, get mode() { return mode; }, walk: (keysDown, seconds) => walker.walk(keysDown, seconds), get state() { return {...state}; }, scene, camera, controls, renderer,
+    setView, setState, setWalk, setNoclip, get mode() { return mode; }, get noclip() { return walker.noclip; }, walk: (keysDown, seconds) => walker.walk(keysDown, seconds), get state() { return {...state}; }, scene, camera, controls, renderer,
     dispose() { stopped = true; cancelAnimationFrame(raf); hooks.dispose(); ro.disconnect(); controls.dispose(); renderer.dispose(); window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onKeyUp); window.removeEventListener('blur', onBlur); window.removeEventListener('mousemove', onMouse); window.removeEventListener('pointerup', onUp); if (document.pointerLockElement) document.exitPointerLock(); container.innerHTML = ''; },
   };
-  return Object.assign(stage, hooks.expose);
+  return assignExpose(stage, hooks.expose);
 }

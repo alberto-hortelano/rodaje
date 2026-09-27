@@ -1,5 +1,5 @@
 // Ruta /viewer/ del servidor: sirve viewer/ con safe(), sin /environment.js; la UI importa el visor GLB y el genérico sin empaquetarlos (issues #9 y #10).
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import http from 'node:http';import {spawn} from 'node:child_process';import * as T from 'three';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import http from 'node:http';import {spawn,spawnSync} from 'node:child_process';import * as T from 'three';
 import {exportGlb} from '../lib/entorno3d.mjs';import {withChrome,newRenderContext,chromePath,VIEWPORTS} from '../lib/chrome.mjs';
 const ROOT=path.resolve(import.meta.dirname,'..'),DATA=fs.mkdtempSync(path.join(os.tmpdir(),'rodaje-viewer-')),id='humo-'+process.pid;
 const SIN_CHROME=!fs.existsSync(chromePath())&&'sin Chrome';
@@ -9,17 +9,36 @@ const g=new T.Group();for(const x of [0,2,4]){const m=new T.Mesh(new T.BoxGeomet
 fs.mkdirSync(path.join(DATA,id,'assets'),{recursive:true});fs.writeFileSync(path.join(DATA,id,'assets/h.glb'),(await exportGlb(g,{quiet:true})).buffer);
 // Y dos entornos con constructor (suelo y muro) para el visor genérico: uno con plugin (botón, panel, capa, entrada y expose) y otro sin él.
 fs.mkdirSync(path.join(DATA,id,'ambientes/humo/3d'),{recursive:true});
-fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/humo.js'),"export function build(T, data, kit) { const g = kit.group('humo'); kit.box(g, 'suelo', [-10, 10], [-0.2, 0], [-10, 10], '#777777'); kit.box(g, 'muro', [-10, 10], [0, 3], [-5.2, -5], '#999999'); return g; }\n");
-fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/model.json'),JSON.stringify({landmarks:[{id:'centro',name:'Centro',view:[0,1.6,4],at:[0,1.5,-10]}]}));
+// La raíz deja en userData datos de ejecución (ship), que no deben llegar al GLB, y units, que sí.
+fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/humo.js'),"export function build(T, data, kit) { const g = kit.group('humo'); kit.box(g, 'suelo', [-10, 10], [-0.2, 0], [-10, 10], '#777777'); kit.box(g, 'muro', [-10, 10], [0, 3], [-5.2, -5], '#999999'); g.userData = {units: 'metres', ship: {x: [1]}}; return g; }\n");
+const landmarks=[{id:'centro',name:'Centro',view:[0,1.6,4],at:[0,1.5,-10]}];
+fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/model.json'),JSON.stringify({landmarks,walkthrough:[{label:'ping',call:'ping',expect:'pong'},{label:'centro',walk:true,view:'centro'},{label:'marca del plugin',call:'setView',args:['marca-plugin'],expect:true}]}));
+fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/model-falla.json'),JSON.stringify({landmarks,walkthrough:[{label:'ping',call:'ping',expect:'otro'}]}));
+// Con viewer.caminante el plugin pone su propio caminante (walkKeys con espacio y «c»); cuenta teclas «k», vistas propias y modos.
 fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/visor.js'),`export function plugin(api) {
+  const walkerEnPlugin = api.walker, modos = [];
+  let teclas = 0, pasos = 0, vista = null;
   const b = api.ui.button({a: 'humo', text: 'Humo', pressed: false}, () => { b.pressed = !b.pressed; });
   const panel = api.ui.panel({title: 'Panel', html: '<p class="humo-panel">uno</p>'});
   api.ui.overlay('<div class="humo-hud">hud</div>');
-  return {spawn: () => ({position: [0, 0, 0], lookAt: [0, 1.62, -10]}), expose: {ping: () => 'pong', panel: h => panel.set(h)}};
+  const mapa = api.ui.overlay('<canvas class="humo-mapa" width="40" height="40"></canvas>').el.querySelector('canvas').getContext('2d');
+  const walker = ({camera}) => {
+    const keys = new Set(), w = {keys, walkKeys: ['w', ' ', 'c'], noclip: false, eye: 1.62,
+      place(x, y, z) { camera.position.set(x, y + w.eye, z); }, aim(from, to) { camera.lookAt(...to); }, look() {},
+      update(dt) { if (keys.has(' ')) camera.position.y += dt; if (keys.has('c')) camera.position.y -= dt; if (keys.has('w')) camera.position.z -= dt; },
+      walk(k, s) { pasos++; k.forEach(x => keys.add(x)); for (let t = 0; t < s; t += 1 / 30) w.update(1 / 30); k.forEach(x => keys.delete(x)); return camera.position.toArray(); }};
+    return w;
+  };
+  return {spawn: () => ({position: [0, 0, 0], lookAt: [0, 1.62, -10]}),
+    ...(api.options.caminante ? {walker} : {}),
+    onKey(k, {down}) { if (k !== 'k') return false; if (down) teclas++; return true; },
+    view(id) { if (id !== 'marca-plugin') return false; vista = id; return true; },
+    onMode(m) { modos.push(m); },
+    expose: {ping: () => 'pong', panel: h => panel.set(h), walkerEnPlugin, mapa: !!mapa, get pasos() { return pasos; }, get teclas() { return teclas; }, get modos() { return [...modos]; }, get vista() { return vista; }}};
 }
 `);
 const humo={builder:'ambientes/humo/3d/humo.js',data:'ambientes/humo/3d/model.json'};
-fs.writeFileSync(path.join(DATA,id,'proyecto.json'),JSON.stringify({id,name:'Humo',type:'serie',ideas:[],characters:[],locations:[],episodes:[],environments:[{id:'solo-glb',name:'Humo',glb:'assets/h.glb'},{id:'con-plugin',name:'Con plugin',...humo,viewer:{plugins:['ambientes/humo/3d/visor.js']}},{id:'sin-plugin',name:'Sin plugin',...humo},{id:'plugin-roto',name:'Roto',...humo,viewer:{plugins:['ambientes/humo/3d/roto.js']}}]}));
+fs.writeFileSync(path.join(DATA,id,'proyecto.json'),JSON.stringify({id,name:'Humo',type:'serie',ideas:[],characters:[],locations:[],episodes:[],environments:[{id:'solo-glb',name:'Humo',glb:'assets/h.glb'},{id:'con-plugin',name:'Con plugin',...humo,viewer:{plugins:['ambientes/humo/3d/visor.js']}},{id:'sin-plugin',name:'Sin plugin',...humo},{id:'plugin-roto',name:'Roto',...humo,viewer:{plugins:['ambientes/humo/3d/roto.js']}},{id:'caminante',name:'Caminante',...humo,viewer:{plugins:['ambientes/humo/3d/visor.js'],caminante:true}},{id:'recorrido-falla',name:'Falla',...humo,data:'ambientes/humo/3d/model-falla.json',viewer:{plugins:['ambientes/humo/3d/visor.js']}}]}));
 fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/roto.js'),'export const nada = 1;\n');
 let child;
 test.before(()=>new Promise((resolve,reject)=>{child=spawn(process.execPath,[path.join(ROOT,'app/server.mjs')],{cwd:ROOT,env:{...process.env,PORT:String(port),RODAJE_DATA:DATA,RODAJE_LAN:'',RODAJE_TLS_CERT:'',RODAJE_TLS_KEY:''},stdio:['ignore','pipe','pipe']});let out='';
@@ -63,3 +82,34 @@ test('humo: el visor genérico monta un entorno con constructor y plugin, y otro
   await page.waitForFunction(()=>/No se pudo/.test(document.querySelector('#environment-model')?.textContent||''),null,{timeout:30000});
   assert.equal(await page.textContent('#environment-model'),'No se pudo cargar el entorno 3D: El plugin ambientes/humo/3d/roto.js no exporta plugin(api)');
   assert.deepEqual(errors,[]);}));
+test('humo: hooks walker, onKey, view y onMode; expose con getters; canvas en la capa',{skip:SIN_CHROME},()=>withChrome(async browser=>{const page=await (await newRenderContext(browser,VIEWPORTS.lineaBase)).newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(`http://127.0.0.1:${port}/?project=${id}&view=environment&environment=caminante`);
+  await page.waitForFunction('window.rodaje?.environment?.scene',null,{timeout:30000});
+  const r=await page.evaluate(()=>{const e=window.rodaje.environment;const antes=e.pasos;e.setWalk(true);const start=e.camera.position.toArray();const end=e.walk([' '],1);
+   return {walkerEnPlugin:e.walkerEnPlugin,mapa:e.mapa,antes,despues:e.pasos,start,end,marca:e.setView('marca-plugin'),vista:e.vista,nada:e.setView('nada'),centro:e.setView('centro'),keys:Object.keys(e)};});
+  assert.equal(r.walkerEnPlugin,null);assert.equal(r.mapa,true);assert.equal(r.antes,0);assert.equal(r.despues,1);assert.ok(Math.abs(r.end[1]-r.start[1]-1)<0.05,JSON.stringify(r));
+  assert.equal(r.marca,true);assert.equal(r.vista,'marca-plugin');assert.equal(r.nada,false);assert.equal(r.centro,true);assert.ok(r.keys.includes('pasos')&&r.keys.includes('setNoclip'));
+  assert.equal(await page.$$eval('.env3d-overlay canvas.humo-mapa',l=>l.length),1);
+  // Teclado: «k» es del plugin; el espacio es del caminante; con foco en el select de presets no se procesa nada.
+  await page.focus('.env3d-view');await page.keyboard.press('k');await page.keyboard.press('k');assert.equal(await page.evaluate(()=>window.rodaje.environment.teclas),2);
+  const y0=await page.evaluate(()=>window.rodaje.environment.camera.position.y);await page.keyboard.down(' ');await page.waitForTimeout(400);await page.keyboard.up(' ');
+  assert.ok(await page.evaluate(()=>window.rodaje.environment.camera.position.y)>y0+0.1,'el espacio sube con el caminante del plugin');
+  await page.focus('select[data-a=preset]');await page.keyboard.press('k');assert.equal(await page.evaluate(()=>window.rodaje.environment.teclas),2);
+  // No clip: setNoclip y el botón del visor van juntos.
+  const n=await page.evaluate(()=>{const e=window.rodaje.environment;e.setNoclip(true);const a=[e.noclip,document.querySelector('[data-a=noclip]').getAttribute('aria-pressed')];document.querySelector('[data-a=noclip]').click();return [...a,e.noclip];});
+  assert.deepEqual(n,[true,'true',false]);
+  const m=await page.evaluate(()=>{const e=window.rodaje.environment;e.setWalk(false);return {modos:e.modos,up:e.camera.up.toArray()};});
+  assert.deepEqual(m,{modos:['walk','orbit'],up:[0,1,0]});
+  assert.deepEqual(errors,[]);}));
+test('humo: GLB del visor sin userData de ejecución',{skip:SIN_CHROME},()=>withChrome(async browser=>{const ctx=await newRenderContext(browser,VIEWPORTS.lineaBase),page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(`http://127.0.0.1:${port}/?project=${id}&view=environment&environment=sin-plugin`);
+  await page.waitForFunction('window.rodaje?.environment?.scene',null,{timeout:30000});
+  const [dl]=await Promise.all([page.waitForEvent('download'),page.click('[data-a=glb]')]);
+  const buf=fs.readFileSync(await dl.path()),json=buf.subarray(20,20+buf.readUInt32LE(12)).toString('utf8'),j=JSON.parse(json);
+  assert.equal(buf.subarray(0,4).toString(),'glTF');assert.doesNotMatch(json,/ship/);assert.deepEqual(j.nodes.find(x=>x.name==='humo').extras,{units:'metres'});
+  assert.deepEqual(errors,[]);}));
+test('humo: recorrer.mjs ejecuta call y expect, y sale con 1 si un paso falla',{skip:SIN_CHROME},()=>{const out=fs.mkdtempSync(path.join(os.tmpdir(),'rodaje-recorrer-'));
+  try{const run=env=>spawnSync(process.execPath,[path.join(ROOT,'scripts/entornos/recorrer.mjs'),out,'--entorno',env,'--project',id,'--url',`http://127.0.0.1:${port}`],{cwd:ROOT,env:{...process.env,RODAJE_DATA:DATA},encoding:'utf8',timeout:120000});
+   const ok=run('con-plugin');assert.equal(ok.status,0,ok.stdout+ok.stderr);assert.match(ok.stdout,/ping\s+"pong" OK/);assert.match(ok.stdout,/marca del plugin\s+true OK/);assert.match(ok.stdout,/3 de 3 pasos OK/);
+   const ko=run('recorrido-falla');assert.equal(ko.status,1,ko.stdout+ko.stderr);assert.match(ko.stdout,/FALLO: valor: "pong" ≠ "otro"/);}
+  finally{fs.rmSync(out,{recursive:true,force:true});}});

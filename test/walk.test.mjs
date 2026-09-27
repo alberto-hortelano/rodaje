@@ -41,3 +41,8 @@ test('createWalker: colisión inyectable; W 1 s avanza unos 3,2 m hacia −z y s
  const cam=new T.PerspectiveCamera(),w=createWalker(T,cam,{collision:fake});assert.equal(w.collision,fake);assert.equal(w.eye,1.62);
  w.place(0,0,0);const pos=w.walk(['w'],1);near(pos[2],-3.2,0.15,'z');near(pos[0],0,1e-9,'x');assert.deepEqual(pos,cam.position.toArray());
  assert.equal(w.keys.size,0);assert.ok(calls.includes('b')&&calls.includes('g'));});
+
+test('createWalker: walkKeys por defecto y opciones de walkOptions',async()=>{const {walkOptions}=await import('../viewer/plugins.mjs');
+ const fake={collect(){},groundAt:()=>0,blocked:()=>false},cam=new T.PerspectiveCamera();
+ const w=createWalker(T,cam,{collision:fake,...walkOptions({walk:{eye:1.5}})});assert.equal(w.walkKeys,WALK_KEYS);assert.equal(w.eye,1.5);
+ w.place(0,0,0);near(cam.position.y,1.5,1e-9,'ojos');});

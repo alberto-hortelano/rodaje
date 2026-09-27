@@ -36,3 +36,25 @@ test('captureSetup: valores por defecto y los de data.capture',()=>{
  assert.deepEqual(e3.captureSetup({},'caja'),{root:'caja',group:undefined,keep:[],fog:true});
  assert.deepEqual(e3.captureSetup({capture:{root:'r',group:'g',keep:['k'],fog:false}},'caja'),{root:'r',group:'g',keep:['k'],fog:false});
  assert.equal(e3.captureSetup({capture:{fog:null}},'caja').fog,true);});
+
+// Extras de los nodos del GLB (su JSON va tras la cabecera de 20 bytes).
+const gltfJson=buf=>JSON.parse(buf.subarray(20,20+buf.readUInt32LE(12)).toString('utf8'));
+test('exportGlb deja en el GLB solo las claves de GLB_USERDATA de la raíz',async()=>{
+ const hijo=box('hijo',[0,1,0]);hijo.userData={ship:{y:2}};const root=group(hijo);root.name='raiz';root.userData={state:{a:1},units:'metres',ship:{x:[1]}};
+ const j=gltfJson((await e3.exportGlb(root,{quiet:true})).buffer),n=j.nodes.find(x=>x.name==='raiz'),h=j.nodes.find(x=>x.name==='hijo');
+ assert.deepEqual(n.extras,{state:{a:1},units:'metres'});assert.deepEqual(Object.keys(n.extras),['state','units']);assert.deepEqual(h.extras,{ship:{y:2}});
+ assert.deepEqual(root.userData,{state:{a:1},units:'metres',ship:{x:[1]}});
+ const solo=group(box('a',[0,1,0]));solo.name='solo';solo.userData={ship:1};const j2=gltfJson((await e3.exportGlb(solo,{quiet:true})).buffer);assert.equal(j2.nodes.find(x=>x.name==='solo').extras,undefined);});
+test('walkthroughSteps: call, args, expect y tolerance',()=>{
+ assert.deepEqual(e3.walkthroughSteps({walkthrough:[{label:'a',call:'navigationState',expect:{mode:'inside'}},{label:'b',call:'setPlace',args:['x',1],expect:[1,2],tolerance:0.1},{label:'c',call:'$pos'}]}),
+  [{label:'a',call:'navigationState',expect:{mode:'inside'}},{label:'b',call:'setPlace',args:['x',1],expect:[1,2],tolerance:0.1},{label:'c',call:'$pos'}]);
+ assert.deepEqual(e3.walkthroughSteps({walkthrough:[{label:'d',expect:null}]}),[{label:'d',expect:null}]);
+ for(const s of [{label:'x',call:'a.b'},{label:'x',call:'dispose'},{label:'x',call:'1a'},{label:'x',call:3},{label:'x',args:[1]},{label:'x',call:'a',args:'1'},{label:'x',tolerance:1},{label:'x',expect:1,tolerance:-1},{label:'x',expect:1,tolerance:'1'}])
+  assert.throws(()=>e3.walkthroughSteps({walkthrough:[s]}),/Paso 1 del recorrido/,JSON.stringify(s));});
+test('matchExpect: parcial, tolerancia, listas y rutas',()=>{
+ assert.deepEqual(e3.matchExpect({mode:'inside',x:1,extra:[1]},{mode:'inside'}),[]);
+ assert.deepEqual(e3.matchExpect({navigationState:{mode:'outside'}},{navigationState:{mode:'inside'}}),['navigationState.mode: "outside" ≠ "inside"']);
+ assert.deepEqual(e3.matchExpect([1.0000001,2],[1,2]),[]);assert.equal(e3.matchExpect([1.05,2],[1,2]).length,1);assert.deepEqual(e3.matchExpect([1.05,2],[1,2],{tolerance:0.1}),[]);
+ assert.deepEqual(e3.matchExpect({p:[1,2,3]},{p:[1,2]}),['p: 3 elementos ≠ 2']);assert.deepEqual(e3.matchExpect({p:[1,5]},{p:[1,2]}),['p[1]: 5 ≠ 2']);
+ assert.deepEqual(e3.matchExpect(null,null),[]);assert.deepEqual(e3.matchExpect(null,{a:1}),['valor: null no es un objeto']);assert.deepEqual(e3.matchExpect({a:null},{a:{b:1}}),['a: null no es un objeto']);
+ assert.deepEqual(e3.matchExpect('pong','pong'),[]);assert.deepEqual(e3.matchExpect('1',1),['valor: "1" ≠ 1']);assert.deepEqual(e3.matchExpect({},{a:1}),['a: undefined ≠ 1']);});
