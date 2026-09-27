@@ -9,6 +9,8 @@ const noUuid=o=>JSON.parse(JSON.stringify(o,(k,v)=>k==='uuid'?undefined:v));
 const describe=o=>({type:o.type,name:o.name,pos:o.position.toArray(),rot:o.rotation.toArray().slice(0,3),scale:o.scale.toArray(),cast:o.castShadow,receive:o.receiveShadow,
  geo:o.geometry&&{type:o.geometry.type,params:o.geometry.parameters&&JSON.stringify(noUuid(o.geometry.parameters)),position:Array.from(o.geometry.attributes.position.array),uv:Array.from(o.geometry.attributes.uv?.array||[]),index:Array.from(o.geometry.index?.array||[])},
  mat:o.material&&noUuid(o.material.toJSON()),children:o.children.map(describe)});
+// document falso: cada canvas registra en log las llamadas y asignaciones de su contexto 2D.
+const fake=log=>({createElement:tag=>{const c={tag,width:0,height:0,getContext:()=>new Proxy({},{set:(t,k,v)=>{log.push(['=',k,v]);return true;},get:(t,k)=>(...a)=>log.push([k,...a])})};return c;}});
 const same=(a,b,where='raíz')=>{assert.equal(a.type,b.type,where);assert.equal(a.name,b.name,where);for(const k of ['pos','rot','scale'])close(a[k],b[k],`${where} ${k}`);assert.equal(a.cast,b.cast,where);assert.equal(a.receive,b.receive,where);
  assert.equal(!!a.geo,!!b.geo,where);if(a.geo){assert.equal(a.geo.type,b.geo.type,where);assert.equal(a.geo.params,b.geo.params,where);for(const k of ['position','uv','index'])close(a.geo[k],b.geo[k],`${where} ${k}`);}
  assert.deepEqual(a.mat,b.mat,where);assert.equal(a.children.length,b.children.length,where);a.children.forEach((c,i)=>same(c,b.children[i],`${where}/${i}:${c.name}`));};
@@ -54,7 +56,6 @@ test('kit ≡ caserón: box, wall, gableRoof, cyl y mat',{skip},async()=>{const 
  const ea=new T.ExtrudeGeometry(new T.Shape([new T.Vector2(0,0),new T.Vector2(3,0),new T.Vector2(0,5)]),{depth:1}),eb=ea.clone();M.scaleUV(ea);kit.scaleUV(eb);close(Array.from(ea.attributes.uv.array),Array.from(eb.attributes.uv.array),'scaleUV');});
 
 test('kit ≡ caserón: texturas procedurales con un canvas falso',{skip},async()=>{const M=await oldModule();
- const fake=log=>({createElement:tag=>{const c={tag,width:0,height:0,getContext:()=>new Proxy({},{set:(t,k,v)=>{log.push(['=',k,v]);return true;},get:(t,k)=>(...a)=>log.push([k,...a])})};return c;}});
  const dump=tx=>Object.fromEntries(Object.entries(tx).map(([k,t])=>[k,{repeat:t.repeat.toArray(),wrap:[t.wrapS,t.wrapT],cs:t.colorSpace,size:[t.image.width,t.image.height]}]));
  try{const la=[],lb=[];globalThis.document=fake(la);const a=M.textures(T);globalThis.document=fake(lb);const kit=createKit(T,{textures:true}),b=kit.proceduralTextures();
   assert.ok(la.length>1000);assert.deepEqual(lb,la);assert.deepEqual(dump(b),dump(a));assert.equal(kit.proceduralTextures(),b);assert.equal(lb.length,la.length);
@@ -78,3 +79,51 @@ test('kit.box reproduce cada caja del caserón construido',{skip},async()=>{cons
 
 test('el caserón construye igual con un kit que con el objeto de opciones',{skip},async()=>{const {build}=await import('data:text/javascript,'+encodeURIComponent(old.src)),state={pendon:'bertran'};
  same(describe(build(T,old.data,createKit(T,{state}))),describe(build(T,old.data,{state,textures:false})));});
+
+// ── #31: canvas, merge, boxGeometry, opciones de material y anisotropía por textura.
+import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+const withDocument=async fn=>{try{globalThis.document=fake([]);return await fn();}finally{delete globalThis.document;}};
+const arr=a=>a?Array.from(a.array):null;
+const sameGeo=(a,b,msg)=>{assert.deepEqual(Object.keys(a.attributes),Object.keys(b.attributes),msg);for(const n of Object.keys(b.attributes)){const x=a.attributes[n],y=b.attributes[n];assert.equal(x.array.constructor,y.array.constructor,`${msg} ${n}`);assert.equal(x.itemSize,y.itemSize,`${msg} ${n}`);assert.equal(x.normalized,y.normalized,`${msg} ${n}`);assert.deepEqual(arr(x),arr(y),`${msg} ${n}`);}
+ assert.equal(a.index?.array.constructor,b.index?.array.constructor,msg+' index');assert.deepEqual(arr(a.index),arr(b.index),msg+' index');assert.deepEqual(a.groups,b.groups,msg+' groups');};
+
+test('canvas: null sin document o con textures:false, sin llamar a draw',async()=>{let n=0;const draw=()=>n++;assert.equal(createKit(T,{textures:true}).canvas(8,8,draw),null);
+ await withDocument(()=>assert.equal(createKit(T).canvas(8,8,draw),null));assert.equal(n,0);});
+test('canvas: con document dibuja una vez y devuelve una CanvasTexture configurada',()=>withDocument(()=>{const kit=createKit(T,{textures:true}),calls=[];
+ const tx=kit.canvas(64,32,(ctx,w,h)=>calls.push([typeof ctx.fillRect,w,h]),{anisotropy:4});assert.deepEqual(calls,[['function',64,32]]);
+ assert.ok(tx.isCanvasTexture);assert.deepEqual([tx.image.width,tx.image.height],[64,32]);assert.equal(tx.colorSpace,T.SRGBColorSpace);assert.equal(tx.anisotropy,4);assert.deepEqual([tx.wrapS,tx.wrapT],[T.ClampToEdgeWrapping,T.ClampToEdgeWrapping]);
+ const r=kit.canvas(16,16,()=>{},{repeat:3});assert.deepEqual([r.wrapS,r.wrapT],[T.RepeatWrapping,T.RepeatWrapping]);assert.deepEqual(r.repeat.toArray(),[3,3]);assert.equal(r.anisotropy,1);
+ assert.deepEqual(kit.canvas(16,16,()=>{},{repeat:[2,5]}).repeat.toArray(),[2,5]);assert.equal(kit.canvas(16,16,()=>{},{colorSpace:T.NoColorSpace}).colorSpace,T.NoColorSpace);}));
+test('merge ≡ mergeGeometries de three/examples',()=>{const kit=createKit(T),errors=[],orig=console.error;console.error=(...a)=>errors.push(a);
+ try{const boxes=()=>[new T.BoxGeometry(1,2,3).translate(1,0,0),new T.BoxGeometry(2,1,1,2,2,2),new T.CylinderGeometry(1,1,2,6)];
+  for(const groups of [false,true]){sameGeo(kit.merge(boxes(),{groups}),mergeGeometries(boxes(),groups),`indexadas ${groups}`);
+   const flat=()=>boxes().map(g=>g.toNonIndexed());sameGeo(kit.merge(flat(),{groups}),mergeGeometries(flat(),groups),`no indexadas ${groups}`);
+   const mix=()=>[new T.ExtrudeGeometry(new T.Shape([new T.Vector2(0,0),new T.Vector2(3,0),new T.Vector2(0,5)]),{depth:1}),new T.PlaneGeometry(2,2).toNonIndexed()];sameGeo(kit.merge(mix(),{groups}),mergeGeometries(mix(),groups),`extrusión ${groups}`);}
+  const big=()=>Array.from({length:3},()=>new T.SphereGeometry(1,256,128));assert.ok(kit.merge(big()).index.array instanceof Uint32Array);sameGeo(kit.merge(big()),mergeGeometries(big()),'índices Uint32');
+  assert.equal(kit.merge([]),null);assert.equal(kit.merge([new T.BoxGeometry(),new T.BoxGeometry().toNonIndexed()]),null);
+  const noUv=new T.BoxGeometry();noUv.deleteAttribute('uv');assert.equal(kit.merge([new T.BoxGeometry(),noUv]),null);assert.equal(kit.merge([noUv,new T.BoxGeometry()]),null);
+  const u16=new T.BoxGeometry();u16.setAttribute('uv',new T.Uint16BufferAttribute(u16.attributes.uv.count*2,2,true));assert.equal(kit.merge([new T.BoxGeometry(),u16]),null);
+  const morph=new T.BoxGeometry();morph.morphAttributes.position=[morph.attributes.position.clone()];assert.equal(kit.merge([morph,new T.BoxGeometry()]),null);
+  const inter=new T.BoxGeometry(),ib=new T.InterleavedBuffer(new Float32Array(inter.attributes.uv.count*2),2);inter.setAttribute('uv',new T.InterleavedBufferAttribute(ib,2,0));assert.equal(kit.merge([new T.BoxGeometry(),inter]),null);
+  assert.deepEqual(errors,[]);}finally{console.error=orig;}});
+test('boxGeometry: caja colocada con la UV de box, tesela 0 y matriz del padre',()=>{const kit=createKit(T,{palette:P});
+ for(const tile of [undefined,3]){const m=kit.box(new T.Group(),'',[1,-3],[0,2],[0.5,1.7],'stone',{tile}),g=kit.boxGeometry([1,-3],[0,2],[0.5,1.7],{tile});
+  close(Array.from(g.attributes.uv.array),uvOf(m),`uv ${tile}`);close(Array.from(g.attributes.position.array),Array.from(m.geometry.clone().translate(...m.position.toArray()).attributes.position.array),`pos ${tile}`);assert.deepEqual(arr(g.index),arr(m.geometry.index));}
+ close(Array.from(kit.boxGeometry([0,4],[0,2],[0,1],{tile:0}).attributes.uv.array),Array.from(new T.BoxGeometry(4,2,1).attributes.uv.array),'tesela 0');
+ const parent=new T.Group();parent.position.set(5,0,-2);parent.rotation.y=0.7;parent.updateMatrixWorld();const g=kit.boxGeometry([0,1],[0,1],[0,2],{matrix:parent.matrixWorld}),m=kit.box(parent,'',[0,1],[0,1],[0,2],'stone');m.updateMatrixWorld();
+ close(Array.from(g.attributes.position.array),Array.from(m.geometry.clone().applyMatrix4(m.matrixWorld).attributes.position.array),'matriz',1e-9);
+ assert.equal(kit.boxGeometry([0,1],[0,1e-4],[0,1]),null);
+ close(uvOf(kit.box(new T.Group(),'',[0,4],[0,2],[0,1],'stone',{tile:0})),Array.from(new T.BoxGeometry(4,2,1).attributes.uv.array),'box tesela 0');const e=new T.PlaneGeometry(3,2),e0=Array.from(e.attributes.uv.array);close(Array.from(kit.scaleUV(e,0).attributes.uv.array),e0,'scaleUV tesela 0');
+ close(uvOf(kit.box(new T.Group(),'',[0,4],[0,2],[0,1],'stone',{tile:3})),uvOf(createKit(T,{palette:P}).configure({tile:3}).box(new T.Group(),'',[0,4],[0,2],[0,1],'stone')),'box tile');});
+test('mat: textura en extra en la caché, map explícito y parámetros de material',()=>withDocument(()=>{const kit=createKit(T,{textures:true,palette:P}),tx=new T.Texture(),other=new T.Texture();
+ tx.toJSON=other.toJSON=()=>{throw Error('toJSON de la textura');};
+ const a=kit.mat('stone',{map:tx});assert.equal(kit.mat('stone',{map:tx}),a);assert.notEqual(kit.mat('stone',{map:other}),a);assert.equal(a.map,tx);assert.equal(a.color.getHexString(),'8e887d');
+ const plain=kit.mat('stone');assert.ok(plain.map?.isCanvasTexture);assert.equal(plain.color.getHexString(),'ffffff');
+ const none=kit.mat('stone',{map:null});assert.equal(none.map,null);assert.equal(none.color.getHexString(),'8e887d');assert.notEqual(none,plain);
+ const m=kit.mat('hull',{side:T.DoubleSide,emissive:'#ff0000',emissiveIntensity:2,metalness:0.6,roughness:0.3,transparent:true,opacity:0.5,depthWrite:false,color:'#00ff00'});
+ assert.deepEqual([m.side,m.emissive.getHexString(),m.emissiveIntensity,m.metalness,m.roughness,m.transparent,m.opacity,m.depthWrite,m.color.getHexString()],[T.DoubleSide,'ff0000',2,0.6,0.3,true,0.5,false,'00ff00']);
+ const seen=[],orig=JSON.stringify;JSON.stringify=(...a)=>{seen.push(a[0]);return orig(...a);};try{kit.mat('plaster',{side:T.DoubleSide,transparent:true,opacity:0.8});kit.mat('plaster',{map:tx,noTex:true});}finally{JSON.stringify=orig;}
+ assert.equal(orig(seen[0]),orig({side:T.DoubleSide,transparent:true,opacity:0.8}));assert.ok(seen.every(v=>Object.values(v).every(x=>!x?.isTexture)));}));
+test('applyImageTextures: anisotropía por textura, 8 por defecto',()=>withDocument(async()=>{const kit=createKit(T,{textures:true,textureUrl:f=>'/t/'+f,palette:P});kit.loadTexture=async()=>{const t=new T.Texture();t.anisotropy=8;return t;};
+ const a=kit.mat('stone'),b=kit.mat('plaster');await kit.applyImageTextures({stone:{file:'s.png',tile:2,anisotropy:4},plaster:{file:'p.png',tile:2}});assert.equal(a.map.anisotropy,4);assert.equal(b.map.anisotropy,8);}));
+test('kit.mjs no trae utilidades de three/examples',()=>assert.doesNotMatch(fs.readFileSync(KIT,'utf8'),/BufferGeometryUtils/));

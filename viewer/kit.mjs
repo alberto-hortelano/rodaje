@@ -1,6 +1,7 @@
 // Kit de construcción de entornos 3D: el tercer argumento de build(T, data, kit). Sin imports: recibe three como T y funciona en Node.
 // Un kit por construcción: caché de materiales y texturas procedurales propias; la de imágenes por URL es del módulo.
 // state, textures, textureUrl y onSky son datos de solo lectura con los nombres del antiguo objeto de opciones.
+// Todo lo del navegador (canvas) y lo que haría falta de three/examples (fusión de geometrías) llega al constructor por el kit.
 
 // ── Geometría de planta irregular.
 export function segDist(x, z, [ax, az], [bx, bz]) { const dx = bx - ax, dz = bz - az, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz))); return Math.hypot(x - ax - t * dx, z - az - t * dz); }
@@ -45,38 +46,61 @@ export function createKit(T, {state = {}, textures = false, textureUrl = null, o
     segDist, polyContains, polyDist, centroid, insetPolygon, xAtZ, zAtX, rectMinus, mulberry32,
     configure({palette, tile} = {}) { if (palette) Object.assign(kit.palette, palette); if (tile) kit.tile = tile; return kit; },
     mat(key, extra = {}) {
-      const id = key + JSON.stringify(extra);
+      const id = key + JSON.stringify(Object.fromEntries(Object.entries(extra).map(([k, v]) => [k, v?.isTexture ? 'tex:' + v.uuid : v])));
       if (!mats[id]) {
         if (!tex) tex = kit.textures && typeof document !== 'undefined' ? kit.proceduralTextures() : {};
         const {noTex, ...params} = extra;
         const m = new T.MeshStandardMaterial({color: kit.palette[key] || key, roughness: 0.9, metalness: 0, ...params});
         m.name = key;
-        if (tex[key] && !noTex) { m.map = tex[key]; m.color.set('#ffffff'); }
+        if (tex[key] && !noTex && !('map' in extra)) { m.map = tex[key]; m.color.set('#ffffff'); }
         mats[id] = m;
       }
       return mats[id];
     },
     materials: () => Object.values(mats),
     group(name, parent) { const g = new T.Group(); g.name = name; if (parent) parent.add(g); return g; },
-    // UV en metros: una tesela de textura cada `tile` metros, sin estirar según el tamaño de la caja.
+    // UV en metros: una tesela de textura cada `tile` metros, sin estirar según el tamaño de la caja; tile 0 la deja sin escalar.
     uvMeters(geo, tile = kit.tile) {
+      if (!tile) return geo;
       const {width: w, height: h, depth: dd} = geo.parameters, uv = geo.attributes.uv, dims = [[dd, h], [dd, h], [w, dd], [w, dd], [w, h], [w, h]];
       for (let f = 0; f < 6; f++) for (let k = 0; k < 4; k++) { const i = f * 4 + k; uv.setXY(i, uv.getX(i) * dims[f][0] / tile, uv.getY(i) * dims[f][1] / tile); }
       return geo;
     },
     // UV de una geometría extruida en la escala de las cajas.
-    scaleUV(geo, tile = kit.tile) { const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / tile, uv.getY(i) / tile); return geo; },
+    scaleUV(geo, tile = kit.tile) { if (!tile) return geo; const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / tile, uv.getY(i) / tile); return geo; },
     // Caja por rangos [x0,x1] [y0,y1] [z0,z1].
-    box(parent, name, [x0, x1], [y0, y1], [z0, z1], m) {
+    box(parent, name, [x0, x1], [y0, y1], [z0, z1], m, {tile} = {}) {
       const w = Math.abs(x1 - x0), h = Math.abs(y1 - y0), dd = Math.abs(z1 - z0);
       if (w < 1e-3 || h < 1e-3 || dd < 1e-3) return null;
-      const geo = kit.uvMeters(new T.BoxGeometry(w, h, dd));
+      const geo = kit.uvMeters(new T.BoxGeometry(w, h, dd), tile ?? kit.tile);
       const mesh = new T.Mesh(geo, typeof m === 'string' ? kit.mat(m) : m);
       mesh.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
       if (name) mesh.name = name;
       mesh.castShadow = mesh.receiveShadow = true;
       parent.add(mesh);
       return mesh;
+    },
+    // Caja por rangos como geometría ya colocada, sin malla, para fusionarla con merge. matrix (la del padre) se premultiplica; tile 0: UV 0–1 por cara.
+    boxGeometry([x0, x1], [y0, y1], [z0, z1], {tile = kit.tile, matrix = null} = {}) {
+      const w = Math.abs(x1 - x0), h = Math.abs(y1 - y0), dd = Math.abs(z1 - z0);
+      if (w < 1e-3 || h < 1e-3 || dd < 1e-3) return null;
+      const geo = new T.BoxGeometry(w, h, dd);
+      if (tile) kit.uvMeters(geo, tile);
+      geo.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+      if (matrix) geo.applyMatrix4(matrix);
+      return geo;
+    },
+    // Fusión de geometrías (mergeGeometries de three/examples); null si no son compatibles.
+    merge(geometries, {groups = false} = {}) { return mergeGeometries(T, geometries, groups); },
+    // Textura dibujada en un canvas; null en Node o con textures:false: el constructor omite entonces lo que sea solo textura.
+    canvas(w, h, draw, {repeat = null, wrap = !!repeat, anisotropy = 1, colorSpace = T.SRGBColorSpace} = {}) {
+      if (!kit.textures || typeof document === 'undefined') return null;
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      draw(c.getContext('2d'), w, h);
+      const tx = new T.CanvasTexture(c); tx.colorSpace = colorSpace; tx.anisotropy = anisotropy;
+      if (wrap) tx.wrapS = tx.wrapT = T.RepeatWrapping;
+      if (repeat) tx.repeat.set(...(Array.isArray(repeat) ? repeat : [repeat, repeat]));
+      return tx;
     },
     // Muro recto con huecos. axis 'x': corre en x, grosor en z; axis 'z': corre en z, grosor en x.
     wall(parent, name, axis, [a0, a1], [t0, t1], [y0, y1], holes, m) {
@@ -137,6 +161,7 @@ export function createKit(T, {state = {}, textures = false, textureUrl = null, o
       return Promise.all(Object.entries(defs || {}).map(([key, cfg]) => kit.loadTexture(kit.textureUrl(cfg.file)).then(tx => {
         if (cfg.sky) return kit.onSky?.(tx);
         const t2 = tx.clone(); t2.needsUpdate = true;
+        if (cfg.anisotropy) t2.anisotropy = cfg.anisotropy;
         if (!cfg.image) { t2.wrapS = t2.wrapT = T.RepeatWrapping; t2.repeat.set(kit.tile / cfg.tile, kit.tile / cfg.tile); }
         for (const m of Object.values(mats)) {
           if (m.name === key) { m.map = t2; m.color.set('#ffffff'); m.visible = true; m.needsUpdate = true; }
@@ -146,6 +171,38 @@ export function createKit(T, {state = {}, textures = false, textureUrl = null, o
     },
   };
   return kit;
+}
+
+// mergeGeometries de three/examples para atributos no entrelazados y sin morph; null (sin console.error) donde aquel falla o no llega.
+function mergeGeometries(T, geos, useGroups = false) {
+  if (!geos?.length) return null;
+  const indexed = geos[0].index !== null, names = Object.keys(geos[0].attributes), merged = new T.BufferGeometry();
+  let offset = 0;
+  for (const [i, g] of geos.entries()) {
+    const own = Object.keys(g.attributes);
+    if ((g.index !== null) !== indexed || own.length !== names.length || own.some(n => !names.includes(n))) return null;
+    if (Object.values(g.morphAttributes).some(a => a.length) || own.some(n => g.attributes[n].isInterleavedBufferAttribute)) return null;
+    if (useGroups) {
+      const count = indexed ? g.index.count : g.attributes.position?.count;
+      if (count === undefined) return null;
+      merged.addGroup(offset, count, i); offset += count;
+    }
+  }
+  if (indexed) {
+    const index = []; let base = 0;
+    for (const g of geos) { for (let j = 0; j < g.index.count; j++) index.push(g.index.getX(j) + base); base += g.attributes.position.count; }
+    merged.setIndex(index);
+  }
+  for (const n of names) {
+    const list = geos.map(g => g.attributes[n]), [a] = list;
+    if (list.some(b => b.array.constructor !== a.array.constructor || b.itemSize !== a.itemSize || b.normalized !== a.normalized || b.gpuType !== a.gpuType)) return null;
+    const array = new a.array.constructor(list.reduce((s, b) => s + b.count * b.itemSize, 0));
+    let at = 0; for (const b of list) { array.set(b.array, at); at += b.count * b.itemSize; }
+    const attr = new T.BufferAttribute(array, a.itemSize, a.normalized);
+    if (a.gpuType !== undefined) attr.gpuType = a.gpuType;
+    merged.setAttribute(n, attr);
+  }
+  return merged;
 }
 
 function procedural(T) {

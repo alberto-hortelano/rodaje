@@ -69,8 +69,14 @@ Hooks (todos opcionales; uno desconocido es un error). Con varios plugins se lla
 
 El visor, el ensayo y los scripts crean un kit nuevo en cada construcción con `createKit(T, {state, textures, textureUrl, onSky})` (`viewer/kit.mjs`, sin imports, funciona en Node) y lo pasan como tercer argumento. Todo llega por ahí:
 - `kit.state`: el estado pedido (preset, secuencia o controles del visor), sin mezclar; el constructor lo combina con su estado por defecto: `{...data.defaultState, ...kit.state}`. El visor arranca con una copia de `data.defaultState` (`initialState`); el constructor no exporta estado propio.
-- `kit.textures`: `true` si se quieren texturas procedurales; en Node o al exportar GLB es `false` y no se crea ningún canvas.
+- `kit.textures`: `true` si se quieren texturas procedurales y de canvas; en Node o al exportar GLB es `false` y no se crea ningún canvas (`kit.canvas` devuelve `null`).
 - `kit.textureUrl(file)`: resuelve las imágenes de `data.textures` respecto a la carpeta de `data`; `kit.onSky(tx)` recibe la del cielo. El constructor solo llama a `kit.applyImageTextures(data.textures)`.
-- Herramientas: `mat`, `group`, `box`, `wall`, `gableRoof`, `cyl`, `uvMeters`, `scaleUV`, `proceduralTextures`, `loadTexture` y los helpers de polígono. La paleta y la tesela las fija el constructor con `kit.configure({palette, tile})`.
+- Herramientas: `mat`, `group`, `box`, `boxGeometry`, `merge`, `canvas`, `wall`, `gableRoof`, `cyl`, `uvMeters`, `scaleUV`, `proceduralTextures`, `loadTexture` y los helpers de polígono. La paleta y la tesela las fija el constructor con `kit.configure({palette, tile})`.
+  - `kit.canvas(w, h, draw, {repeat, wrap, anisotropy, colorSpace})`: `CanvasTexture` dibujada una vez con `draw(ctx, w, h)`, o `null` sin `document` o con `textures:false`. Convención: si da `null`, el constructor omite las piezas que son solo textura (rótulos, placas); el resto queda con color liso.
+  - `kit.merge(geometries, {groups})`: como `mergeGeometries` de three/examples (atributos no entrelazados, sin morph); `null` si no son compatibles. El constructor no importa nada de three/examples.
+  - `kit.boxGeometry(xr, yr, zr, {tile, matrix})`: la caja de `box` como geometría ya colocada (sin malla) para fusionarla; `matrix` (la del padre) se premultiplica y `tile: 0` deja la UV en 0–1 por cara. `box(…, m, {tile})` admite también una tesela por llamada.
+  - `kit.mat(key, extra)`: `extra` admite cualquier parámetro de `MeshStandardMaterial` (`side`, `emissive`, `metalness`, `transparent`, `opacity`, `depthWrite`, `color`…). Un `map` explícito, textura o `null`, gana a la textura procedural y conserva el color; las texturas cuentan en la caché por su `uuid`. Como conserva el color de la paleta, la textura sale teñida: para verla tal cual, pasa también `color: '#ffffff'`.
+  - `applyImageTextures` admite `anisotropy` por textura (por defecto, la de `loadTexture`: 8).
+  - `uvMeters(geo, 0)` y `scaleUV(geo, 0)` dejan la UV sin escalar.
 
 `state`, `textures`, `textureUrl` y `onSky` son datos de solo lectura con los mismos nombres que el antiguo objeto de opciones: un constructor antiguo funciona igual si recibe un kit. No hay cuarto argumento y `data` (`model.json`) no se modifica. No confundir con `locations[].modelSpace.kit`, que es una lista de piezas.
