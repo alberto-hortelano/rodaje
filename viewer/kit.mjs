@@ -156,6 +156,7 @@ export function createKit(T, {state = {}, textures = false, textureUrl = null, o
       return TEXTURES.get(url);
     },
     // Imágenes generadas (model.json → textures): sustituyen a la textura de procedimiento en cuanto cargan; si faltan, no pasa nada.
+    // defs[clave] = {file, tile, anisotropy?, image?, sky?, hide?, tint?}; con tint la imagen se multiplica por el color del material.
     applyImageTextures(defs = {}) {
       if (!kit.textureUrl || typeof document === 'undefined') return Promise.resolve();
       return Promise.all(Object.entries(defs || {}).map(([key, cfg]) => kit.loadTexture(kit.textureUrl(cfg.file)).then(tx => {
@@ -164,7 +165,7 @@ export function createKit(T, {state = {}, textures = false, textureUrl = null, o
         if (cfg.anisotropy) t2.anisotropy = cfg.anisotropy;
         if (!cfg.image) { t2.wrapS = t2.wrapT = T.RepeatWrapping; t2.repeat.set(kit.tile / cfg.tile, kit.tile / cfg.tile); }
         for (const m of Object.values(mats)) {
-          if (m.name === key) { m.map = t2; m.color.set('#ffffff'); m.visible = true; m.needsUpdate = true; }
+          if (m.name === key) { m.map = t2; if (!cfg.tint) m.color.set('#ffffff'); m.visible = true; m.needsUpdate = true; }
           if ((cfg.hide || []).includes(m.name)) m.visible = false;
         }
       }).catch(() => {}))).then(() => {});

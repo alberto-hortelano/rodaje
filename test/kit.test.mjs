@@ -126,4 +126,7 @@ test('mat: textura en extra en la caché, map explícito y parámetros de materi
  assert.equal(orig(seen[0]),orig({side:T.DoubleSide,transparent:true,opacity:0.8}));assert.ok(seen.every(v=>Object.values(v).every(x=>!x?.isTexture)));}));
 test('applyImageTextures: anisotropía por textura, 8 por defecto',()=>withDocument(async()=>{const kit=createKit(T,{textures:true,textureUrl:f=>'/t/'+f,palette:P});kit.loadTexture=async()=>{const t=new T.Texture();t.anisotropy=8;return t;};
  const a=kit.mat('stone'),b=kit.mat('plaster');await kit.applyImageTextures({stone:{file:'s.png',tile:2,anisotropy:4},plaster:{file:'p.png',tile:2}});assert.equal(a.map.anisotropy,4);assert.equal(b.map.anisotropy,8);}));
+test('applyImageTextures: tint conserva el color del material',()=>withDocument(async()=>{const kit=createKit(T,{textures:true,textureUrl:f=>'/t/'+f,palette:P});kit.loadTexture=()=>Promise.resolve(new T.Texture());
+ const a=kit.mat('wall',{color:'#435d70'});await kit.applyImageTextures({wall:{file:'w.png',tile:3,tint:true}});assert.ok(a.map);assert.equal(a.color.getHexString(),'435d70');
+ const k2=createKit(T,{textures:true,textureUrl:f=>'/t/'+f,palette:P});k2.loadTexture=()=>Promise.resolve(new T.Texture());const b=k2.mat('wall',{color:'#435d70'});await k2.applyImageTextures({wall:{file:'w.png',tile:3}});assert.ok(b.map);assert.equal(b.color.getHexString(),'ffffff');}));
 test('kit.mjs no trae utilidades de three/examples',()=>assert.doesNotMatch(fs.readFileSync(KIT,'utf8'),/BufferGeometryUtils/));

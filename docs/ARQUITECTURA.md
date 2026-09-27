@@ -67,6 +67,12 @@ Hooks (todos opcionales; uno desconocido es un error). Con varios plugins se lla
 - `passable(obj)`: basta con que uno diga sí; se prueba en cada antepasado de la malla.
 - `expose: {…}`: métodos que se añaden a `window.rodaje.environment`; no pueden pisar los del visor.
 
+**Constructor de la nave (provisional hasta #14).** `proyecto.json` → `shipModel.builder` declara el constructor de la nave (`build(T, data, kit)`, mismas reglas que un `environments[].builder`). `proyecto-check` lo acepta como constructor declarado (fuera de R-code y R-manifest; R-builder revisa ruta, existencia y contenido) hasta que la nave pase a ser un entorno en #14. `shipModel.viewer` sigue siendo código fuera de constructor.
+
+**root.userData: datos de ejecución del visor.** Un constructor puede dejar en `root.userData.<clave>` lo que su visor necesita en tiempo de ejecución (volúmenes, colisiones, puertas, kits…). Debe ser serializable (números finitos, textos, booleanos, arrays y objetos planos) y referirse a los nodos por su nombre (únicos), nunca por referencia a objetos de three. El visor lo rehidrata una vez (Matrix4.fromArray, Vector3) y lo quita antes de exportar a GLB, así que no llega a `extras`. Caso actual: `userData.ship` de toledo.js.
+
+**Texturas teñidas.** `kit.applyImageTextures(defs)` con `defs[clave] = {file, tile, anisotropy?, image?, sky?, hide?, tint?}`: con `tint: true` la imagen se multiplica por el color del material (se conserva `color`). Sin `tint` el color pasa a blanco, como hasta ahora. Varias variantes de color pueden compartir así una misma imagen, siempre que usen la clave de la textura en `kit.mat(clave, {color})`.
+
 ### El tercer argumento: `kit`
 
 El visor, el ensayo y los scripts crean un kit nuevo en cada construcción con `createKit(T, {state, textures, textureUrl, onSky})` (`viewer/kit.mjs`, sin imports, funciona en Node) y lo pasan como tercer argumento. Todo llega por ahí:
