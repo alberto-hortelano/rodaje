@@ -1,17 +1,9 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';
 const w=await import('../app/workflow.mjs');
-const fx=path.join(import.meta.dirname,'fixtures/ep01-s01-b02');const j=f=>JSON.parse(fs.readFileSync(path.join(fx,f),'utf8'));
-const project=j('project.json'),sequence=j('sequence.json'),shots=j('shots.json'),block=j('block.json'),accepted=fs.readFileSync(path.join(fx,'prompt-accepted.txt'),'utf8');
-const registry={summary:'Photorealistic live-action science-fiction drama with dry understated comedy.',lighting:{red:'Practical helmet headlamps and amber emergency strips are the only sources; each face-plate is lit by the nearest lamp on the camera side and falls off fast into deep shadow; high-ISO grain.'},assets:{
- ROZ_RED:{kind:'character',character:'roz',variant:'red',file:'personajes/roz/ref/red-v02.png',proxy:'Cream',descriptor:'Older woman in the oldest sealed suit aboard, yellowed cream, shipping-line logo half worn off, helmet sticker crossed out; visor dark and reflective. 100% matches the reference.',status:'approved'},
- EARL_RED:{kind:'character',character:'earl',variant:'red',file:'personajes/earl/ref/red-v01.png',proxy:'Dark grey',descriptor:'Heavy male mechanic in a patched dark grey sealed suit, tools and keys at the belt; visor dark and reflective. 100% matches the reference.',status:'approved'},
- NNAMDI_RED:{kind:'character',character:'nnamdi',variant:'red',file:'personajes/nnamdi/ref/red-v02.png',proxy:'Orange',descriptor:'Thin Black man in a newer orange tug-company sealed suit marked NNAMDI; visor down, dark and reflective. 100% matches the reference.',status:'approved'},
- ROZ_VOICE:{kind:'voice',character:'roz',file:'assets/ep01-s01-real-v01/roz-ref.wav',descriptor:'Low, gravelly, fast.',status:'approved'},
- EARL_VOICE:{kind:'voice',character:'earl',file:'assets/ep01-s01-real-v01/earl-ref.wav',descriptor:'Bass, slow.',status:'approved'},
- NNAMDI_VOICE:{kind:'voice',character:'nnamdi',file:'assets/ep01-s01-real-v01/nnamdi-ref.wav',descriptor:'High, very fast.',status:'approved'},
- HOLD11_PLATE:{kind:'location',location:'cargo',aliases:['ep01-hold-11'],file:'ambientes/cargo/ref/interior-from-3d-v01.png',descriptor:'Depressurised cargo hold: aged ivory metal, seed containers strapped to floor rails, weathered sunset mural, amber emergency strips. Controls geometry, materials, light and atmosphere ONLY — not framing.',status:'approved'}}};
-const map={prompt:'The camera is on the rail side. The MURAL fills the aft bulkhead at frame-left; the two RANKS of strapped containers run away from camera along the rails; the CRADLE sits on the centre rail in the midground; the DOOR is in the far wall at frame-right.',side:'rail side (local z < 0)',axis:'the centre rail',landmarks:[{label:'at the port rank of containers',positions:[[-1.6,1.1]]},{label:'behind the cradle',positions:[[-0.65,-1]]},{label:'at the strap of the cradle',positions:[[1.2,-1]]}]};
-const scene={characters:{roz:{paragraph:'ROZ wants the containers locked before anyone spends the money; she checks strap tension with a gloved tug and gives the radio nothing but short orders.'},earl:{paragraph:'EARL wants to finish the latch; his hands stay on the cradle, he answers late and flat.'},nnamdi:{paragraph:'NNAMDI wants an audience; he hangs off the strap and narrates, helmet turning to whoever last spoke.'}},local_constraints:['Any container that opens = failed take.']};
+const fx=path.join(import.meta.dirname,'fixtures/ep01-s01-b02');
+// Datos de b02 (fixtures/ep01-s01-b02/datos.mjs): conTextos lleva el catálogo y los textos de prompt de dead-air (#42); bare es el proyecto sin catálogo.
+import {project as bare,base,conTextos} from './fixtures/ep01-s01-b02/datos.mjs';import {casos} from './fixtures/ep01-s01-b02/casos-42.mjs';
+const {project,sequence,shots,block,registry,map,scene}=conTextos,accepted=fs.readFileSync(path.join(fx,'prompt-accepted.txt'),'utf8');
 function dlines(text){return [...text.matchAll(/At approximately ([\d.]+)s, ([A-Z]+)[^<]*<d>\[English\] (.*?)<\/d>/g)].map(m=>[Number(m[1]).toFixed(2),m[2],m[3]]);}
 
 test('opticsLine deriva grados horizontales del FOV vertical y elige el ancla más cercana',()=>{assert.equal(Math.round(w.horizontalFov(50)),79);const line=w.opticsLine(50);assert.match(line,/^79° horizontal field of view \(about 24 mm/);assert.match(line,/One lens for the whole take/);assert.equal(w.opticsAnchor(30).mm,35);});
@@ -43,17 +35,19 @@ const noFrame=framePrompt({project,sequence:{title:'x'},shots:{s1:{...shots.s1,s
 assert.ok(noFrame.warnings.some(w=>/fotograma/.test(w)));assert.ok(noFrame.warnings.some(w=>/ancel/.test(w)));assert.doesNotMatch(noFrame.prompt,/\[\[CAMERA\]\]|\[\[ACTION\]\]/);});
 
 // #41: el catálogo de canales y variantes sale del proyecto. Las referencias se capturaron con el código anterior a #41.
-const CATALOGO={variants:[{id:'green',label:'Verde · ropa normal'},{id:'yellow',label:'Amarilla · respirador'},{id:'red',label:'Roja · traje espacial'}],defaultVariant:'green',
- zones:[{id:'space',label:'Espacio',color:'#364973'},{id:'green',label:'Zona verde · caras',color:'#487432',variant:'green'},{id:'yellow',label:'Zona amarilla · respirador',color:'#887116',variant:'yellow'},{id:'red',label:'Zona roja · cascos',color:'#983b2a',variant:'red'},{id:'other',label:'Otro'}],
- channels:[{id:'direct',label:'Directo · caras'},{id:'radio',label:'RADIO · casco',speakLight:true,color:'#4b6a63'},{id:'muffled',label:'MUFFLED · respirador',color:'#a08a3a'},{id:'ext',label:'EXT · canal externo',offscreen:true,color:'#7a5a2c'},{id:'external',label:'EXTERNAL · canal externo en cuadro',color:'#7a5a2c'},{id:'pa',label:'PA · megafonía',color:'#8a4d7a'}]};
 const ref=f=>fs.readFileSync(path.join(fx,f),'utf8');
 const withExt=()=>{const b=structuredClone(block);b.parts[0].lines.push({id:'ext-1',character:'brady',text:'Hold eleven, confirm the seal.',channel:'ext',offscreen:false,start:5});return b;};
-test('blockPrompt de b02 es byte a byte el de antes de #41, con y sin catálogo (#41)',()=>{const dead={...project,stage:CATALOGO};
+test('blockPrompt de b02 es byte a byte el de antes de #41 con el catálogo y los textos de dead-air (#41, #42)',()=>{
  assert.equal(w.blockPrompt({project,sequence,shots,block,registry,map,scene}).prompt,ref('prompt-ref-41.txt'));
- assert.equal(w.blockPrompt({project:dead,sequence,shots,block,registry,map,scene}).prompt,ref('prompt-ref-41.txt'));
- assert.equal(w.blockPrompt({project:dead,sequence,shots,block:withExt(),registry,map,scene}).prompt,ref('prompt-ref-41-ext.txt'));});
-test('una línea ext es fuera de campo con el catálogo de dead-air y hablada en un proyecto sin catálogo (#41)',()=>{const b=withExt(),dead={...project,stage:CATALOGO};
- const neutral=w.blockPrompt({project,sequence,shots,block:b,registry,map,scene});assert.match(neutral.prompt,/BRADY, [^<]*says exactly: <d>\[English\] Hold eleven, confirm the seal\.<\/d>/);assert.ok(neutral.refs.errors.includes('Falta en el registro: BRADY_VOICE'));
- const r=w.blockPrompt({project:dead,sequence,shots,block:b,registry,map,scene});assert.doesNotMatch(r.prompt,/Hold eleven/);assert.deepEqual(r.refs.errors,[]);});
-test('la variante del prompt: la de la secuencia, si no la variante por defecto del catálogo, si no green (#41)',()=>{const summary=(p,s)=>/\(ep01-hold-11, (\w+) zone/.exec(w.blockPrompt({project:p,sequence:s,shots,block,registry,map,scene}).prompt)?.[1];const s0={...sequence,variant:''};
- assert.equal(summary(project,sequence),sequence.variant);assert.equal(summary(project,s0),'green');assert.equal(summary({...project,stage:{...CATALOGO,defaultVariant:'yellow'}},s0),'yellow');assert.equal(summary({...project,stage:{...CATALOGO,defaultVariant:'nope'}},s0),'green');});
+ assert.equal(w.blockPrompt({project,sequence,shots,block:withExt(),registry,map,scene}).prompt,ref('prompt-ref-41-ext.txt'));});
+test('una línea ext es fuera de campo con el catálogo de dead-air y hablada en un proyecto sin catálogo (#41)',()=>{const b=withExt();
+ const neutral=w.blockPrompt({project:bare,sequence,shots,block:b,registry,map,scene});assert.match(neutral.prompt,/BRADY[^<]*says exactly: <d>\[English\] Hold eleven, confirm the seal\.<\/d>/);assert.ok(neutral.refs.errors.includes('Falta en el registro: BRADY_VOICE'));
+ const r=w.blockPrompt({project,sequence,shots,block:b,registry,map,scene});assert.doesNotMatch(r.prompt,/Hold eleven/);assert.deepEqual(r.refs.errors,[]);});
+test('la zona del prompt: la variante de la secuencia, si no la variante por defecto del catálogo, si no ninguna (#41, #42)',()=>{const run=(p,s)=>w.blockPrompt({project:p,sequence:s,shots,block,registry,map,scene}).prompt,summary=(p,s)=>/\(ep01-hold-11, (\w+) zone/.exec(run(p,s))?.[1];const s0={...sequence,variant:''},C=project.stage;
+ assert.equal(summary(project,sequence),sequence.variant);assert.equal(summary(project,s0),'green');assert.equal(summary({...project,stage:{...C,defaultVariant:'yellow'}},s0),'yellow');
+ for(const p of [{...project,stage:{...C,defaultVariant:'nope'}},bare]){assert.equal(summary(p,s0),undefined);assert.match(run(p,s0),/\(ep01-hold-11, gravity normal\)/);}});
+
+// #42: los textos de prompt salen del registro y del catálogo. ref-42 se capturó con el código anterior a #42 (capturar-42.mjs sobre base).
+test('blockPrompt reproduce byte a byte los casos de referencia de la #42',()=>{for(const {name,args} of casos(conTextos))assert.equal(w.blockPrompt(args).prompt,ref(`ref-42/${name}.txt`),name);});
+test('una instantánea sin textos de canal toma los del proyecto vivo y el registro se lee en vivo (#42)',()=>{const stale=w.stageFallback(base.project,conTextos.project);assert.ok(stale.stage.channels.every(c=>c.prompt));assert.equal(base.project.stage.channels.some(c=>c.prompt),false);
+ for(const n of ['red','offscreen']){const {args}=casos({...base,project:stale,registry:conTextos.registry}).find(c=>c.name===n);assert.equal(w.blockPrompt(args).prompt,ref(`ref-42/${n}.txt`),n);}});

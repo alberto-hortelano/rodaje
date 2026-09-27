@@ -17,7 +17,7 @@
 
 ## Registro, perfiles y ensayo
 
-- `scripts/registro.mjs`: registro de assets con descriptores congelados: sync · freeze · render · check · describe `id@estado`.
+- `scripts/registro.mjs`: registro de assets con descriptores congelados: sync · freeze · render · check · describe `id@estado` · textos (textos de prompt del registro: imprime o aplica `--desde fichero.json` con `--simular`).
 - `scripts/perfil.mjs`: perfil maestro de interpretación y voice prompt por personaje (skill `interpretacion`).
 - `scripts/mapa-espacial.mjs`: borrador de `MAPA.md` por landmarks para un ambiente.
 - `scripts/stage-config.mjs`: show · check · set · staging · catalogo de la configuración del ensayo 3D, `proyecto.stage.rehearsal`, del staging de los planos y del catálogo de variantes, zonas y canales (formato en `docs/ensayo-3d.md`; animaciones en `docs/mixamo.md`).

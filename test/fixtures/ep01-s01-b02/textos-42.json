@@ -1,0 +1,148 @@
+{
+  "catalog": {
+    "variants": [
+      {
+        "id": "green",
+        "label": "Verde · ropa normal"
+      },
+      {
+        "id": "yellow",
+        "label": "Amarilla · respirador"
+      },
+      {
+        "id": "red",
+        "label": "Roja · traje espacial"
+      }
+    ],
+    "zones": [
+      {
+        "id": "space",
+        "label": "Espacio",
+        "color": "#364973"
+      },
+      {
+        "id": "green",
+        "label": "Zona verde · caras",
+        "color": "#487432",
+        "variant": "green"
+      },
+      {
+        "id": "yellow",
+        "label": "Zona amarilla · respirador",
+        "color": "#887116",
+        "variant": "yellow"
+      },
+      {
+        "id": "red",
+        "label": "Zona roja · cascos",
+        "color": "#983b2a",
+        "variant": "red"
+      },
+      {
+        "id": "other",
+        "label": "Otro"
+      }
+    ],
+    "channels": [
+      {
+        "id": "direct",
+        "label": "Directo · caras"
+      },
+      {
+        "id": "radio",
+        "label": "RADIO · casco",
+        "speakLight": true,
+        "color": "#4b6a63"
+      },
+      {
+        "id": "muffled",
+        "label": "MUFFLED · respirador",
+        "color": "#a08a3a"
+      },
+      {
+        "id": "ext",
+        "label": "EXT · canal externo",
+        "offscreen": true,
+        "color": "#7a5a2c"
+      },
+      {
+        "id": "external",
+        "label": "EXTERNAL · canal externo en cuadro",
+        "color": "#7a5a2c"
+      },
+      {
+        "id": "pa",
+        "label": "PA · megafonía",
+        "color": "#8a4d7a"
+      }
+    ],
+    "defaultVariant": "green"
+  },
+  "channelPrompts": {
+    "direct": {
+      "voice": "natural voice, lips visible",
+      "offscreen": "radio line"
+    },
+    "radio": {
+      "voice": "restrained helmet radio voice",
+      "offscreen": "radio line",
+      "direction": "speaks by radio; helmet stays sealed, only their talk light activates, no visible lips."
+    },
+    "muffled": {
+      "voice": "voice muffled through a respirator",
+      "offscreen": "radio line"
+    },
+    "ext": {
+      "voice": "external channel",
+      "offscreen": "radio line"
+    },
+    "external": {
+      "voice": "natural voice, lips visible",
+      "offscreen": "radio line"
+    },
+    "pa": {
+      "voice": "ship PA",
+      "offscreen": "PA announcement",
+      "direction": "is an OFFSCREEN public-address recording, never a visible person; nobody mouths this line."
+    }
+  },
+  "registry": {
+    "sound": {
+      "red": "Native dialogue with the assigned reference voices, intimate helmet-radio intelligibility with subtle radio filtering. Under it, a low continuous ship rumble transmitted through the structure and quiet suit handling. Vacuum outside the helmets: every sound arrives through the suit or the structure.",
+      "yellow": "Native dialogue with the assigned reference voices, muffled through respirators but intelligible. Thin pressurised-corridor air: ventilation hiss, distant machinery, close cloth and equipment handling.",
+      "green": "Native dialogue with the assigned reference voices, natural room voices with lips visible. Room tone of an old ship interior: ventilation, ticking metal, close handling of objects."
+    },
+    "constraints": {
+      "red": "Visors stay closed, dark and reflective in every frame; only the speaking character keys the radio, shown by a small amber light.",
+      "yellow": "Respirators stay on in every frame; eyes visible above them."
+    },
+    "texts": {
+      "people": "the crew",
+      "physics": {
+        "normal": "Gravity normal: boots land with weight, straps and cables hang straight down, a container only moves with hands on it, dropped objects fall.",
+        "half": "Half gravity: long slow strides, bodies settle softly, straps sway slowly, anything let go drifts down instead of dropping.",
+        "zero": "Zero gravity: every body is anchored by one hand or a boot hook, torsos float free of the floor, hair and straps drift, anything let go stays where it is or drifts slowly.",
+        "changing": "Gravity is changing during this block: it starts as the previous block ended and settles into the state written in the timing, with straps, bodies and loose objects answering the change together."
+      },
+      "swarm": {
+        "label": "Seed potatoes",
+        "none": "all containers sealed, none visible"
+      },
+      "retention": {
+        "character": "suit and helmet state",
+        "guide": "helmets carry only a small amber talk light"
+      },
+      "quality": {
+        "costume": "suits",
+        "details": "visors, straps and practical lights"
+      },
+      "tasks": {
+        "idle": "hands on the nearest strap or latch",
+        "fallback": "The same station continues."
+      },
+      "offscreen": {
+        "where": "over the helmets"
+      }
+    }
+  }
+}

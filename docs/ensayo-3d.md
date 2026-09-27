@@ -51,9 +51,10 @@ Junto a `rehearsal`, `proyecto.stage` guarda el catálogo del proyecto: las vari
 - `variants`: `[{id, label}]`. `id` en minúsculas, dígitos y guiones, empezando por letra. Siempre existe la variante `''` («Diseño base»); una entrada con `id: ""` solo cambia su etiqueta. Con más de una variante, cada personaje tiene su botón «Variantes por zona».
 - `defaultVariant`: id de una variante. Es la del prompt de vídeo cuando la secuencia no tiene variante.
 - `zones`: `[{id, label, color?, variant?}]`. `color` es `#rrggbb` y tiñe la pastilla de la viñeta; `variant` es la variante que toma la secuencia al convertir el storyboard en capítulo. Siempre existe `other` («Sin zona»), al final si el catálogo no la coloca; solo admite `label` y `color`.
-- `channels`: `[{id, label, color?, offscreen?, speakLight?}]`. `id` solo con letras minúsculas (el diálogo del storyboard se escribe `Nombre (canal): texto`). `color` es el borde de la línea en el storyboard. `offscreen: true` hace del canal una voz sin cuerpo: no se genera en el vídeo del bloque (va como evento en ACTION TIMING y se monta en post), no cuenta en el presupuesto de diálogo ni pide voz de referencia, no mueve la boca en el ensayo, no obliga a que el hablante esté en el reparto, se marca «fuera de campo» al elegirlo y el montaje lo rotula «(OFF)». `speakLight: true` enciende la luz de habla del casco en el ensayo. Siempre existen `direct` («Directo», primero) y `pa` («Voz en off», fuera de campo, al final); el catálogo solo cambia su `label` y su `color`. Una línea sin canal va por `direct`; un canal que no está en el catálogo se muestra y se conserva, sin comportamiento.
+- `channels`: `[{id, label, color?, offscreen?, speakLight?, prompt?}]`. `id` solo con letras minúsculas (el diálogo del storyboard se escribe `Nombre (canal): texto`). `color` es el borde de la línea en el storyboard. `offscreen: true` hace del canal una voz sin cuerpo: no se genera en el vídeo del bloque (va como evento en ACTION TIMING y se monta en post), no cuenta en el presupuesto de diálogo ni pide voz de referencia, no mueve la boca en el ensayo, no obliga a que el hablante esté en el reparto, se marca «fuera de campo» al elegirlo y el montaje lo rotula «(OFF)». `speakLight: true` enciende la luz de habla del casco en el ensayo. Siempre existen `direct` («Directo», primero) y `pa` («Voz en off», fuera de campo, al final); el catálogo solo cambia su `label`, su `color` y su `prompt`. Una línea sin canal va por `direct`; un canal que no está en el catálogo se muestra y se conserva, sin comportamiento.
+  `prompt` es el texto del canal en el prompt de vídeo, en inglés: `voice` acompaña a la réplica en cuadro («At approximately 2.00s, ANA, `voice`, says exactly…»), `offscreen` nombra la voz fuera de campo en ACTION TIMING («an offscreen `offscreen` from…»; sin él, «voice») y `direction` es la indicación del flujo antiguo de vídeo (`voiceDirection`). Las tres son opcionales y, si están, texto no vacío. Una línea con un canal fuera del catálogo toma el `prompt` de `direct`; un canal sin `prompt` no añade nada.
 
-Un proyecto sin catálogo ve «Diseño base», «Sin zona», «Directo» y «Voz en off». Las instantáneas de lote y de trabajo que no traen catálogo lo toman del proyecto vivo (`stageFallback`).
+Un proyecto sin catálogo ve «Diseño base», «Sin zona», «Directo» y «Voz en off». Las instantáneas de lote y de trabajo que no traen catálogo lo toman del proyecto vivo (`stageFallback`), y sus canales sin `prompt` toman, por id, el del canal vivo.
 
 Ejemplo:
 
@@ -68,7 +69,8 @@ Ejemplo:
   ],
   "channels": [
     {"id": "direct", "label": "Directo · caras"},
-    {"id": "phone", "label": "TELÉFONO · auricular", "color": "#4b6a63", "speakLight": true},
+    {"id": "phone", "label": "TELÉFONO · auricular", "color": "#4b6a63", "speakLight": true,
+     "prompt": {"voice": "thin phone voice", "offscreen": "phone call", "direction": "speaks into the phone; only their lips move."}},
     {"id": "tv", "label": "TV · fuera de campo", "color": "#7a5a2c", "offscreen": true},
     {"id": "pa", "label": "Megafonía", "color": "#8a4d7a"}
   ]

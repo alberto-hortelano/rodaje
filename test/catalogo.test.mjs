@@ -10,6 +10,9 @@ const OLD_VARIANTS=[['','Diseño base'],['green','Verde · ropa normal'],['yello
 const OLD_ZONES=[['space','Espacio'],['green','Zona verde · caras'],['yellow','Zona amarilla · respirador'],['red','Zona roja · cascos'],['other','Otro']];
 const OLD_CHANNELS=[['','Directo · caras'],['radio','RADIO · casco'],['muffled','MUFFLED · respirador'],['ext','EXT · canal externo'],['pa','PA · megafonía']];
 const dead={stage:CATALOGO},withStage=stage=>({stage});
+// Textos de canal de dead-air (#42), los mismos de migraciones/42-canales.json.
+const PROMPTS=JSON.parse(fs.readFileSync(path.join(ROOT,'test/fixtures/ep01-s01-b02/textos-42.json'),'utf8')).channelPrompts;
+const CATALOGO_42={...CATALOGO,channels:CATALOGO.channels.map(c=>({...c,prompt:PROMPTS[c.id]}))};
 const pairs=list=>list.map(e=>[e.id,e.label]);
 
 test('projectVariants: neutro, dead-air como la lista antigua, mal formados fuera y "" renombra la base',()=>{
@@ -34,6 +37,10 @@ test('projectChannels: neutro, dead-air en orden más external, integrados sin b
  assert.deepEqual(r,[{id:'pa',label:'Mega',color:'#010203',offscreen:true,speakLight:false},{id:'direct',label:'Cara',offscreen:false,speakLight:false},{id:'tv',label:'TV',offscreen:false,speakLight:false}]);
  const onlyRadio=w.projectChannels(withStage({channels:[{id:'radio',label:'Radio'}]}));assert.deepEqual(onlyRadio.map(c=>c.id),['direct','radio','pa']);});
 
+test('projectChannels conserva prompt en direct, pa y los propios, y descarta subclaves inválidas (#42)',()=>{const ch=w.projectChannels({stage:CATALOGO_42});
+ for(const c of ch)assert.deepEqual(c.prompt,PROMPTS[c.id],c.id);assert.equal(ch.find(c=>c.id==='pa').offscreen,true);
+ const r=w.projectChannels(withStage({channels:[{id:'direct',label:'D',prompt:{voice:'v',tone:'x',offscreen:''}},{id:'tv',label:'TV',prompt:{direction:'d',voice:3}},{id:'phone',label:'Tel',prompt:'x'},{id:'pa',label:'PA',prompt:{}}]}));
+ assert.deepEqual(r.map(c=>c.prompt),[{voice:'v'},{direction:'d'},undefined,undefined]);assert.equal(Object.hasOwn(r[2],'prompt'),false);});
 test('channelOf, zoneOf, lineOffscreen, projectDefaultVariant y zoneVariant',()=>{const CH=w.projectChannels(dead),N=w.projectChannels(null);
  for(const id of ['',null,undefined])assert.equal(w.channelOf(CH,id).id,'direct');assert.equal(w.channelOf(CH,'radio').speakLight,true);
  assert.deepEqual(w.channelOf(N,'radio'),{id:'radio',label:'radio',offscreen:false,speakLight:false,unknown:true});assert.equal(w.channelOf([],'').id,'direct');
@@ -61,7 +68,8 @@ test('stageCatalogErrors: un caso por regla y el catálogo de dead-air sin error
  has({zones:[{id:'z',label:'Z',color:'red'}]},/zones\[0\]\.color debe ser #rrggbb/);has({zones:[{id:'z',label:'Z',variant:'night'}]},/zones\[0\]\.variant "night" no es una variante/);has({zones:[{id:'z',label:'Z',variant:''}]},/zones\[0\]\.variant "" no es una variante/);
  has({zones:[{id:'other',label:'O',variant:'x'}]},/zona integrada «other»/);has({zones:[{id:'z',label:'Z',offscreen:true}]},/clave desconocida «offscreen»/);
  has({channels:[{id:'tv-2',label:'TV'}]},/channels\[0\]\.id "tv-2" no válido/);has({channels:[{id:'tv',label:'TV',offscreen:'sí'}]},/channels\[0\]\.offscreen debe ser true o false/);has({channels:[{id:'tv',label:'TV',speakLight:1}]},/speakLight debe ser true o false/);
- has({channels:[{id:'pa',label:'PA',offscreen:true}]},/canal integrado «pa» solo admite label y color/);has({channels:[{id:'direct',label:'D',speakLight:false}]},/canal integrado «direct»/);has({channels:[{id:'tv',label:'TV',variant:'x'}]},/clave desconocida «variant»/);
+ has({channels:[{id:'pa',label:'PA',offscreen:true}]},/canal integrado «pa» solo admite label, color y prompt/);has({channels:[{id:'direct',label:'D',speakLight:false}]},/canal integrado «direct»/);has({channels:[{id:'tv',label:'TV',variant:'x'}]},/clave desconocida «variant»/);
+ assert.deepEqual(e(CATALOGO_42),[]);has({channels:[{id:'tv',label:'TV',prompt:'x'}]},/channels\[0\]\.prompt debe ser un objeto/);has({channels:[{id:'pa',label:'PA',prompt:{tone:'x'}}]},/channels\[0\]\.prompt: clave desconocida «tone»/);has({channels:[{id:'direct',label:'D',prompt:{voice:' '}}]},/channels\[0\]\.prompt\.voice debe ser un texto no vacío/);has({channels:[{id:'tv',label:'TV',prompt:{direction:3}}]},/prompt\.direction debe ser un texto no vacío/);
  has({defaultVariant:'night'},/defaultVariant "night"/);has({defaultVariant:3},/defaultVariant 3/);assert.deepEqual(e({defaultVariant:''}),[]);
  assert.deepEqual(e({variants:[{id:'',label:'Base'},{id:'day',label:'Día'}],zones:[{id:'z',label:'Z',variant:'day'}],defaultVariant:'day'}),[]);});
 
@@ -79,13 +87,21 @@ test('stageFallback: sin stage toma el del vivo; con stage conserva el suyo y co
  const snap={id:'x',stage:{rehearsal:{a:1}}},r=w.stageFallback(snap,live);assert.deepEqual(r.stage.rehearsal,{a:1});for(const k of w.STAGE_CATALOG_KEYS)assert.deepEqual(r.stage[k],CATALOGO[k]);assert.deepEqual(snap,{id:'x',stage:{rehearsal:{a:1}}});
  const own={id:'x',stage:{rehearsal:{a:1},channels:[{id:'tv',label:'TV'}]}},r2=w.stageFallback(own,live);assert.deepEqual(r2.stage.channels,[{id:'tv',label:'TV'}]);assert.deepEqual(r2.stage.zones,CATALOGO.zones);
  assert.equal(w.stageFallback(snap,null),snap);assert.equal(w.stageFallback(snap,{stage:{rehearsal:{b:2}}}),snap);const full={id:'x',stage:{...CATALOGO}};assert.equal(w.stageFallback(full,live),full);});
+test('stageFallback completa por id el prompt de los canales de la instantánea: no pisa, no añade canales y sin cambios devuelve la misma (#42)',()=>{
+ const live={stage:CATALOGO_42},snap={id:'x',stage:{...CATALOGO,channels:[...CATALOGO.channels.filter(c=>c.id!=='external'),{id:'tv',label:'TV'}]}},copy=structuredClone(snap);
+ const r=w.stageFallback(snap,live);assert.deepEqual(snap,copy);assert.deepEqual(r.stage.channels.map(c=>c.id),snap.stage.channels.map(c=>c.id));
+ for(const c of r.stage.channels)assert.deepEqual(c.prompt,c.id==='tv'?undefined:PROMPTS[c.id],c.id);assert.equal(Object.hasOwn(r.stage.channels.at(-1),'prompt'),false);
+ const own={id:'x',stage:{...CATALOGO,channels:[{id:'radio',label:'R',prompt:{voice:'mine'}}]}};assert.equal(w.stageFallback(own,live),own);
+ const withPrompt={id:'x',stage:{...CATALOGO_42}};assert.equal(w.stageFallback(withPrompt,live),withPrompt);assert.equal(w.stageFallback(snap,null),snap);assert.equal(w.stageFallback(snap,{stage:{channels:'x'}}),snap);
+ assert.deepEqual(w.stageFallback({id:'x',stage:{rehearsal:{}}},live).stage.channels,CATALOGO_42.channels);});
 
 test('canales en un proyecto sin catálogo: pa fuera de campo, ext y radio habladas; con el catálogo de dead-air ext pasa a fuera de campo',()=>{
  const block={parts:[{shot:'t',at:1,from:0,to:5,lines:[{character:'pa',channel:'pa',text:'Attention.',start:0},{character:'b',channel:'ext',text:'Copy that.',start:1},{character:'c',channel:'radio',text:'Go.',start:2}]}]},shots={t:{action:'They wait.'}};
  assert.deepEqual(w.spokenLines(block,shots).map(l=>l.character),['b','c']);assert.deepEqual(w.offscreenLines(block,shots).map(l=>[l.character,l.start]),[['pa',1]]);
  const CH=w.projectChannels(dead);assert.deepEqual(w.spokenLines(block,shots,CH).map(l=>l.character),['c']);assert.deepEqual(w.offscreenLines(block,shots,CH).map(l=>l.character),['pa','b']);
- const neutral=w.actionTiming({block,shots,project:{characters:[]}});assert.match(neutral[1],/^1\.00s: an offscreen PA announcement from PA/);assert.match(neutral[2],/^At approximately 2\.00s, B, [^<]*says exactly: <d>\[English\] Copy that\.<\/d>/);
- const withCat=w.actionTiming({block,shots,project:{characters:[],stage:CATALOGO}});assert.match(withCat[2],/^2\.00s: an offscreen radio line from B/);
+ const neutral=w.actionTiming({block,shots,project:{characters:[]}});assert.match(neutral[1],/^1\.00s: an offscreen voice from PA plays \(audio/);assert.match(neutral[2],/^At approximately 2\.00s, B says exactly: <d>\[English\] Copy that\.<\/d>/);
+ const withCat=w.actionTiming({block,shots,project:{characters:[],stage:CATALOGO}});assert.match(withCat[2],/^2\.00s: an offscreen voice from B/);
+ const withText=w.actionTiming({block,shots,project:{characters:[],stage:CATALOGO_42}});assert.match(withText[1],/^1\.00s: an offscreen PA announcement from PA/);assert.match(withText[2],/^2\.00s: an offscreen radio line from B/);assert.match(withText[3],/^At approximately 3\.00s, C, restrained helmet radio voice, says exactly/);
  const ok={status:'approved'},registry={assets:{B_VOICE:ok,C_VOICE:ok,PA_VOICE:ok}},sequence={cast:[],location:'x'},blk={...block,cast:[]};
  assert.deepEqual(w.resolveRefs({sequence,block:blk,registry,shots}).audios.map(a=>a.tag),['B_VOICE','C_VOICE']);assert.deepEqual(w.resolveRefs({sequence,block:blk,registry,shots},{channels:CH}).audios.map(a=>a.tag),['C_VOICE']);});
 
