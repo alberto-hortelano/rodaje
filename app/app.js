@@ -2,7 +2,7 @@
 
 // app/rehearsal.source.js
 import { createStage } from "./stage.js";
-import { rehearsalConfig } from "./workflow.mjs";
+import { rehearsalConfig, stageReuseKey } from "./workflow.mjs";
 async function mountRehearsal(root, { project, episode }) {
   const esc2 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const shots = episode.sequences.flatMap((s, si) => s.shots.map((t2, ti) => ({ s, t: t2, si, ti })));
@@ -60,7 +60,7 @@ async function mountRehearsal(root, { project, episode }) {
     $3("[data-title]").textContent = `${si + 1}/${episode.sequences.length} \xB7 Plano ${ti + 1}/${s.shots.length} \xB7 ${s.title}`;
     $3("[data-script]").textContent = t2.description;
     $3("[data-subtitle]").textContent = t2.lines.length ? "Pulsa Ensayar para escuchar el di\xE1logo." : "ACCI\xD3N \xB7 " + t2.description;
-    const key = [s.id, t2.location || s.location, t2.variant || s.variant, !!t2.detail].join(":");
+    const key = stageReuseKey(project, s, t2);
     let st2;
     if (stage2 && stageKey === key) {
       st2 = stage2;

@@ -1,7 +1,7 @@
 // Instantánea para detectar regresiones: digests de todos los planos, GLB y caras coplanarias de cada entorno con constructor, y capturas de las vistas 3D.
 // Uso: node scripts/linea-base.mjs <dir> [--url http://127.0.0.1:4320] [--sin-capturas]
 //        [--ensayo <proyecto>:<plano>,<plano>,... [--lote <lote> [--sin-respaldo]]]
-// --ensayo añade capturas del ensayo 3D (createStage) de esos planos en t=0, a mitad y 0,3 s tras la primera réplica;
+// --ensayo añade capturas del ensayo 3D (createStage) de esos planos en t=0, a mitad y 0,3 s tras la primera réplica, con st.diagnostics() de cada instante;
 // --lote repite los planos con la instantánea del lote, completada con el stage del proyecto vivo salvo --sin-respaldo.
 // Escribe solo en <dir>: linea-base.json y capturas/<nombre>.png. Para comparar dos instantáneas: diff -r <a> <b>.
 // Las capturas necesitan la app arrancada (npm start) y Chrome (ver lib/chrome.mjs).
@@ -91,7 +91,8 @@ if (shots) {
             const png = await page.evaluate(({t, time}) => { const l = t.lines.find(l => time >= l.start && time < l.start + (l.estimatedDuration || 3)); st.setSpeaker(l || null); return st.frame(time); }, {t, time});
             const buf = Buffer.from(png.split(',')[1], 'base64'), name = `${prefix}${id}-${time.toFixed(2)}`, archivo = 'capturas/' + name + '.png';
             fs.writeFileSync(path.join(out, archivo), buf);
-            result.ensayo[name] = {archivo, sha256: sha(buf)}; names.push(name);
+            const diagnostico = await page.evaluate(() => st.diagnostics()); // contactos, actores y enjambre visibles en ese instante
+            result.ensayo[name] = {archivo, sha256: sha(buf), diagnostico}; names.push(name);
           }
         } catch (e) { errors.push(e.message.split('\n')[0]); }
         const peticiones = [...asked].sort();
