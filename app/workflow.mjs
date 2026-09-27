@@ -90,6 +90,8 @@ const prompt=`summary:\n${summary}\nretention_analysis:\n${retention}\ndetailed_
 const emo=forbiddenEmotionWords(acting+' '+local);if(emo.length)warnings.push(`Palabras de emoción en la interpretación: ${emo.join(', ')} (skill interpretacion)`);
 return {prompt,image,warnings,duration,requested,budget,names:cast.map(nameOf)};}
 
+// Preview 3D estándar: un plano con render propio (customRenderer) no pasa por stage; se reproduce la preview guardada.
+export function previewIssues(shot){return shot?.customRenderer?['Plano con render propio: reproduce la preview guardada']:[];}
 // ---- Escaleta: secuencias en orden con número, minutos y una carátula (imagen) por secuencia.
 export function outlineSequence(p,id){for(const e of p.episodes||[])for(const s of e.sequences||[])if(s.id===id)return {episode:e,sequence:s};throw Error('Secuencia no encontrada');}
 export function outline(p){const rows=[];let n=0,start=0;for(const e of p.episodes||[])for(const s of e.sequences||[]){n++;const minutes=Number(s.minutes)||0;rows.push({episode:e,sequence:s,number:n,code:String(n).padStart(2,'0'),minutes,start});start+=minutes;}return rows;}
