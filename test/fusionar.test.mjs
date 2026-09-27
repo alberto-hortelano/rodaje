@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import {createHash} from 'node:crypto';import {spawn,spawnSync} from 'node:child_process';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import {createHash} from 'node:crypto';import {spawnSync} from 'node:child_process';import {spawnServer} from './fixtures/hijos.mjs';
 const F=await import('../lib/fusiones.mjs');
 // Cada test usa su propio DATA temporal, no el de la suite (test/setup.mjs).
 const dirs=[],tmp=()=>{const d=fs.mkdtempSync(path.join(os.tmpdir(),'rodaje-fusiones-'));dirs.push(d);return d;};
@@ -67,7 +67,7 @@ test('fusionar.mjs migra al arrancar, guarda en el proyecto y marca la fusionada
  assert.equal(spawnSync('ffmpeg',['-v','error','-f','lavfi','-i','color=gray:s=96x64','-frames:v','1',path.join(d,'a/x.png')]).status,0);
  fs.copyFileSync(path.join(d,'a/x.png'),path.join(d,'a/x-v2.png'));
  const huerfana={'zzz/h.png':LOG['zzz/h.png']};put(d,'fusiones.json',{...huerfana,'a/viejo.png':e('a/viejo0.png','a/viejo.chatgpt.png','2026-09-01T00:00:00.000Z')});
- const port=await freePort(),child=spawn(process.execPath,[script,'--puerto',String(port)],{env,stdio:['ignore','pipe','pipe']});
+ const port=await freePort(),child=spawnServer(process.execPath,[script,'--puerto',String(port)],{env,stdio:['ignore','pipe','pipe']});
  try{
   await new Promise((ok,ko)=>{let out='';child.stdout.on('data',b=>{out+=b;if(out.includes('http://'))ok();});child.on('exit',c=>ko(Error('salió con '+c)));});
   assert.deepEqual(read(d,'a/fusiones.json'),{'viejo.png':e('viejo0.png','viejo.chatgpt.png','2026-09-01T00:00:00.000Z')});assert.deepEqual(read(d,'fusiones.json'),huerfana);
@@ -78,7 +78,7 @@ test('fusionar.mjs migra al arrancar, guarda en el proyecto y marca la fusionada
   assert.deepEqual(fs.readFileSync(path.join(d,'fusiones.json')),raiz);
   for(const q of ['?recargar']){const pares=await (await fetch(`${url}/api/pares${q}`)).json();const p=pares.find(p=>p.editada==='a/x-v2.png');assert.ok(p,q);assert.equal(p.original,'a/x.png');assert.equal(p.fusionada,g.fecha);}
  }finally{child.kill();}
- const port2=await freePort(),solo=spawn(process.execPath,[script,'a','--puerto',String(port2)],{env,stdio:['ignore','pipe','pipe']});
+ const port2=await freePort(),solo=spawnServer(process.execPath,[script,'a','--puerto',String(port2)],{env,stdio:['ignore','pipe','pipe']});
  try{await new Promise((ok,ko)=>{let out='';solo.stdout.on('data',b=>{out+=b;if(out.includes('http://'))ok();});solo.on('exit',c=>ko(Error('salió con '+c)));});
   const p=(await (await fetch(`http://127.0.0.1:${port2}/api/pares`)).json()).find(p=>p.editada==='a/x-v2.png');assert.ok(p?.fusionada);}finally{solo.kill();}
  const m=spawnSync(process.execPath,[script,'--migrar'],{env,encoding:'utf8',timeout:20000});assert.equal(m.status,0);assert.match(m.stdout,/Nada que migrar/);assert.doesNotMatch(m.stdout,/http:\/\//);});

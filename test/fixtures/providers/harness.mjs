@@ -2,7 +2,7 @@
 // el grabador de fetch (fal-fetch-mock.mjs), ffmpeg/ffprobe falsos en PATH y FAL_KEY=test:dummy. Lo registrado se normaliza
 // y se compara con golden/. RODAJE_GOLDEN=grabar lo reescribe, y solo se permite sobre el código anterior al refactor.
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import http from 'node:http';
-import {spawn,spawnSync} from 'node:child_process';import {pathToFileURL} from 'node:url';
+import {spawnSync} from 'node:child_process';import {spawnServer} from '../hijos.mjs';import {pathToFileURL} from 'node:url';
 export const ROOT=path.resolve(import.meta.dirname,'../../..');
 export const GOLDEN=path.join(import.meta.dirname,'golden');
 const MOCK=pathToFileURL(path.join(ROOT,'test/fixtures/fal-fetch-mock.mjs')).href,BIN=path.join(ROOT,'test/fixtures/bin');
@@ -46,7 +46,7 @@ const freePort=()=>new Promise((ok,ko)=>{const s=net.createServer().listen(0,'12
 const get=url=>new Promise((ok,ko)=>http.get(url,res=>{const c=[];res.on('data',d=>c.push(d));res.on('end',()=>ok(Buffer.concat(c).toString()));}).on('error',ko));
 // fusionar.mjs: arranca el servidor, pide /api/pares y lo para. Registro con los argv ordenados (el orden de recorrido no cuenta).
 export async function runFusionar(data){const log=path.join(tmp('rodaje-prov-log-'),'fusionar.jsonl'),port=await freePort();
- const child=spawn(process.execPath,['--import',MOCK,path.join(ROOT,'scripts/fusionar.mjs'),CLI_PROJECT,'--puerto',String(port)],{cwd:ROOT,env:mockEnv({data,log}),stdio:['ignore','pipe','pipe']});
+ const child=spawnServer(process.execPath,['--import',MOCK,path.join(ROOT,'scripts/fusionar.mjs'),CLI_PROJECT,'--puerto',String(port)],{cwd:ROOT,env:mockEnv({data,log}),stdio:['ignore','pipe','pipe']});
  let stderr='';child.stderr.on('data',d=>stderr+=d);
  try{await new Promise((ok,ko)=>{let out='';child.stdout.on('data',d=>{out+=d;if(out.includes('http://127.0.0.1:'))ok();});child.on('exit',c=>ko(Error('fusionar salió con '+c+': '+stderr)));setTimeout(()=>ko(Error('fusionar no arrancó: '+stderr)),20000).unref();});
   const pares=JSON.parse(await get(`http://127.0.0.1:${port}/api/pares`));

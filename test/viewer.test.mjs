@@ -1,5 +1,5 @@
 // Ruta /viewer/ del servidor: sirve viewer/ con safe(), sin /environment.js; la UI importa el visor GLB y el genérico sin empaquetarlos (issues #9 y #10).
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import http from 'node:http';import {spawn,spawnSync} from 'node:child_process';import * as T from 'three';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import http from 'node:http';import {spawnSync} from 'node:child_process';import {spawnServer} from './fixtures/hijos.mjs';import * as T from 'three';
 import {exportGlb} from '../lib/entorno3d.mjs';import {withChrome,newRenderContext,chromePath,VIEWPORTS} from '../lib/chrome.mjs';
 const ROOT=path.resolve(import.meta.dirname,'..'),DATA=fs.mkdtempSync(path.join(os.tmpdir(),'rodaje-viewer-')),id='humo-'+process.pid;
 const SIN_CHROME=!fs.existsSync(chromePath())&&'sin Chrome';
@@ -41,7 +41,7 @@ const humo={builder:'ambientes/humo/3d/humo.js',data:'ambientes/humo/3d/model.js
 fs.writeFileSync(path.join(DATA,id,'proyecto.json'),JSON.stringify({id,name:'Humo',type:'serie',ideas:[],characters:[],locations:[],episodes:[],environments:[{id:'solo-glb',name:'Humo',glb:'assets/h.glb'},{id:'con-plugin',name:'Con plugin',...humo,viewer:{plugins:['ambientes/humo/3d/visor.js']}},{id:'sin-plugin',name:'Sin plugin',...humo},{id:'plugin-roto',name:'Roto',...humo,viewer:{plugins:['ambientes/humo/3d/roto.js']}},{id:'caminante',name:'Caminante',...humo,viewer:{plugins:['ambientes/humo/3d/visor.js'],caminante:true}},{id:'recorrido-falla',name:'Falla',...humo,data:'ambientes/humo/3d/model-falla.json',viewer:{plugins:['ambientes/humo/3d/visor.js']}}]}));
 fs.writeFileSync(path.join(DATA,id,'ambientes/humo/3d/roto.js'),'export const nada = 1;\n');
 let child;
-test.before(()=>new Promise((resolve,reject)=>{child=spawn(process.execPath,[path.join(ROOT,'app/server.mjs')],{cwd:ROOT,env:{...process.env,PORT:String(port),RODAJE_DATA:DATA,RODAJE_LAN:'',RODAJE_TLS_CERT:'',RODAJE_TLS_KEY:''},stdio:['ignore','pipe','pipe']});let out='';
+test.before(()=>new Promise((resolve,reject)=>{child=spawnServer(process.execPath,[path.join(ROOT,'app/server.mjs')],{cwd:ROOT,env:{...process.env,PORT:String(port),RODAJE_DATA:DATA,RODAJE_LAN:'',RODAJE_TLS_CERT:'',RODAJE_TLS_KEY:''},stdio:['ignore','pipe','pipe']});let out='';
  const t=setTimeout(()=>reject(Error('El servidor no arrancó: '+out)),15000);child.stdout.on('data',d=>{out+=d;if(out.includes('Rodaje ·')){clearTimeout(t);resolve();}});child.stderr.on('data',d=>out+=d);child.on('exit',c=>reject(Error('El servidor salió con '+c+': '+out)));}));
 test.after(()=>{child?.kill();fs.rmSync(DATA,{recursive:true,force:true});});
 // Ruta tal cual, sin normalizar: http.get no resuelve «..» ni descodifica.

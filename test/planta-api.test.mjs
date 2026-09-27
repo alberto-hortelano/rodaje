@@ -1,5 +1,5 @@
 // /api/planta (issue #12): lee y guarda dims.planta de los datos de un entorno. Ruta desde proyecto.json, token, origen y revisión.
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import {spawn} from 'node:child_process';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import {spawnServer} from './fixtures/hijos.mjs';
 import {jsonValueSpan} from '../lib/json.mjs';
 const ROOT=path.resolve(import.meta.dirname,'..'),TMP=fs.mkdtempSync(path.join(os.tmpdir(),'rodaje-planta-')),DATA=path.join(TMP,'data'),id='humo-'+process.pid,base=path.join(DATA,id);
 const port=await new Promise(r=>{const s=net.createServer().listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>r(p));});});
@@ -19,7 +19,7 @@ fs.writeFileSync(path.join(base,'ambientes/h/3d/sin.json'),'{"dims": {}}');
 const env=(eid,data)=>({id:eid,name:'Entorno '+eid,builder:'ambientes/h/3d/h.js',data});
 fs.writeFileSync(path.join(base,'proyecto.json'),JSON.stringify({id,name:'Humo',type:'serie',ideas:[],characters:[],locations:[],episodes:[],environments:[env('h','ambientes/h/3d/model.json'),env('fuera','../../x.json'),env('enlace','ambientes/h/3d/enlace.json'),env('sin','ambientes/h/3d/sin.json'),env('texto','ambientes/h/3d/LEEME.md')]}));
 let child,token;const origin=`http://127.0.0.1:${port}`;
-test.before(()=>new Promise((resolve,reject)=>{child=spawn(process.execPath,[path.join(ROOT,'app/server.mjs')],{cwd:ROOT,env:{...process.env,PORT:String(port),RODAJE_DATA:DATA,RODAJE_LAN:'',RODAJE_TLS_CERT:'',RODAJE_TLS_KEY:''},stdio:['ignore','pipe','pipe']});let out='';
+test.before(()=>new Promise((resolve,reject)=>{child=spawnServer(process.execPath,[path.join(ROOT,'app/server.mjs')],{cwd:ROOT,env:{...process.env,PORT:String(port),RODAJE_DATA:DATA,RODAJE_LAN:'',RODAJE_TLS_CERT:'',RODAJE_TLS_KEY:''},stdio:['ignore','pipe','pipe']});let out='';
  const t=setTimeout(()=>reject(Error('El servidor no arrancó: '+out)),15000);child.stdout.on('data',d=>{out+=d;if(out.includes('Rodaje ·')){clearTimeout(t);resolve();}});child.stderr.on('data',d=>out+=d);child.on('exit',c=>reject(Error('El servidor salió con '+c+': '+out)));})
  .then(async()=>{token=(await (await fetch(origin+'/api/state')).json()).token;}));
 test.after(()=>{child?.kill();fs.rmSync(TMP,{recursive:true,force:true});});
