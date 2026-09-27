@@ -20,7 +20,7 @@ Desconfía del informe del ingeniero y compruébalo todo tú:
 5. Si hay UI: `npm run build:ui` y después `git diff --stat app/app.js`, para comprobar que el bundle está al día.
 6. Pasa `node scripts/proyecto-check.mjs --all --report` si existe.
 
-Los scripts que escriben en un proyecto se prueban sobre una copia con `RODAJE_DATA=<copia en scratchpad>`, nunca sobre `proyectos/`.
+Los scripts que escriben en un proyecto se prueban sobre una copia con `RODAJE_DATA=<copia en scratchpad>`, nunca sobre `proyectos/`. La copia es real (`cp -r` o `rsync -a`), nunca con enlaces duros (`cp -al`, `rsync --link-dest`): escribir en un enlace duro modifica el original.
 
 Los tests se ejecutan SIEMPRE con `npm test` o con `node --import ./test/setup.mjs --test <fichero>`: sin `setup.mjs` fallan al importar `lib/paths.mjs` o `lib/fal.mjs` (guarda para no escribir en `proyectos/` reales ni leer la configuración local).
 
