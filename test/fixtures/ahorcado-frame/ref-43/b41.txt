@@ -1,0 +1,22 @@
+summary:
+[image-to-video, first frame supplied] Photorealistic live-action medieval drama, thirteenth century, grounded and naturalistic, in open northern European farmland; muted desaturated palette, aged mud-stained costumes, no fantasy. Shot C01. The supplied image IS frame zero: the take starts exactly on it and moves on in one continuous take. Exactly 1 person in the scene: THE YOUNG PRIEST.
+retention_analysis:
+Keep every face, beard, hair, costume, animal and prop exactly as in the first frame for the whole take. Nobody new appears unless the action says so; nobody is duplicated; nobody changes clothes or weapons. Keep the location, the light and the colour of the first frame.
+detailed_description:
+LOCATION MAP: The crossroads of two muddy roads in open winter pasture. THE TREE, a single ancient leafless oak, stands at the right-hand front corner of the crossroads; its thick LOW LIMB runs almost horizontally out over the verge toward the centre of the crossroads. A rough LADDER leans against the trunk on the road side. The low HITCHING POST stands in the same verge a few paces from the trunk. At the foot of the tree, among the huge knuckled ROOTS, the earth is black, soft and bare. THE BACK ROAD enters at the far left round a BEND hidden by a bare thorn HEDGE; THE ROAD AHEAD leaves to the right, straight, long and open; THE OPPOSITE ROAD comes down toward us from a low bare HILL far behind. Nothing else stands in the open fields. Camera side: the camera stands on the back-road side of the crossroads, looking toward the tree, which stays at frame-right. The 180° line is the line between the bend in the hedge and the tree; the camera stays on its side of that line.
+FIRST FRAME: the supplied image, unchanged.
+CAMERA: [[CAMERA]]
+ACTION TIMING:
+[0.00s–8.00s] [[ACTION]]
+Nobody speaks in this shot.
+PEOPLE: THE YOUNG PRIEST: a slender young secular priest in his mid-to-late twenties, narrow-shouldered and upright; a pale smooth oval face with a high forehead, straight black eyebrows, large calm dark-brown eyes with a steady, unhurried gaze, a fine straight nose, a full closed mouth that neither smiles nor frowns, closely shaved; short black hair cut round above the ears with a small neat shaved tonsure at the crown, no modern haircut; a long plain travelling cloak of very dark brown, almost black wool, closed at the front, the hood lying on his shoulders, over a long dark tunic, plain leather riding boots spattered with mud; no cross, no beads, no ornament of any kind. Polite, silent, never in a hurry; he does not cross himself. A distinct man from Gilbert and the Official.
+CHARACTER ACTING: THE YOUNG PRIEST sits very upright and still on his pale mule at the top of the hill, hands folded on the reins, and watches the line of six grow small on the road below. He does not cross himself. When they are gone he gives the mule a light touch on the neck and starts down toward the crossroads, unhurried.
+PHYSICS: Real weight: feet sink into soft mud and crack frozen ruts, breath steams, cloth and gear move with the body; any animal already in the first frame shifts its weight and blows.
+LIGHTING: Early winter afternoon under a low, even overcast sky: flat, cold grey light with no sun and no hard shadows, frost in the wheel ruts, breath visible; the light falls slowly as the scene goes on.
+STYLE: Photorealistic live-action medieval drama, thirteenth century, grounded and naturalistic, in open northern European farmland; muted desaturated palette, aged mud-stained costumes, no fantasy.
+QUALITY: Photorealistic from frame zero; identities, costumes and animals consistent across the whole take; natural motion blur; no morphing.
+POSITIVE CONSTRAINTS: Eyes lead the head and settle on people or landmarks; nobody looks at the lens. Only the people and animals of the first frame appear; nobody enters the frame unless the action says so. Every person 100% matches the first frame in every frame. [[LOCAL]]
+overall_soundscape:
+Cold wind over open winter pasture, bare branches creaking, mud and frozen ruts; no birds at all.
+non_diegetic_music:
+None.

@@ -1,0 +1,14 @@
+{
+  "sound": {
+    "default": "Natural exterior sound."
+  },
+  "texts": {
+    "frame": {
+      "keep": "face, beard, hair, costume, animal and prop",
+      "changes": "clothes or weapons",
+      "physics": "Real weight: feet sink into soft mud and crack frozen ruts, breath steams, cloth and gear move with the body; any animal already in the first frame shifts its weight and blows.",
+      "quality": "identities, costumes and animals",
+      "present": "people and animals"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+summary:
+[image-to-video, first frame supplied] Photorealistic live-action medieval drama, thirteenth century, grounded and naturalistic, in open northern European farmland; muted desaturated palette, aged mud-stained costumes, no fantasy. Shot A13. The supplied image IS frame zero: the take starts exactly on it and moves on in one continuous take. Exactly 1 person in the scene: WARIN.
+retention_analysis:
+Keep every face, beard, hair, costume, animal and prop exactly as in the first frame for the whole take. Nobody new appears unless the action says so; nobody is duplicated; nobody changes clothes or weapons. Keep the location, the light and the colour of the first frame.
+detailed_description:
+LOCATION MAP: The crossroads of two muddy roads in open winter pasture. THE TREE, a single ancient leafless oak, stands at the right-hand front corner of the crossroads; its thick LOW LIMB runs almost horizontally out over the verge toward the centre of the crossroads. A rough LADDER leans against the trunk on the road side. The low HITCHING POST stands in the same verge a few paces from the trunk. At the foot of the tree, among the huge knuckled ROOTS, the earth is black, soft and bare. THE BACK ROAD enters at the far left round a BEND hidden by a bare thorn HEDGE; THE ROAD AHEAD leaves to the right, straight, long and open; THE OPPOSITE ROAD comes down toward us from a low bare HILL far behind. Nothing else stands in the open fields. Camera side: the camera stands on the back-road side of the crossroads, looking toward the tree, which stays at frame-right. The 180° line is the line between the bend in the hedge and the tree; the camera stays on its side of that line.
+FIRST FRAME: the supplied image, unchanged.
+CAMERA: [[CAMERA]]
+ACTION TIMING:
+[0.00s–5.00s] [[ACTION]]
+Nobody speaks in this shot.
+PEOPLE: WARIN: a broad-shouldered, big-boned man in his late thirties with no fat on him, a square weather-beaten face with hollows under the cheekbones and cords in the neck, skin reddened by wind with broken capillaries on the cheeks and nose, old pockmarks, a wide nose slightly crooked, one eye narrower than the other, small dark eyes under thick brows, a sparse patchy dark-brown beard, unkempt at the chin, hacked short with a knife, greying in streaks; greasy dark hair, roughly cut; big scarred hands; he wears no mail, only a stained quilted gambeson with one sleeve patched in a different cloth, a cheap brown felt hat with a shapeless brim, a crossbow slung on his back, a quiver of bolts and a long knife at his belt, and a small cloth bundle sewn to the inside of his collar; mud to the thighs.
+CHARACTER ACTING: WARIN shoots like a professional and reloads without hurry, but his eyes never leave the man who is still walking with the bolt in him; the hands work, the face does not believe it. After the fight he unties the shovel and reads the ground: frozen ruts, then the soft black earth among the roots. He heads for the tree. At Odila's words he stops with the shovel raised and looks to Girart, and when Girart is looking elsewhere he drives the blade in between the roots.
+PHYSICS: Real weight: feet sink into soft mud and crack frozen ruts, breath steams, cloth and gear move with the body; any animal already in the first frame shifts its weight and blows.
+LIGHTING: Early winter afternoon under a low, even overcast sky: flat, cold grey light with no sun and no hard shadows, frost in the wheel ruts, breath visible; the light falls slowly as the scene goes on.
+STYLE: Photorealistic live-action medieval drama, thirteenth century, grounded and naturalistic, in open northern European farmland; muted desaturated palette, aged mud-stained costumes, no fantasy.
+QUALITY: Photorealistic from frame zero; identities, costumes and animals consistent across the whole take; natural motion blur; no morphing.
+POSITIVE CONSTRAINTS: Eyes lead the head and settle on people or landmarks; nobody looks at the lens. Only the people and animals of the first frame appear; nobody enters the frame unless the action says so. Every person 100% matches the first frame in every frame. [[LOCAL]]
+overall_soundscape:
+Cold wind over open winter pasture, bare branches creaking, mud and frozen ruts; no birds at all.
+non_diegetic_music:
+None.

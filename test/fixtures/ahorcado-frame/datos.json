@@ -1,0 +1,3543 @@
+{
+ "project": {
+  "characters": [
+   {
+    "id": "ancel",
+    "name": "Ancel"
+   },
+   {
+    "id": "aymer",
+    "name": "Aymer"
+   },
+   {
+    "id": "meliora",
+    "name": "Meliora"
+   },
+   {
+    "id": "gilbert",
+    "name": "Gilbert"
+   },
+   {
+    "id": "warin",
+    "name": "Warin"
+   },
+   {
+    "id": "odila",
+    "name": "Odila"
+   },
+   {
+    "id": "renaud",
+    "name": "Renaud"
+   },
+   {
+    "id": "bertran",
+    "name": "Bertran"
+   },
+   {
+    "id": "conde",
+    "name": "El conde"
+   },
+   {
+    "id": "girart",
+    "name": "Girart"
+   },
+   {
+    "id": "obispo",
+    "name": "El obispo"
+   },
+   {
+    "id": "oficial",
+    "name": "El oficial"
+   },
+   {
+    "id": "procurador",
+    "name": "El procurador"
+   },
+   {
+    "id": "cura-joven",
+    "name": "El cura joven"
+   },
+   {
+    "id": "cura-diente",
+    "name": "El cura del diente"
+   },
+   {
+    "id": "sargento",
+    "name": "El sargento"
+   },
+   {
+    "id": "mujer-sabia",
+    "name": "La mujer sabia"
+   },
+   {
+    "id": "la-mujer",
+    "name": "La mujer"
+   },
+   {
+    "id": "el-viejo",
+    "name": "El viejo"
+   },
+   {
+    "id": "capitan",
+    "name": "El capitán del conde"
+   },
+   {
+    "id": "clerigo-portero",
+    "name": "El clérigo"
+   },
+   {
+    "id": "cura-farol",
+    "name": "El cura del farol"
+   },
+   {
+    "id": "molinero",
+    "name": "El molinero"
+   },
+   {
+    "id": "del-ganado",
+    "name": "El del ganado"
+   },
+   {
+    "id": "la-madre",
+    "name": "La madre"
+   },
+   {
+    "id": "mujer-del-vecino",
+    "name": "La mujer del vecino"
+   },
+   {
+    "id": "escribano",
+    "name": "El escribano del conde"
+   },
+   {
+    "id": "el-padre",
+    "name": "El padre"
+   },
+   {
+    "id": "el-hijo",
+    "name": "El hijo"
+   },
+   {
+    "id": "hombre-de-la-casa",
+    "name": "El hombre de la casa"
+   },
+   {
+    "id": "primero-de-los-tres",
+    "name": "El primero de los tres"
+   },
+   {
+    "id": "primero-de-los-dos",
+    "name": "El primero de los dos"
+   },
+   {
+    "id": "segundo-de-los-dos",
+    "name": "El segundo de los dos"
+   },
+   {
+    "id": "hombre-de-bertran",
+    "name": "Un hombre de Bertran"
+   },
+   {
+    "id": "hombre-del-azadon",
+    "name": "El hombre del azadón"
+   },
+   {
+    "id": "mujer-media-puerta",
+    "name": "La mujer de la media puerta"
+   },
+   {
+    "id": "vecino-del-cesto",
+    "name": "El vecino del cesto"
+   },
+   {
+    "id": "primero-del-arbol",
+    "name": "El primero del árbol"
+   },
+   {
+    "id": "segundo-del-arbol",
+    "name": "El segundo del árbol"
+   }
+  ]
+ },
+ "sequence": {
+  "id": "a1-00-ahorcado",
+  "title": "Prólogo · El Ahorcado",
+  "cast": [
+   {
+    "character": "primero-del-arbol",
+    "x": 2.95,
+    "z": -0.35,
+    "yaw": 0
+   },
+   {
+    "character": "segundo-del-arbol",
+    "x": 2.6,
+    "z": -1,
+    "yaw": 0
+   },
+   {
+    "character": "girart",
+    "x": 1.93,
+    "z": -1.53,
+    "yaw": 0
+   },
+   {
+    "character": "aymer",
+    "x": 1.03,
+    "z": -1.88,
+    "yaw": 0
+   },
+   {
+    "character": "warin",
+    "x": 0,
+    "z": -2,
+    "yaw": 0
+   },
+   {
+    "character": "renaud",
+    "x": -1.03,
+    "z": -1.88,
+    "yaw": 0
+   },
+   {
+    "character": "ancel",
+    "x": -1.93,
+    "z": -1.53,
+    "yaw": 0
+   },
+   {
+    "character": "odila",
+    "x": -2.6,
+    "z": -1,
+    "yaw": 0
+   },
+   {
+    "character": "cura-joven",
+    "x": -2.95,
+    "z": -0.35,
+    "yaw": 0
+   }
+  ],
+  "silent": true,
+  "minutes": 4,
+  "text": "Un año antes del camino, en la misma guerra entre vecinos. Retirada por el camino del cruce, tarde de invierno; los que persiguen vienen a medio día. En el cruce hay un árbol grande y desnudo, y del árbol cuelga un hombre que lleva días muerto. Dos hombres sin señas de ningún bando lo están bajando: uno subido a una escalera con el cuchillo en la cuerda, el otro abajo sujetándole las piernas. No son de ninguna de las dos huestes, y nadie tiene por qué andar por el cruce con la guerra tan cerca. Girart y los suyos salen de la curva. Los dos sueltan el cuerpo, que se queda a medio bajar, colgado de un brazo, y atacan sin una palabra, dos contra seis. No huyen ni piden cuartel. Aguantan heridas que tumbarían a cualquiera: Warin le mete un virote en el pecho a uno y el hombre sigue viniendo; Aymer le abre el brazo al otro y el otro cambia la espada de mano. Caen al final, con cuatro o cinco heridas cada uno y sin un grito. Es un combate limpio y dura demasiado. Girart manda enterrarlos y seguir: no hay tiempo de llevarlos a sagrado y los que persiguen están cerca. La tierra blanda está al pie del árbol. Odila: «Ahí no.» Ancel, con amabilidad: «La tierra es tierra.» Warin cava. Mientras cavan, Ancel registra los zurrones buscando cartas u órdenes, que es su oficio: encuentra un libro envuelto en hule encerado y atado con cordel, lo abre, lee dos líneas, lo cierra y se lo guarda. Odila lo ve y no dice nada. Renaud mira al colgado, que nadie toca: lo que la comarca deja en el árbol se queda en el árbol. Gilbert no está: va por delante con los caballos de refresco y no sabrá nada de esto hasta la taberna. Renaud se lleva uno de los dos caballos de los muertos, porque el suyo está herido; el otro se queda atado. Se van sin mirar atrás. En lo alto del camino contrario, un cura joven en una mula los mira irse; nadie lo ve. Son hombres del obispo, y el obispo sabe dónde estaban y qué hacían: esa misma noche los suyos los sacan de la fosa buscando el libro, y no lo encuentran. Por eso Renaud, que vuelve de noche, no los encuentra. Nada de esto se dice. Dos líneas en toda la secuencia.",
+  "coverPrompt": "Early winter afternoon at a muddy crossroads under a great bare tree. A body that has hung for days is half cut down, dangling by one arm from the rope, a ladder fallen beneath it. Two men in plain dark clothes with no colours have turned from it with drawn blades toward a small band coming round the bend: a knight in a worn surcoat, a captain, a stocky sergeant raising a crossbow, a monk, a laundress, a gaunt rider. Far up the opposite road, a young priest on a mule watches. Frozen ruts, low grey light, the instant before the clash. Medieval cinematic realism, early winter, diffuse daylight, aged costumes, muted palette. Nothing supernatural in frame. One single cinematic 16:9 film still. No text, no captions, no borders, no watermark.",
+  "location": "cruce",
+  "storyboard": "sb-00-ahorcado",
+  "ambiencePrompt": "Cold wind over open winter pasture, bare branches creaking, mud and frozen ruts; no birds at all."
+ },
+ "shots": {
+  "43346191-8af6-46f9-80d4-33a3970b6d4c": {
+   "id": "43346191-8af6-46f9-80d4-33a3970b6d4c",
+   "title": "A01 · El cruce",
+   "description": "Un cruce embarrado en campo abierto. A la derecha, el árbol; de la rama baja cuelga un hombre. Uno de los dos, subido a la escalera, corta la cuerda; el otro le abraza las piernas. La sábana doblada en el suelo, dos caballos al poste. Nadie más.\nCámara: Plano general fijo desde el camino de atrás, a la altura de un jinete.",
+   "duration": 8,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A01",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A01.png"
+  },
+  "e7d1aac5-68da-445f-aa3b-094797161874": {
+   "id": "e7d1aac5-68da-445f-aa3b-094797161874",
+   "title": "A02 · La cuerda",
+   "description": "El de la escalera corta la cuerda despacio, fibra a fibra. Abajo, el otro sostiene las piernas del muerto. Trabajan como quien hace un oficio.\nCámara: Contrapicado medio desde el pie de la escalera; teleobjetivo corto.",
+   "duration": 6,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A02",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A02.png"
+  },
+  "b4081b68-aee6-4cee-91a4-feeb51fb9ce7": {
+   "id": "b4081b68-aee6-4cee-91a4-feeb51fb9ce7",
+   "title": "A03 · La sábana",
+   "description": "La sábana de lino limpio, doblada con cuidado sobre el barro helado. Detrás, desenfocados, los dos caballos al poste.\nCámara: Detalle a ras de suelo.",
+   "duration": 4,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A03",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A03.png"
+  },
+  "cb019d97-cc4b-4086-990c-c0a74d333067": {
+   "id": "cb019d97-cc4b-4086-990c-c0a74d333067",
+   "title": "A04 · Los dos se paran",
+   "description": "Llega un ruido de cascos por la curva. Los dos se paran y miran hacia el seto, sin soltar al muerto.\nCámara: Plano medio de los dos, desde el camino de atrás.",
+   "duration": 4,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A04",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A04.png"
+  },
+  "8de85dbd-d998-42ec-badf-adac1ab15f3c": {
+   "id": "8de85dbd-d998-42ec-badf-adac1ab15f3c",
+   "title": "A05 · La curva del seto",
+   "description": "Por la curva salen Girart a caballo y detrás Aymer, Warin y Renaud; Ancel a pie junto al estribo de Aymer; Odila al final en la mula cargada. Barro hasta las rodillas de los caballos, un pendón enrollado. Nadie habla.\nCámara: Plano general desde el árbol hacia la curva; la fila sale de detrás del seto.",
+   "duration": 7,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A05",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A05.png"
+  },
+  "bc7598e5-1a07-47f5-a8ff-d0b6556ace03": {
+   "id": "bc7598e5-1a07-47f5-a8ff-d0b6556ace03",
+   "title": "A06 · Girart mira",
+   "description": "Girart mira el camino de atrás y después el cruce. El anillo de sello en la mano derecha, en las riendas.\nCámara: Plano medio corto de Girart a caballo.",
+   "duration": 4,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A06",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A06.png"
+  },
+  "647db442-3556-4143-bc54-885ebbed8d06": {
+   "id": "647db442-3556-4143-bc54-885ebbed8d06",
+   "title": "A07 · Lo que ve Girart",
+   "description": "El árbol, la escalera, los dos, que le miran.\nCámara: Subjetivo de Girart, a la altura del jinete; teleobjetivo.",
+   "duration": 3,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A07",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A07.png"
+  },
+  "fb93790d-13d1-4a89-8592-52b3a9ff5eef": {
+   "id": "fb93790d-13d1-4a89-8592-52b3a9ff5eef",
+   "title": "A08 · El colgado cae un palmo",
+   "description": "El de la escalera suelta el cuchillo; el de abajo suelta las piernas. El colgado cae un palmo y se queda, torcido, colgado del brazo que ha cogido la cuerda, con los pies casi en el suelo.\nCámara: Plano medio del árbol, fijo.",
+   "duration": 5,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A08",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A08.png"
+  },
+  "b59390d8-6b06-4a38-a6fc-de6609238ae4": {
+   "id": "b59390d8-6b06-4a38-a6fc-de6609238ae4",
+   "title": "A09 · Los dos vienen",
+   "description": "Los dos sacan las espadas cortas y vienen hacia los seis andando, sin una palabra. Detrás, el colgado torcido.\nCámara: Plano medio largo, a la altura del pecho; ellos hacia cámara.",
+   "duration": 6,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A09",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A09.png"
+  },
+  "09ef95be-adb4-4409-b461-4ad060829bc1": {
+   "id": "09ef95be-adb4-4409-b461-4ad060829bc1",
+   "title": "A10 · Girart levanta la mano",
+   "description": "Girart levanta la mano derecha. Los suyos se abren a los lados sin que nadie diga nada.\nCámara: Plano medio de Girart; detrás, los suyos.",
+   "duration": 4,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A10",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A10.png"
+  },
+  "e0951fe7-ab2e-489c-8e62-32debc7fe920": {
+   "id": "e0951fe7-ab2e-489c-8e62-32debc7fe920",
+   "title": "A11 · Warin dispara",
+   "description": "Warin apunta la ballesta y dispara.\nCámara: Plano medio de Warin a caballo, de perfil.",
+   "duration": 5,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A11",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A11.png"
+  },
+  "19487140-3830-435a-a227-f28de3e18248": {
+   "id": "19487140-3830-435a-a227-f28de3e18248",
+   "title": "A12 · El virote",
+   "description": "El virote se le clava en el pecho hasta las plumas. Se tambalea, lo mira y sigue viniendo.\nCámara: Plano medio del primero, teleobjetivo.",
+   "duration": 4,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A12",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A12.png"
+  },
+  "4b0a83d0-85cd-4a2e-940e-f78c72aa0ab6": {
+   "id": "4b0a83d0-85cd-4a2e-940e-f78c72aa0ab6",
+   "title": "A13 · Warin recarga",
+   "description": "Warin carga otra vez, sin prisa y sin creérselo.\nCámara: Primer plano de Warin.",
+   "duration": 4,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A13",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A13.png"
+  },
+  "8fa3ed5f-7027-496a-860e-7a75a41d63d5": {
+   "id": "8fa3ed5f-7027-496a-860e-7a75a41d63d5",
+   "title": "A14 · Aymer y el segundo",
+   "description": "Aymer, a pie, cruza con el segundo y le abre el brazo de la espada del codo a la muñeca. El otro se pasa la espada a la izquierda y sigue.\nCámara: Plano medio, cámara al hombro.",
+   "duration": 6,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A14",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A14.png"
+  },
+  "facd546d-8f1b-43ba-9002-84edc680086d": {
+   "id": "facd546d-8f1b-43ba-9002-84edc680086d",
+   "title": "A15 · Renaud y el caballo",
+   "description": "Renaud le corta el paso al primero con el caballo; el hombre le hiere el caballo en el pecho.\nCámara: Plano medio largo, cámara baja.",
+   "duration": 5,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A15",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A15.png"
+  },
+  "5a5c9a84-c085-4dcd-a76f-aba3a3814ea7": {
+   "id": "5a5c9a84-c085-4dcd-a76f-aba3a3814ea7",
+   "title": "A16 · El canto de la espada",
+   "description": "Girart le da con el canto de la espada en la cabeza; el hombre se arrodilla y se levanta.\nCámara: Plano medio.",
+   "duration": 4,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A16",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A16-v2.png"
+  },
+  "ab3d04fe-b7c3-44e4-9328-336faa4c9160": {
+   "id": "ab3d04fe-b7c3-44e4-9328-336faa4c9160",
+   "title": "A17 · Ancel y Odila",
+   "description": "Ancel se ha quedado atrás, junto a la mula. Odila le coge el brazo y no le deja adelantarse.\nCámara: Plano medio, más atrás, junto a la mula.",
+   "duration": 4,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A17",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A17.png"
+  },
+  "29dc01f7-cbdd-427d-b86c-91bae5aeb2be": {
+   "id": "29dc01f7-cbdd-427d-b86c-91bae5aeb2be",
+   "title": "A18 · Caen",
+   "description": "Caen al final. El primero, con el virote en el pecho y otro en el cuello, de rodillas y luego de lado. El segundo se sienta en el barro contra la escalera, los ojos abiertos, la espada en la mano izquierda.\nCámara: Plano general corto, fijo.",
+   "duration": 7,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A18",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A18.png"
+  },
+  "91b225c5-2af0-4073-a540-a9b3c51e6252": {
+   "id": "91b225c5-2af0-4073-a540-a9b3c51e6252",
+   "title": "A19 · Silencio",
+   "description": "Girart baja del caballo. Mira a los dos, el camino de atrás, el árbol.\nCámara: Plano general; Girart en primer término.",
+   "duration": 6,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A19",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A19-v3.png"
+  },
+  "1a76aa15-c667-4d33-b7c9-ce80c06aa849": {
+   "id": "1a76aa15-c667-4d33-b7c9-ce80c06aa849",
+   "title": "A20 · La espada del sentado",
+   "description": "Aymer le quita la espada de la mano al sentado. No sabe si está muerto. Lo está.\nCámara: Plano medio.",
+   "duration": 4,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A20",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A20.png"
+  },
+  "5bb6e7bf-54aa-49b3-b05c-996beb759b3d": {
+   "id": "5bb6e7bf-54aa-49b3-b05c-996beb759b3d",
+   "title": "A21 · Girart señala",
+   "description": "Girart señala a los dos muertos, después el suelo, después el camino de delante.\nCámara: Plano medio de Girart.",
+   "duration": 6,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A21",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A21.png"
+  },
+  "1c6657ed-456e-49f0-854d-f416ec9b7106": {
+   "id": "1c6657ed-456e-49f0-854d-f416ec9b7106",
+   "title": "A22 · La pala",
+   "description": "Warin desata la pala de la mula. Mira alrededor: la tierra dura y helada de los caminos; la blanda y negra al pie del árbol.\nCámara: Plano medio de Warin junto a la mula.",
+   "duration": 6,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A22",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A22.png"
+  },
+  "0aff5605-3a27-43c5-b044-84d7f9c9f4cd": {
+   "id": "0aff5605-3a27-43c5-b044-84d7f9c9f4cd",
+   "title": "A23 · «Ahí no»",
+   "description": "Odila, desde la mula, seca, sin explicar.\nCámara: Plano medio corto de Odila, desde abajo.",
+   "duration": 4,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [
+    {
+     "id": "3f077f58-be1d-41b5-a3cb-a8ba17c26905",
+     "character": "odila",
+     "text": "Not there.",
+     "start": 0.5,
+     "offscreen": false,
+     "audio": "assets/voces/a1-00-ahorcado/3f077f58-be1d-41b5-a3cb-a8ba17c26905.wav",
+     "audioDuration": 1.06
+    }
+   ],
+   "history": [],
+   "storyboardShot": "sb-00ah-A23",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A23.png"
+  },
+  "b228501c-6a5c-4d4a-9643-ad0ed04becfb": {
+   "id": "b228501c-6a5c-4d4a-9643-ad0ed04becfb",
+   "title": "A24 · Warin mira a Girart",
+   "description": "Warin se para y mira a Girart. Girart mira el camino de atrás.\nCámara: Plano medio de Warin con la pala; Girart al fondo.",
+   "duration": 4,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A24",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A24.png"
+  },
+  "ca4ea7c5-a02a-43a9-bc54-6e522f676ff3": {
+   "id": "ca4ea7c5-a02a-43a9-bc54-6e522f676ff3",
+   "title": "A25 · «La tierra es tierra»",
+   "description": "Ancel, con amabilidad, no con burla.\nCámara: Plano medio corto de Ancel.",
+   "duration": 4,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [
+    {
+     "id": "86291f07-54f6-441c-b308-48aad0652238",
+     "character": "ancel",
+     "text": "Earth is earth.",
+     "start": 0.5,
+     "offscreen": false,
+     "audio": "assets/voces/a1-00-ahorcado/86291f07-54f6-441c-b308-48aad0652238.wav",
+     "audioDuration": 1.92
+    }
+   ],
+   "history": [],
+   "storyboardShot": "sb-00ah-A25",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A25-v2.png"
+  },
+  "294054be-5bed-4197-823b-3d4527a26dee": {
+   "id": "294054be-5bed-4197-823b-3d4527a26dee",
+   "title": "A26 · La pala entra",
+   "description": "Warin clava la pala entre las raíces.\nCámara: Detalle a ras de suelo.",
+   "duration": 3,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-A26",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/A26.png"
+  },
+  "1a700999-1f69-401d-af1d-b8ec19a84f64": {
+   "id": "1a700999-1f69-401d-af1d-b8ec19a84f64",
+   "title": "B01 · La fosa",
+   "description": "Warin cava. Aymer y Renaud arrastran los cuerpos. Girart, a caballo otra vez, vigila el camino de atrás.\nCámara: Plano general al pie del árbol.",
+   "duration": 7,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-B01",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/B01-v2.png"
+  },
+  "6f257ab6-92e8-4fde-9157-91653e96c9b0": {
+   "id": "6f257ab6-92e8-4fde-9157-91653e96c9b0",
+   "title": "B02 · Los zurrones",
+   "description": "Ancel registra los zurrones de los dos junto a la sábana, como se registra a un muerto en la guerra: pan, un pedernal, una bolsa con poca plata que deja donde está.\nCámara: Plano medio de Ancel de rodillas.",
+   "duration": 7,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-B02",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/B02.png"
+  },
+  "cdd60172-3002-402e-9d9a-6e5a9ada71f3": {
+   "id": "cdd60172-3002-402e-9d9a-6e5a9ada71f3",
+   "title": "B03 · El bulto",
+   "description": "Al fondo del segundo zurrón, un bulto envuelto en hule encerado y atado con cordel. Lo desata.\nCámara: Detalle de las manos.",
+   "duration": 6,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-B03",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/B03.png"
+  },
+  "c70f0884-58b2-4899-8b2e-0dff933cda78": {
+   "id": "c70f0884-58b2-4899-8b2e-0dff933cda78",
+   "title": "B04 · El libro",
+   "description": "Es un libro pequeño y grueso, con tapas de madera sin adornos. Lo abre por cualquier parte y lee: se le mueven los labios en dos líneas. Lo cierra.\nCámara: Primer plano de Ancel; no se ve la página.",
+   "duration": 8,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-B04",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/B04.png"
+  },
+  "450adcb0-9f91-474b-9742-93de6dd38962": {
+   "id": "450adcb0-9f91-474b-9742-93de6dd38962",
+   "title": "B05 · Quieto",
+   "description": "Se queda un momento quieto, de rodillas, con el libro cerrado en las manos.\nCámara: Plano medio, fijo.",
+   "duration": 5,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-B05",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/B05.png"
+  },
+  "77930b1c-c8c6-44c7-8a42-4412c77a7135": {
+   "id": "77930b1c-c8c6-44c7-8a42-4412c77a7135",
+   "title": "B06 · Al zurrón",
+   "description": "Lo envuelve otra vez en el hule, ata el cordel y se lo mete en su zurrón.\nCámara: Plano medio.",
+   "duration": 6,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-B06",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/B06.png"
+  },
+  "ebcdea9a-36f0-49da-93c8-978d4756200f": {
+   "id": "ebcdea9a-36f0-49da-93c8-978d4756200f",
+   "title": "B07 · Odila lo ve",
+   "description": "Odila, con las riendas de la mula en la mano, lo ha visto. Mira el libro entrar en el zurrón y después mira a otra parte.\nCámara: Plano medio corto de Odila.",
+   "duration": 5,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-B07",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/B07.png"
+  },
+  "3ab76a2c-3fc7-41e1-b922-9f0647fcd977": {
+   "id": "3ab76a2c-3fc7-41e1-b922-9f0647fcd977",
+   "title": "B08 · A la fosa",
+   "description": "Warin y Aymer echan a los dos en la fosa, uno sobre otro, sin la sábana. Warin echa tierra negra.\nCámara: Plano medio sobre la fosa.",
+   "duration": 6,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-B08",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/B08.png"
+  },
+  "42df9351-c787-44df-ae51-75f311bb9208": {
+   "id": "42df9351-c787-44df-ae51-75f311bb9208",
+   "title": "B09 · Renaud y el colgado",
+   "description": "Renaud, de pie delante del colgado, que sigue torcido del brazo a media altura. Nadie lo toca. Lo mira un rato largo. Es el único que lo mira.\nCámara: Plano medio de Renaud de espaldas, frente al colgado; cámara lenta no.",
+   "duration": 10,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-B09",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/B09.png"
+  },
+  "828cb7c2-4f72-4e95-bb6c-1cba57134ed3": {
+   "id": "828cb7c2-4f72-4e95-bb6c-1cba57134ed3",
+   "title": "B10 · El hombro",
+   "description": "Aymer le toca el hombro. Renaud se da la vuelta.\nCámara: Plano medio.",
+   "duration": 4,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-B10",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/B10.png"
+  },
+  "3c196abb-1c60-4511-add9-a30f8828eb66": {
+   "id": "3c196abb-1c60-4511-add9-a30f8828eb66",
+   "title": "B11 · Dos golpes",
+   "description": "Warin aplana la tierra con la pala, dos golpes, y ata la pala a la mula.\nCámara: Plano medio.",
+   "duration": 5,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-B11",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/B11.png"
+  },
+  "94347f2d-c67d-4c01-a898-0a53a9c3747b": {
+   "id": "94347f2d-c67d-4c01-a898-0a53a9c3747b",
+   "title": "B12 · Girart mueve la mano",
+   "description": "Girart mueve la mano. Se van.\nCámara: Plano medio de Girart a caballo.",
+   "duration": 3,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-B12",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/B12-v2.png"
+  },
+  "0d6f7f33-9db9-48c3-83c5-d32f365f3ff6": {
+   "id": "0d6f7f33-9db9-48c3-83c5-d32f365f3ff6",
+   "title": "B13 · Se van",
+   "description": "Salen por el camino de delante en el mismo orden, al paso. Girart delante. Renaud el último, en uno de los caballos de los muertos, llevando del ronzal el suyo, herido. Nadie mira atrás.\nCámara: Plano general largo, fijo, desde el árbol.",
+   "duration": 12,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-B13",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/B13.png"
+  },
+  "74f49a8a-91a3-4108-8965-1196c39c3f68": {
+   "id": "74f49a8a-91a3-4108-8965-1196c39c3f68",
+   "title": "B14 · El cruce solo",
+   "description": "El cruce se queda solo: el árbol, el colgado del brazo, la escalera, la sábana doblada, el otro caballo de los muertos atado al poste, la tierra removida.\nCámara: Plano general fijo, el mismo encuadre de A01.",
+   "duration": 8,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-B14",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/B14.png"
+  },
+  "32cf6382-6df5-44a2-98ad-94e620955fe4": {
+   "id": "32cf6382-6df5-44a2-98ad-94e620955fe4",
+   "title": "C01 · El cura en la loma",
+   "description": "Lejos, en lo alto del camino contrario, un cura joven en una mula, quieto. Mira la fila de seis hacerse pequeña en el camino de delante.\nCámara: Plano general largo desde lo alto de la loma; el cura en primer término.",
+   "duration": 8,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-C01",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/C01.png"
+  },
+  "c688d090-8307-4751-8e71-871b8c31dd90": {
+   "id": "c688d090-8307-4751-8e71-871b8c31dd90",
+   "title": "C02 · El cura arrea",
+   "description": "No se santigua. Arrea la mula y baja hacia el cruce, sin prisa. Negro.\nCámara: Plano medio del cura, de frente; luego baja y sale de cuadro.",
+   "duration": 7,
+   "camera": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "cameraEnd": {
+    "position": [
+     4,
+     2.5,
+     7
+    ],
+    "target": [
+     0,
+     1,
+     0
+    ],
+    "fov": 45
+   },
+   "lines": [],
+   "history": [],
+   "storyboardShot": "sb-00ah-C02",
+   "storyboardRender": "storyboards/sb-00-ahorcado/render/C02.png"
+  }
+ },
+ "registry": {
+  "summary": "Photorealistic live-action medieval drama, thirteenth century, grounded and naturalistic, in open northern European farmland; muted desaturated palette, aged mud-stained costumes, no fantasy.",
+  "lighting": {
+   "default": "Early winter afternoon under a low, even overcast sky: flat, cold grey light with no sun and no hard shadows, frost in the wheel ruts, breath visible; the light falls slowly as the scene goes on."
+  },
+  "assets": {
+   "ANCEL_BASE": {
+    "kind": "character",
+    "character": "ancel",
+    "variant": "",
+    "file": "biblia/personajes/02-ancel/ref/ref-A.png",
+    "descriptor": "ANCEL: a thin man around fifty with a long narrow face, sunken cheeks, a shaved tonsure with a ring of short grey hair, pale light-brown eyes, a long thin nose, chapped lips, no beard but two days of grey stubble; he wears an undyed brown wool habit, patched and hitched up at the belt for walking, a leather satchel on a strap across his chest, and a small dull lead pendant on a cord at his neck; no weapon; ink stains on the fingers of his right hand.",
+    "status": "approved",
+    "sha256": "47c4d3d5cede24f6a101ee1c9b8d37fadaff95e28601b66bc3eac4913be3938c",
+    "since": "2026-09-26"
+   },
+   "ANCEL_VOICE": {
+    "kind": "voice",
+    "character": "ancel",
+    "file": "",
+    "descriptor": "A man in his early fifties with a thin, light, slightly nasal low-tenor voice and a soft, neutral English accent. Candid everyday speech at a normal, slightly hurried pace, words running together and sentence ends dropping away; kind and tired, with a faint unease; never a narrator or announcer.",
+    "status": "approved",
+    "since": "2026-09-26",
+    "minimax": "ttv-voice-2026092702505626-WscBfiq9"
+   },
+   "AYMER_BASE": {
+    "kind": "character",
+    "character": "aymer",
+    "variant": "",
+    "file": "biblia/personajes/01-aymer/ref/ref-A.png",
+    "descriptor": "AYMER: a heavy-set man in his mid-forties with a broad weathered face, a short grey-streaked beard, deep lines from nose to mouth, small tired grey eyes under heavy brows, a nose broken once and badly set; greying brown hair cut in the thirteenth-century bowl style, a straight sparse fringe level across the forehead, covering the top half of the ears, thinning on top, unwashed and pressed flat from the helmet; he wears a rusted mail hauberk over a dirty quilted gambeson, a plain leather belt with a sword in a worn scabbard, no surcoat, no heraldry; he stands with his weight off his right hip.",
+    "status": "approved",
+    "sha256": "2590b1b10e0406701462f3defd7dfbb3b366b9c8171c0034b8ba71b103b90ccb",
+    "since": "2026-09-26"
+   },
+   "AYMER_VOICE": {
+    "kind": "voice",
+    "character": "aymer",
+    "file": "",
+    "elevenlabs": "goT3UYdM9bhm0n2lmKQx",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "MELIORA_BASE": {
+    "kind": "character",
+    "character": "meliora",
+    "variant": "",
+    "file": "biblia/personajes/00-meliora/ref/ref-A-v2.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "MELIORA_VOICE": {
+    "kind": "voice",
+    "character": "meliora",
+    "file": "",
+    "elevenlabs": "4BAlflaQyhIcCfHiEI7x",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "GILBERT_BASE": {
+    "kind": "character",
+    "character": "gilbert",
+    "variant": "",
+    "file": "assets/gilbert.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "GILBERT_VOICE": {
+    "kind": "voice",
+    "character": "gilbert",
+    "file": "",
+    "elevenlabs": "b7KMRhsKiOzXq0GV97l0",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "WARIN_BASE": {
+    "kind": "character",
+    "character": "warin",
+    "variant": "",
+    "file": "biblia/personajes/04-warin/ref/ref-A.png",
+    "descriptor": "WARIN: a broad-shouldered, big-boned man in his late thirties with no fat on him, a square weather-beaten face with hollows under the cheekbones and cords in the neck, skin reddened by wind with broken capillaries on the cheeks and nose, old pockmarks, a wide nose slightly crooked, one eye narrower than the other, small dark eyes under thick brows, a sparse patchy dark-brown beard, unkempt at the chin, hacked short with a knife, greying in streaks; greasy dark hair, roughly cut; big scarred hands; he wears no mail, only a stained quilted gambeson with one sleeve patched in a different cloth, a cheap brown felt hat with a shapeless brim, a crossbow slung on his back, a quiver of bolts and a long knife at his belt, and a small cloth bundle sewn to the inside of his collar; mud to the thighs.",
+    "status": "approved",
+    "sha256": "779883b43e8f100a0ca5cc94b49246912af2ba25044f6d133e69f91f30f8bab1",
+    "since": "2026-09-26"
+   },
+   "WARIN_VOICE": {
+    "kind": "voice",
+    "character": "warin",
+    "file": "",
+    "elevenlabs": "2ajXGJNYBR0iNHpS4VZb",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "ODILA_BASE": {
+    "kind": "character",
+    "character": "odila",
+    "variant": "",
+    "file": "biblia/personajes/05-odila/ref/ref-A.png",
+    "descriptor": "ODILA: a woman in her mid-thirties who looks ten years older, with a long weather-beaten face with no fat on it, hollows under the cheekbones, skin roughened and reddened by wind and lye, a few old pockmarks, deep-set dark eyes, a strong jaw, a thin straight chapped mouth and lines at the corners of the eyes; grey-streaked dark hair pulled back under a plain brown linen kerchief tied at the nape; she wears layered brown and grey-green wool skirts hitched up with cord, a stained linen apron, a short wool jacket, and a cloth bundle on her back; big raw red hands with short nails; a small knife and a needle case at her belt.",
+    "status": "approved",
+    "sha256": "97aeab08b734cfca8ded781f2d4e98b294b692c375ee9391120250b15e8ba80a",
+    "since": "2026-09-26"
+   },
+   "ODILA_VOICE": {
+    "kind": "voice",
+    "character": "odila",
+    "file": "",
+    "descriptor": "A woman in her late thirties from the English countryside with a plain, medium-pitched mezzo-soprano voice, a little tired; soft rural English accent. Candid everyday speech at a normal pace; short, finished sentences said once without persuading; never sweet, girlish or performed.",
+    "status": "approved",
+    "since": "2026-09-26",
+    "minimax": "ttv-voice-2026092703121726-JljkrMsW"
+   },
+   "RENAUD_BASE": {
+    "kind": "character",
+    "character": "renaud",
+    "variant": "",
+    "file": "biblia/personajes/06-renaud/ref/ref-A.png",
+    "descriptor": "RENAUD: a gaunt, underfed man around forty with hollow cheeks and temples, a long face with the skin drawn tight over the bones and greyish from lack of sleep, weather-beaten, dark shadowed eyes that do not settle on anything, a thin dark beard grown out untrimmed and uneven, cracked lips, matted dark hair roughly cut; a mail coif pushed back off his head onto his shoulders, over a plain dark brown gambeson with no ornament, a sword on a belt cinched two holes tighter than its old mark, no hat; he stands slightly apart from anyone else in frame.",
+    "status": "approved",
+    "sha256": "8740695700db8b7a50059a3bb05e947a674222c9ab7bcf7f0fd34335888ee474",
+    "since": "2026-09-26"
+   },
+   "RENAUD_VOICE": {
+    "kind": "voice",
+    "character": "renaud",
+    "file": "",
+    "elevenlabs": "7rQX8r6PVq3gfJ8rZzyE",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "BERTRAN_BASE": {
+    "kind": "character",
+    "character": "bertran",
+    "variant": "",
+    "file": "assets/b6755168-decc-4aff-8470-5021fc8ec119.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "CONDE_BASE": {
+    "kind": "character",
+    "character": "conde",
+    "variant": "",
+    "file": "assets/7316a576-6824-412c-b149-1b3b859ff940.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "GIRART_BASE": {
+    "kind": "character",
+    "character": "girart",
+    "variant": "",
+    "file": "biblia/personajes/09-girart/ref/ref-A.png",
+    "descriptor": "GIRART: a lean, hard man in his mid-fifties worn down by months of campaigning, upright in the saddle; a weathered oval face with high flat cheekbones and hollow cheeks, a straight nose, grey-green eyes under thick dark brows half gone grey, deep lines across the forehead and at the corners of the eyes, a short grizzled grey-and-brown beard hacked short with a knife, grey-brown hair in the thirteenth-century bowl cut with a straight fringe, pressed flat by the helmet, no modern haircut; a worn, stained sleeveless wool surcoat of faded madder red gone rusty brown, split for riding, with no charge, badge or embroidery, over a dark iron mail hauberk with mail sleeves and the frayed hem of a dull brown quilted gambeson, a plain leather sword belt with a long sword in a worn scabbard, scuffed leather riding boots; on the ring finger of his right hand a heavy man's signet ring of worn dull gold with a flat oval bezel engraved with a small shield of three diagonal bands and no border. Quiet authority, commands with a raised hand, never raises his voice. A distinct man from Bertran, Aymer and the Count.",
+    "status": "approved",
+    "sha256": "0b7882e39984906febab57530f6530da83dc9df498f8674f2df3f3ee9a91e91a",
+    "since": "2026-09-26",
+    "states": {
+     "foot": {
+      "drop": [
+       ", upright in the saddle"
+      ],
+      "note": "on foot, standing on the ground; his horse stands beside him with no rider"
+     },
+     "dead": {
+      "drop": [
+       ", upright in the saddle"
+      ],
+      "note": "here he is dead: he lies completely still on the ground and appears only once in the frame; no horse under him, and no rider anywhere in frame looks like him"
+     },
+     "nobelt": {
+      "drop": [
+       ", upright in the saddle",
+       ", a plain leather sword belt with a long sword in a worn scabbard"
+      ],
+      "note": "here he is dead: he lies completely still on the ground and appears only once in the frame; no horse under him, and no rider anywhere in frame looks like him; his sword belt has been taken off"
+     },
+     "bare": {
+      "drop": [
+       ", upright in the saddle",
+       ", a plain leather sword belt with a long sword in a worn scabbard",
+       "; on the ring finger of his right hand a heavy man's signet ring of worn dull gold with a flat oval bezel engraved with a small shield of three diagonal bands and no border"
+      ],
+      "note": "here he is dead: he lies completely still on the ground and appears only once in the frame; no horse under him, and no rider anywhere in frame looks like him; his sword belt and his signet ring have been taken off, no ring on his hands"
+     }
+    }
+   },
+   "OBISPO_BASE": {
+    "kind": "character",
+    "character": "obispo",
+    "variant": "",
+    "file": "biblia/personajes/10-obispo/ref/ref-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "OFICIAL_BASE": {
+    "kind": "character",
+    "character": "oficial",
+    "variant": "",
+    "file": "biblia/personajes/11-oficial/ref/ref-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "PROCURADOR_BASE": {
+    "kind": "character",
+    "character": "procurador",
+    "variant": "",
+    "file": "biblia/personajes/12-procurador/ref/ref-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "CURA-JOVEN_BASE": {
+    "kind": "character",
+    "character": "cura-joven",
+    "variant": "",
+    "file": "biblia/personajes/13-cura-joven/ref/ref-B.png",
+    "descriptor": "THE YOUNG PRIEST: a slender young secular priest in his mid-to-late twenties, narrow-shouldered and upright; a pale smooth oval face with a high forehead, straight black eyebrows, large calm dark-brown eyes with a steady, unhurried gaze, a fine straight nose, a full closed mouth that neither smiles nor frowns, closely shaved; short black hair cut round above the ears with a small neat shaved tonsure at the crown, no modern haircut; a long plain travelling cloak of very dark brown, almost black wool, closed at the front, the hood lying on his shoulders, over a long dark tunic, plain leather riding boots spattered with mud; no cross, no beads, no ornament of any kind. Polite, silent, never in a hurry; he does not cross himself. A distinct man from Gilbert and the Official.",
+    "status": "approved",
+    "sha256": "88741df6e591061c6a85bf23c8a25f3dfc831b37f4b3bda81e75f8fe2568d53f",
+    "since": "2026-09-26"
+   },
+   "CURA-DIENTE_BASE": {
+    "kind": "character",
+    "character": "cura-diente",
+    "variant": "",
+    "file": "biblia/personajes/14-cura-aldea/ref/ref-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "SARGENTO_BASE": {
+    "kind": "character",
+    "character": "sargento",
+    "variant": "",
+    "file": "biblia/personajes/15-sargento/ref/ref-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "MUJER-SABIA_BASE": {
+    "kind": "character",
+    "character": "mujer-sabia",
+    "variant": "",
+    "file": "biblia/personajes/16-mujer-sabia/ref/ref-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "LA-MUJER_BASE": {
+    "kind": "character",
+    "character": "la-mujer",
+    "variant": "",
+    "file": "biblia/personajes/17-la-mujer/ref/ref-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "EL-VIEJO_BASE": {
+    "kind": "character",
+    "character": "el-viejo",
+    "variant": "",
+    "file": "biblia/personajes/18-el-viejo/ref/ref-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "CAPITAN_BASE": {
+    "kind": "character",
+    "character": "capitan",
+    "variant": "",
+    "file": "biblia/personajes/19-capitan-conde/ref/ref-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "CLERIGO-PORTERO_BASE": {
+    "kind": "character",
+    "character": "clerigo-portero",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/clerigo-portero-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "CURA-FAROL_BASE": {
+    "kind": "character",
+    "character": "cura-farol",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/cura-iglesia-de-abajo-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "MOLINERO_BASE": {
+    "kind": "character",
+    "character": "molinero",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/molinero-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "DEL-GANADO_BASE": {
+    "kind": "character",
+    "character": "del-ganado",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/del-ganado-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "LA-MADRE_BASE": {
+    "kind": "character",
+    "character": "la-madre",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/madre-y-nino-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "MUJER-DEL-VECINO_BASE": {
+    "kind": "character",
+    "character": "mujer-del-vecino",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/otro-vecino-y-mujer-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "ESCRIBANO_BASE": {
+    "kind": "character",
+    "character": "escribano",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/escribano-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "EL-PADRE_BASE": {
+    "kind": "character",
+    "character": "el-padre",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/padre-e-hijo-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "EL-HIJO_BASE": {
+    "kind": "character",
+    "character": "el-hijo",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/padre-e-hijo-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "HOMBRE-DE-LA-CASA_BASE": {
+    "kind": "character",
+    "character": "hombre-de-la-casa",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/hombre-de-la-casa-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "PRIMERO-DE-LOS-TRES_BASE": {
+    "kind": "character",
+    "character": "primero-de-los-tres",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/los-tres-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "PRIMERO-DE-LOS-DOS_BASE": {
+    "kind": "character",
+    "character": "primero-de-los-dos",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/los-dos-del-obispo-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "SEGUNDO-DE-LOS-DOS_BASE": {
+    "kind": "character",
+    "character": "segundo-de-los-dos",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/los-dos-del-obispo-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "HOMBRE-DE-BERTRAN_BASE": {
+    "kind": "character",
+    "character": "hombre-de-bertran",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/hombres-de-bertran-A.png",
+    "descriptor": "",
+    "status": "draft"
+   },
+   "PRIMERO-DEL-ARBOL_BASE": {
+    "kind": "character",
+    "character": "primero-del-arbol",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/dos-del-arbol-1-A.png",
+    "descriptor": "THE FIRST MAN OF THE TREE: a hard, compact man of about forty with a thick neck and heavy shoulders; a broad flat face with a heavy square jaw, a flattened broad nose, deep-set dark-brown eyes under a low brow, a close-cropped black beard going grey at the chin, kept short and neat, short black hair cut round and close, weathered but well-fed skin, no modern haircut; good plain clothes with no colour, badge or device: a knee-length cote of good dark brown-black wool with a few rings of a hidden mail shirt showing at one cuff, a good dark hooded travelling cloak, dark hose, good leather boots, a plain leather belt with a short single-edged sword in a plain scabbard and a knife; silent, working like a craftsman, no soldier of any host.",
+    "status": "approved",
+    "sha256": "5318a76229f03c8488040132deb7d5a032b222839beff4f51fe1c13d8d55f874",
+    "since": "2026-09-26"
+   },
+   "SEGUNDO-DEL-ARBOL_BASE": {
+    "kind": "character",
+    "character": "segundo-del-arbol",
+    "variant": "",
+    "file": "biblia/personajes/reparto/ref/dos-del-arbol-2-A.png",
+    "descriptor": "THE SECOND MAN OF THE TREE: a lean, long-limbed man in his mid-thirties; a narrow face with high cheekbones, narrowed pale blue eyes, straight reddish-brown eyebrows, a straight narrow nose with a small old white scar across the bridge, a short close-trimmed reddish-brown beard, short reddish-brown hair cut round, weathered skin, no modern haircut; good plain clothes with no colour, badge or device: a knee-length cote of good dark grey-brown wool over a hidden mail shirt, a good dark hooded travelling cloak, dark hose, good leather boots, a plain leather belt with a short single-edged sword in a plain scabbard and a leather satchel at his hip; silent, patient, no soldier of any host.",
+    "status": "approved",
+    "sha256": "ec8f09b99a836f3a4cfe3e62bab1d54898f41bfc85ed27668d4808fd360665a1",
+    "since": "2026-09-26"
+   }
+  }
+ },
+ "map": {
+  "prompt": "The crossroads of two muddy roads in open winter pasture. THE TREE, a single ancient leafless oak, stands at the right-hand front corner of the crossroads; its thick LOW LIMB runs almost horizontally out over the verge toward the centre of the crossroads. A rough LADDER leans against the trunk on the road side. The low HITCHING POST stands in the same verge a few paces from the trunk. At the foot of the tree, among the huge knuckled ROOTS, the earth is black, soft and bare. THE BACK ROAD enters at the far left round a BEND hidden by a bare thorn HEDGE; THE ROAD AHEAD leaves to the right, straight, long and open; THE OPPOSITE ROAD comes down toward us from a low bare HILL far behind. Nothing else stands in the open fields.",
+  "landmarks": [],
+  "axis": "the line between the bend in the hedge and the tree",
+  "side": "the camera stands on the back-road side of the crossroads, looking toward the tree, which stays at frame-right"
+ },
+ "scene": {
+  "scene": 1,
+  "title": "Prólogo · El Ahorcado",
+  "axis": "the line from the bend by the hedge (the six) to the tree (the two); camera on the back-road side, the six always at the hedge side of frame and the tree at the right",
+  "characters": {
+   "girart": {
+    "objective": "get his company past the crossroads and ahead of the pursuers without losing a man",
+    "obstacle": "two strangers who fight on after wounds that should stop them, and pursuers half a day behind",
+    "tactics": [
+     "assess",
+     "command by gesture",
+     "strike to end it",
+     "decide and move on"
+    ],
+    "beats": [
+     "looks at the road behind, then at the crossroads",
+     "raises the open hand and the company spreads",
+     "after the fight: dismounts, looks at the dead, at the road behind, at the tree",
+     "points at the dead, at the ground, at the road ahead"
+    ],
+    "business": "reins in the ringed right hand; later the sword, struck flat",
+    "tic": {
+     "trigger": "whenever a decision is waited for",
+     "action": "his eyes go first to the road behind, only then to his men"
+    },
+    "mask_crack": "However, when Warin looks to him about the soft earth, he keeps his eyes on the road behind a beat too long.",
+    "paragraph": "GIRART commands without a word: his eyes go to the road behind, then to the crossroads, and his open right hand rises and the company spreads. He fights economically and without heat, striking once with the flat of the sword to end it. After the fight he steps down with a horseman's stiffness, takes in the dead, the road behind and the tree, then points: the dead, the ground, the road ahead. When Warin looks to him about where to dig, he keeps watching the road behind a beat too long, and lets the silence decide."
+   },
+   "aymer": {
+    "objective": "finish the fight and bury the dead fast so the company can move",
+    "obstacle": "a stranger who changes sword hands and keeps coming, and his own bad hip on the ground",
+    "tactics": [
+     "close in",
+     "cut to disarm",
+     "clear the ground",
+     "move the others on"
+    ],
+    "beats": [
+     "dismounts badly by the hip and meets the second man",
+     "cuts the sword arm and sees him change hands",
+     "crouches in two stages to take the sword from the seated dead man",
+     "lays a hand on Renaud's shoulder"
+    ],
+    "business": "the sword; dragging the bodies; tipping them into the grave",
+    "tic": {
+     "trigger": "when someone lingers",
+     "action": "a hand on the shoulder instead of a word"
+    },
+    "mask_crack": "However, when the seated man does not move, he checks him for one beat longer than a soldier needs.",
+    "paragraph": "AYMER dismounts badly, weight off the right hip, and goes to meet the second stranger on foot. He cuts to disarm, sees the man pass the sword to his left hand without a sound, and keeps working. After the fight he crouches in two stages to take the sword from the seated man, not sure he is dead, checking one beat longer than a soldier needs. He drags and tips the bodies without ceremony, then lays a flat hand on Renaud's shoulder to move him on."
+   },
+   "warin": {
+    "objective": "drop the first stranger and then get the dead in the ground so they can leave",
+    "obstacle": "a bolt that does not stop the man, and the only soft earth lies among the roots of that tree",
+    "tactics": [
+     "shoot",
+     "reload without hurry",
+     "look for the easy ground",
+     "look to his lord for permission"
+    ],
+    "beats": [
+     "shoots; the bolt goes in to the fletching",
+     "spans the crossbow again, eyes still on the man",
+     "unties the shovel, looks from frozen ruts to the black earth",
+     "stops at Odila's words, looks to Girart, then digs"
+    ],
+    "business": "crossbow spanned and shot; the shovel untied, driven in, two flat blows at the end",
+    "tic": {
+     "trigger": "when a thing does not behave as it should",
+     "action": "his hands keep working while his eyes stay fixed on it"
+    },
+    "mask_crack": "However, when Odila says «Not there», he stops with the shovel raised and looks to Girart, not to her.",
+    "paragraph": "WARIN shoots like a professional and reloads without hurry, but his eyes never leave the man who is still walking with the bolt in him; the hands work, the face does not believe it. After the fight he unties the shovel and reads the ground: frozen ruts, then the soft black earth among the roots. He heads for the tree. At Odila's words he stops with the shovel raised and looks to Girart, and when Girart is looking elsewhere he drives the blade in between the roots."
+   },
+   "ancel": {
+    "objective": "find out who sent the two strangers",
+    "obstacle": "the dead carry nothing but bread, flint and a little silver, and then a book he should not keep",
+    "tactics": [
+     "search methodically",
+     "read",
+     "hide it in plain sight",
+     "answer kindly"
+    ],
+    "beats": [
+     "held back by Odila during the fight, straining forward",
+     "searches the satchels like an army clerk, leaves the silver",
+     "unwraps the book, reads two lines with moving lips, closes it",
+     "kneels still, then wraps it and puts it in his own satchel"
+    ],
+    "business": "the satchels; the oilcloth and cord; the book with wooden boards",
+    "tic": {
+     "trigger": "when he reads",
+     "action": "his lips move slightly and he forgets the people around him"
+    },
+    "mask_crack": "However, when the book is closed in his hands, he goes perfectly still for a moment before he wraps it.",
+    "paragraph": "ANCEL answers Odila with a small tired kindness, the way one humours village belief, and means it. Kneeling at the satchels he searches like an army clerk: bread, flint, silver put back where it was. From the oilcloth he draws a small wooden-boarded book, opens it anywhere, and reads two lines with moving lips. He closes it and stays perfectly still, hands closed around it, then wraps it again, ties the cord and slides it into his own satchel as if it were nothing."
+   },
+   "odila": {
+    "objective": "stop the others from doing what cannot be undone",
+    "obstacle": "no one listens to a laundress, and Girart will not look at her",
+    "tactics": [
+     "hold on",
+     "state once",
+     "watch"
+    ],
+    "beats": [
+     "grips Ancel's arm and holds him back from the fight",
+     "says «Not there» from the mule, flatly",
+     "watches the book go into Ancel's satchel",
+     "looks away"
+    ],
+    "business": "the mule's reins; Ancel's arm",
+    "tic": {
+     "trigger": "when someone is about to cross a line",
+     "action": "she takes hold of the nearest rein, arm or rope and does not let go"
+    },
+    "mask_crack": "However, when the book disappears into the satchel, she looks at Ancel, not at the book, and then away.",
+    "paragraph": "ODILA leans down from the mule and grips Ancel's arm, holding him back from the fight without a word. When Warin heads for the roots she says two words, flat and final, and does not explain or repeat them. Later, standing with the reins in her fist, she watches Ancel slide the wrapped book into his own satchel; she looks once at him, not at the book, and then deliberately away."
+   },
+   "renaud": {
+    "objective": "not leave the hanging man behind",
+    "obstacle": "no one takes down what the country leaves on the tree, and the company must go",
+    "tactics": [
+     "block",
+     "stay",
+     "look"
+    ],
+    "beats": [
+     "turns his horse across the first man's path; the horse is cut",
+     "stands before the figure on the limb, looking up",
+     "turns away only when Aymer touches his shoulder",
+     "rides out last on the strangers' horse, leading his own"
+    ],
+    "business": "the horse turned across the path; the wounded horse led by the halter",
+    "tic": {
+     "trigger": "when the others turn away from something",
+     "action": "he keeps looking at it until someone touches him"
+    },
+    "mask_crack": "However, when he leads his wounded horse, his hand on the halter is gentle.",
+    "paragraph": "RENAUD turns his thin horse across the first stranger's path and takes the cut for it without a sound. After the burial he stands alone before the figure on the low limb and looks up at it for a long time, the only one who does; his jaw works once. He turns only when Aymer's hand lands on his shoulder. He rides out last on one of the strangers' horses, leading his own wounded horse gently by the halter, and does not look back."
+   },
+   "primero-del-arbol": {
+    "objective": "take the dead man down unseen, then stop the riders who saw it",
+    "obstacle": "six armed riders, a bolt in his chest",
+    "tactics": [
+     "work",
+     "let go",
+     "advance",
+     "keep coming"
+    ],
+    "beats": [
+     "holds the dead man's legs, working",
+     "lets go and draws the short sword",
+     "walks on with the bolt in his chest",
+     "kneels, rises, falls"
+    ],
+    "business": "the dead man's legs; the short sword",
+    "tic": {
+     "trigger": "when he is hurt",
+     "action": "he looks at the wound once, as at a slipped tool, and goes on"
+    },
+    "mask_crack": "However, when he is seen, his calm becomes silent purpose.",
+    "paragraph": "THE FIRST MAN OF THE TREE works like a craftsman, holding the dead man's legs, until the riders appear; then he lets go, draws his short sword and walks toward them in a straight, unhurried line. Hit by a bolt, he glances at it once, as at a slipped tool, and keeps coming. Struck on the head, he kneels and rises. He never cries out."
+   },
+   "segundo-del-arbol": {
+    "objective": "take the dead man down carefully, then stop the riders who saw it",
+    "obstacle": "six armed riders, a sword arm cut open",
+    "tactics": [
+     "work",
+     "let go",
+     "advance",
+     "change hands and continue"
+    ],
+    "beats": [
+     "cuts the rope fibre by fibre",
+     "drops the knife and jumps down",
+     "cut on the sword arm, changes hands",
+     "sits against the ladder, eyes open"
+    ],
+    "business": "the knife on the rope; the sword passed to the left hand",
+    "tic": {
+     "trigger": "when he is wounded",
+     "action": "he changes hands and keeps coming without a sound"
+    },
+    "mask_crack": "However, when he is spotted, his hand lets go of the task at once.",
+    "paragraph": "THE SECOND MAN OF THE TREE saws the rope patiently, fibre by fibre, until he sees the riders; the knife drops at once and he jumps down with his sword out. Cut open along the sword arm, he passes the blade to his left hand without a sound and comes on. At the end he sits in the mud against the ladder, eyes open, the sword still in his left hand."
+   },
+   "cura-joven": {
+    "objective": "see the company leave and then go down to the crossroads",
+    "obstacle": "none he shows; he has simply been waiting",
+    "tactics": [
+     "wait",
+     "watch",
+     "go"
+    ],
+    "beats": [
+     "sits still on the mule on the hill, watching",
+     "watches the six grow small",
+     "does not cross himself",
+     "nudges the mule and starts down"
+    ],
+    "business": "the mule's reins",
+    "tic": {
+     "trigger": "when what he waited for is done",
+     "action": "he moves at once, without hurry"
+    },
+    "mask_crack": "However, when the six are gone, he nudges the mule forward at once.",
+    "paragraph": "THE YOUNG PRIEST sits very upright and still on his pale mule at the top of the hill, hands folded on the reins, and watches the line of six grow small on the road below. He does not cross himself. When they are gone he gives the mule a light touch on the neck and starts down toward the crossroads, unhurried."
+   }
+  },
+  "local_constraints": [
+   "Any look into the lens = failed take (C04)",
+   "Anyone but Odila or Ancel moving their lips = failed take (C05)",
+   "Any bird on screen = failed take (C07)",
+   "The figure on the limb seen close or with a face = failed take (C09)",
+   "Any shout or cry in the fight = failed take (guion: nadie grita)",
+   "Anyone looking back as the six ride out = failed take (guion)"
+  ]
+ },
+ "blocks": [
+  {
+   "block": {
+    "id": "b01",
+    "mode": "fotograma",
+    "duration": 8,
+    "length": 8,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "43346191-8af6-46f9-80d4-33a3970b6d4c",
+      "from": 0,
+      "to": 8,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "primero-del-arbol",
+    "segundo-del-arbol"
+   ]
+  },
+  {
+   "block": {
+    "id": "b02",
+    "mode": "fotograma",
+    "duration": 6,
+    "length": 6,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "e7d1aac5-68da-445f-aa3b-094797161874",
+      "from": 0,
+      "to": 6,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "primero-del-arbol",
+    "segundo-del-arbol"
+   ]
+  },
+  {
+   "block": {
+    "id": "b03",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 4,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "b4081b68-aee6-4cee-91a4-feeb51fb9ce7",
+      "from": 0,
+      "to": 4,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": []
+  },
+  {
+   "block": {
+    "id": "b04",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 4,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "cb019d97-cc4b-4086-990c-c0a74d333067",
+      "from": 0,
+      "to": 4,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "primero-del-arbol",
+    "segundo-del-arbol"
+   ]
+  },
+  {
+   "block": {
+    "id": "b05",
+    "mode": "fotograma",
+    "duration": 7,
+    "length": 7,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "8de85dbd-d998-42ec-badf-adac1ab15f3c",
+      "from": 0,
+      "to": 7,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "girart",
+    "aymer",
+    "warin",
+    "renaud",
+    "ancel",
+    "odila"
+   ]
+  },
+  {
+   "block": {
+    "id": "b06",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 4,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "bc7598e5-1a07-47f5-a8ff-d0b6556ace03",
+      "from": 0,
+      "to": 4,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "girart"
+   ]
+  },
+  {
+   "block": {
+    "id": "b07",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 3,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "647db442-3556-4143-bc54-885ebbed8d06",
+      "from": 0,
+      "to": 3,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "primero-del-arbol",
+    "segundo-del-arbol"
+   ]
+  },
+  {
+   "block": {
+    "id": "b08",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 5,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "fb93790d-13d1-4a89-8592-52b3a9ff5eef",
+      "from": 0,
+      "to": 5,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "primero-del-arbol",
+    "segundo-del-arbol"
+   ]
+  },
+  {
+   "block": {
+    "id": "b09",
+    "mode": "fotograma",
+    "duration": 6,
+    "length": 6,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "b59390d8-6b06-4a38-a6fc-de6609238ae4",
+      "from": 0,
+      "to": 6,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "primero-del-arbol",
+    "segundo-del-arbol"
+   ]
+  },
+  {
+   "block": {
+    "id": "b10",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 4,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "09ef95be-adb4-4409-b461-4ad060829bc1",
+      "from": 0,
+      "to": 4,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "girart",
+    "aymer",
+    "warin",
+    "renaud"
+   ]
+  },
+  {
+   "block": {
+    "id": "b11",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 5,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "e0951fe7-ab2e-489c-8e62-32debc7fe920",
+      "from": 0,
+      "to": 5,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "warin"
+   ]
+  },
+  {
+   "block": {
+    "id": "b12",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 4,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "19487140-3830-435a-a227-f28de3e18248",
+      "from": 0,
+      "to": 4,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "primero-del-arbol"
+   ]
+  },
+  {
+   "block": {
+    "id": "b13",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 4,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "4b0a83d0-85cd-4a2e-940e-f78c72aa0ab6",
+      "from": 0,
+      "to": 4,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "warin"
+   ]
+  },
+  {
+   "block": {
+    "id": "b14",
+    "mode": "fotograma",
+    "duration": 6,
+    "length": 6,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "8fa3ed5f-7027-496a-860e-7a75a41d63d5",
+      "from": 0,
+      "to": 6,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "aymer",
+    "segundo-del-arbol"
+   ]
+  },
+  {
+   "block": {
+    "id": "b15",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 5,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "facd546d-8f1b-43ba-9002-84edc680086d",
+      "from": 0,
+      "to": 5,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "renaud",
+    "primero-del-arbol"
+   ]
+  },
+  {
+   "block": {
+    "id": "b16",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 4,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "5a5c9a84-c085-4dcd-a76f-aba3a3814ea7",
+      "from": 0,
+      "to": 4,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "girart",
+    "primero-del-arbol"
+   ]
+  },
+  {
+   "block": {
+    "id": "b17",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 4,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "ab3d04fe-b7c3-44e4-9328-336faa4c9160",
+      "from": 0,
+      "to": 4,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "ancel",
+    "odila"
+   ]
+  },
+  {
+   "block": {
+    "id": "b18",
+    "mode": "fotograma",
+    "duration": 7,
+    "length": 7,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "29dc01f7-cbdd-427d-b86c-91bae5aeb2be",
+      "from": 0,
+      "to": 7,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "primero-del-arbol",
+    "segundo-del-arbol"
+   ]
+  },
+  {
+   "block": {
+    "id": "b19",
+    "mode": "fotograma",
+    "duration": 6,
+    "length": 6,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "91b225c5-2af0-4073-a540-a9b3c51e6252",
+      "from": 0,
+      "to": 6,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "girart",
+    "aymer",
+    "warin",
+    "renaud",
+    "ancel",
+    "odila",
+    "primero-del-arbol",
+    "segundo-del-arbol"
+   ]
+  },
+  {
+   "block": {
+    "id": "b20",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 4,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "1a76aa15-c667-4d33-b7c9-ce80c06aa849",
+      "from": 0,
+      "to": 4,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "aymer",
+    "segundo-del-arbol"
+   ]
+  },
+  {
+   "block": {
+    "id": "b21",
+    "mode": "fotograma",
+    "duration": 6,
+    "length": 6,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "5bb6e7bf-54aa-49b3-b05c-996beb759b3d",
+      "from": 0,
+      "to": 6,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "girart"
+   ]
+  },
+  {
+   "block": {
+    "id": "b22",
+    "mode": "fotograma",
+    "duration": 6,
+    "length": 6,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "1c6657ed-456e-49f0-854d-f416ec9b7106",
+      "from": 0,
+      "to": 6,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "warin"
+   ]
+  },
+  {
+   "block": {
+    "id": "b23",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 4,
+    "voices": [
+     "odila"
+    ],
+    "offscreen": [],
+    "budget": 2,
+    "parts": [
+     {
+      "shot": "0aff5605-3a27-43c5-b044-84d7f9c9f4cd",
+      "from": 0,
+      "to": 4,
+      "at": 0,
+      "lines": [
+       {
+        "id": "3f077f58-be1d-41b5-a3cb-a8ba17c26905",
+        "character": "odila",
+        "text": "Not there.",
+        "start": 0.5,
+        "offscreen": false,
+        "audio": "assets/voces/a1-00-ahorcado/3f077f58-be1d-41b5-a3cb-a8ba17c26905.wav",
+        "audioDuration": 1.06
+       }
+      ]
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "odila"
+   ]
+  },
+  {
+   "block": {
+    "id": "b24",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 4,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "b228501c-6a5c-4d4a-9643-ad0ed04becfb",
+      "from": 0,
+      "to": 4,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "warin",
+    "girart"
+   ]
+  },
+  {
+   "block": {
+    "id": "b25",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 4,
+    "voices": [
+     "ancel"
+    ],
+    "offscreen": [],
+    "budget": 2.25,
+    "parts": [
+     {
+      "shot": "ca4ea7c5-a02a-43a9-bc54-6e522f676ff3",
+      "from": 0,
+      "to": 4,
+      "at": 0,
+      "lines": [
+       {
+        "id": "86291f07-54f6-441c-b308-48aad0652238",
+        "character": "ancel",
+        "text": "Earth is earth.",
+        "start": 0.5,
+        "offscreen": false,
+        "audio": "assets/voces/a1-00-ahorcado/86291f07-54f6-441c-b308-48aad0652238.wav",
+        "audioDuration": 1.92
+       }
+      ]
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "ancel"
+   ]
+  },
+  {
+   "block": {
+    "id": "b26",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 3,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "294054be-5bed-4197-823b-3d4527a26dee",
+      "from": 0,
+      "to": 3,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "warin"
+   ]
+  },
+  {
+   "block": {
+    "id": "b27",
+    "mode": "fotograma",
+    "duration": 7,
+    "length": 7,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "1a700999-1f69-401d-af1d-b8ec19a84f64",
+      "from": 0,
+      "to": 7,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "warin",
+    "aymer",
+    "renaud",
+    "girart",
+    "primero-del-arbol",
+    "segundo-del-arbol"
+   ]
+  },
+  {
+   "block": {
+    "id": "b28",
+    "mode": "fotograma",
+    "duration": 7,
+    "length": 7,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "6f257ab6-92e8-4fde-9157-91653e96c9b0",
+      "from": 0,
+      "to": 7,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "ancel"
+   ]
+  },
+  {
+   "block": {
+    "id": "b29",
+    "mode": "fotograma",
+    "duration": 6,
+    "length": 6,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "cdd60172-3002-402e-9d9a-6e5a9ada71f3",
+      "from": 0,
+      "to": 6,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "ancel"
+   ]
+  },
+  {
+   "block": {
+    "id": "b30",
+    "mode": "fotograma",
+    "duration": 8,
+    "length": 8,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "c70f0884-58b2-4899-8b2e-0dff933cda78",
+      "from": 0,
+      "to": 8,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "ancel"
+   ]
+  },
+  {
+   "block": {
+    "id": "b31",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 5,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "450adcb0-9f91-474b-9742-93de6dd38962",
+      "from": 0,
+      "to": 5,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "ancel"
+   ]
+  },
+  {
+   "block": {
+    "id": "b32",
+    "mode": "fotograma",
+    "duration": 6,
+    "length": 6,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "77930b1c-c8c6-44c7-8a42-4412c77a7135",
+      "from": 0,
+      "to": 6,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "ancel"
+   ]
+  },
+  {
+   "block": {
+    "id": "b33",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 5,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "ebcdea9a-36f0-49da-93c8-978d4756200f",
+      "from": 0,
+      "to": 5,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "odila"
+   ]
+  },
+  {
+   "block": {
+    "id": "b34",
+    "mode": "fotograma",
+    "duration": 6,
+    "length": 6,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "3ab76a2c-3fc7-41e1-b922-9f0647fcd977",
+      "from": 0,
+      "to": 6,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "warin",
+    "aymer"
+   ]
+  },
+  {
+   "block": {
+    "id": "b35",
+    "mode": "fotograma",
+    "duration": 10,
+    "length": 10,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "42df9351-c787-44df-ae51-75f311bb9208",
+      "from": 0,
+      "to": 10,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "renaud"
+   ]
+  },
+  {
+   "block": {
+    "id": "b36",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 4,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "828cb7c2-4f72-4e95-bb6c-1cba57134ed3",
+      "from": 0,
+      "to": 4,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "renaud",
+    "aymer"
+   ]
+  },
+  {
+   "block": {
+    "id": "b37",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 5,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "3c196abb-1c60-4511-add9-a30f8828eb66",
+      "from": 0,
+      "to": 5,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "warin"
+   ]
+  },
+  {
+   "block": {
+    "id": "b38",
+    "mode": "fotograma",
+    "duration": 5,
+    "length": 3,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "94347f2d-c67d-4c01-a898-0a53a9c3747b",
+      "from": 0,
+      "to": 3,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "girart"
+   ]
+  },
+  {
+   "block": {
+    "id": "b39",
+    "mode": "fotograma",
+    "duration": 12,
+    "length": 12,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "0d6f7f33-9db9-48c3-83c5-d32f365f3ff6",
+      "from": 0,
+      "to": 12,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "girart",
+    "aymer",
+    "warin",
+    "renaud",
+    "ancel",
+    "odila"
+   ]
+  },
+  {
+   "block": {
+    "id": "b40",
+    "mode": "fotograma",
+    "duration": 8,
+    "length": 8,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "74f49a8a-91a3-4108-8965-1196c39c3f68",
+      "from": 0,
+      "to": 8,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": []
+  },
+  {
+   "block": {
+    "id": "b41",
+    "mode": "fotograma",
+    "duration": 8,
+    "length": 8,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "32cf6382-6df5-44a2-98ad-94e620955fe4",
+      "from": 0,
+      "to": 8,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "cura-joven"
+   ]
+  },
+  {
+   "block": {
+    "id": "b42",
+    "mode": "fotograma",
+    "duration": 7,
+    "length": 7,
+    "voices": [],
+    "offscreen": [],
+    "budget": 0,
+    "parts": [
+     {
+      "shot": "c688d090-8307-4751-8e71-871b8c31dd90",
+      "from": 0,
+      "to": 7,
+      "at": 0,
+      "lines": []
+     }
+    ],
+    "rules": [
+     "R12"
+    ]
+   },
+   "cast": [
+    "cura-joven"
+   ]
+  }
+ ]
+}

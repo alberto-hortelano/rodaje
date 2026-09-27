@@ -20,7 +20,8 @@ test('promptTexts funde campo a campo sobre los neutros y no los muta',()=>{cons
  const t=w.promptTexts({texts:{people:'the family',physics:{normal:'N',Half:'x',zero:''},swarm:{label:'Birds'},tasks:{idle:' ',fallback:'F'},quality:'x'}});
  assert.equal(t.people,'the family');assert.deepEqual(t.physics,{normal:'N'});assert.deepEqual(t.swarm,{label:'Birds',none:''});assert.deepEqual(t.tasks,{idle:'',fallback:'F'});assert.deepEqual(t.quality,w.NEUTRAL_TEXTS.quality);
  t.retention.character='x';assert.deepEqual(w.NEUTRAL_TEXTS,copy);
- assert.deepEqual(w.promptTexts({texts:T42.registry.texts}),{...T42.registry.texts});});
+ assert.deepEqual(w.promptTexts({texts:T42.registry.texts}),{...T42.registry.texts,frame:w.NEUTRAL_TEXTS.frame});
+ assert.deepEqual(w.promptTexts({texts:{frame:{keep:'face',physics:''}}}).frame,{...w.NEUTRAL_TEXTS.frame,keep:'face'});});
 
 test('channelPrompt: el del canal; desconocido, el de direct; conocido sin prompt, vacío',()=>{const CH=w.projectChannels(DEAD);
  assert.deepEqual(w.channelPrompt(CH,'radio'),T42.channelPrompts.radio);assert.deepEqual(w.channelPrompt(CH,''),T42.channelPrompts.direct);assert.deepEqual(w.channelPrompt(CH,'intercom'),T42.channelPrompts.direct);
@@ -34,7 +35,8 @@ test('registryTextErrors: un caso por regla y los textos de dead-air sin errores
  has({texts:'x'},/^texts debe ser un objeto/);has({texts:{crowd:'x'}},/texts: clave desconocida «crowd»/);has({texts:{people:' '}},/texts\.people debe ser un texto no vacío/);
  has({texts:{physics:'x'}},/texts\.physics debe ser un objeto/);has({texts:{physics:{Half:'x'}}},/texts\.physics: clave «Half» no válida/);has({texts:{physics:{half:''}}},/texts\.physics\.half debe ser/);
  has({texts:{swarm:[]}},/texts\.swarm debe ser un objeto/);has({texts:{swarm:{color:'x'}}},/texts\.swarm: clave desconocida «color»/);has({texts:{offscreen:{where:''}}},/texts\.offscreen\.where debe ser un texto no vacío/);
- assert.deepEqual(e({texts:{physics:{lunar:'Moon.'}}}),[]);});
+ assert.deepEqual(e({texts:{physics:{lunar:'Moon.'}}}),[]);
+ assert.deepEqual(e({texts:{frame:{keep:'k',changes:'c',physics:'p',quality:'q',present:'r'}}}),[]);has({texts:{frame:{animals:'x'}}},/texts\.frame: clave desconocida «animals»/);has({texts:{frame:{physics:''}}},/texts\.frame\.physics debe ser un texto no vacío/);has({texts:{frame:'x'}},/texts\.frame debe ser un objeto/);});
 
 test('registryTextIssues: claves por zona fuera del catálogo y variantes sin sonido; dead-air sin avisos',()=>{
  assert.deepEqual(w.registryTextIssues({lighting:DEAD_LIGHTING,...T42.registry},DEAD),[]);assert.deepEqual(w.registryTextIssues({lighting:{default:'x'}},null),[]);
