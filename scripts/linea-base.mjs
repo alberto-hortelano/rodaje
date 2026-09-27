@@ -4,13 +4,14 @@
 // --ensayo añade capturas del ensayo 3D (createStage) de esos planos en t=0, a mitad y 0,3 s tras la primera réplica;
 // --lote repite los planos con la instantánea del lote, completada con el stage del proyecto vivo salvo --sin-respaldo.
 // Escribe solo en <dir>: linea-base.json y capturas/<nombre>.png. Para comparar dos instantáneas: diff -r <a> <b>.
-// Las capturas necesitan la app arrancada (npm start) y Chrome (CHROME_PATH o /usr/bin/google-chrome).
+// Las capturas necesitan la app arrancada (npm start) y Chrome (ver lib/chrome.mjs).
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {load, digest, dir, shot as findShot} from '../app/store.mjs';
 import {sortKeys, stageFallback} from '../app/workflow.mjs';
 import {readJSON, writeJSON} from '../lib/json.mjs';
+import {withChrome, newRenderContext, pinClock, VIEWPORTS} from '../lib/chrome.mjs';
 import {projectIds, environmentsWithBuilder, loadEnvironment, buildEnvironment, exportGlb, coplanarReport} from '../lib/entorno3d.mjs';
 
 const args = process.argv.slice(2);
@@ -44,18 +45,16 @@ for (const {projectId, envId} of envs) {
 }
 
 if (shots) {
-  const {chromium} = await import('playwright');
   const views = [
     ...envs.map(({projectId, envId}) => ({name: `entorno-${projectId}-${envId}`, path: `/?project=${encodeURIComponent(projectId)}&view=environment&environment=${encodeURIComponent(envId)}`, ready: 'window.rodaje?.environment', canvas: '#environment-model canvas[data-engine]'})),
     ...projects.filter(p => p.shipModel).map(p => ({name: `nave-${p.id}`, path: `/?project=${encodeURIComponent(p.id)}&view=ship`, ready: 'window.rodaje?.ship', canvas: '#ship-model canvas[data-engine]'}))
   ];
-  const browser = await chromium.launch({executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox']});
   const failures = [];
-  try {
+  await withChrome(async browser => {
     result.chrome = browser.version();
     result.capturas = {};
     fs.mkdirSync(path.join(out, 'capturas'), {recursive: true});
-    const context = await browser.newContext({viewport: {width: 1280, height: 800}, deviceScaleFactor: 1, serviceWorkers: 'block'});
+    const context = await newRenderContext(browser, VIEWPORTS.lineaBase);
     for (const v of views) {
       const page = await context.newPage(), errors = [];
       page.on('request', r => { if (r.method() !== 'GET') errors.push(`petición ${r.method()} ${r.url()}`); });
@@ -83,7 +82,7 @@ if (shots) {
         page.on('request', r => { if (r.method() !== 'GET') errors.push(`petición ${r.method()} ${r.url()}`); const u = new URL(r.url()); if (u.pathname === '/api/asset') asked.add(u.searchParams.get('file')); });
         await page.route('**/*', r => r.request().method() === 'GET' ? r.continue() : r.abort());
         page.on('pageerror', e => errors.push('error en la página: ' + e.message));
-        await page.addInitScript(() => { performance.now = () => 1000; }); // la boca del que habla oscila con performance.now
+        await pinClock(page);
         try {
           const {sequence: s, shot: t} = findShot(project, id);
           await page.goto(url + '/'); await page.waitForTimeout(800);
@@ -104,7 +103,7 @@ if (shots) {
         await page.close();
       }
     }
-  } finally { await browser.close(); }
+  });
   if (failures.length) { console.error('Fallos en las capturas:'); for (const f of failures) console.error('  ' + f); process.exit(1); }
 }
 

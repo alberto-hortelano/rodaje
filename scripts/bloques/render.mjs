@@ -3,16 +3,15 @@
 //   node scripts/bloques/render.mjs <lote> [bloque] [--project id] [--labels] [--force]
 // Necesita la app abierta (./abrir.sh) porque renderiza con /stage.js en Chrome headless. No genera nada de pago.
 import fs from 'node:fs';import path from 'node:path';import {spawn} from 'node:child_process';import {once} from 'node:events';
-import {chromium} from 'playwright';
+import {withChrome,newRenderContext,pinClock,VIEWPORTS} from '../../lib/chrome.mjs';
 import {parseArgs,cliProject,usageExit} from './lib.mjs';import {loadLote} from '../../lib/lotes.mjs';import {load} from '../../app/store.mjs';import {stageFallback} from '../../app/workflow.mjs';
 const USAGE='Uso: render.mjs <lote> [bloque] [--project id] [--labels] [--force]';
 const {args:[lote,only],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
 const {project:id}=cliProject({usage:USAGE,opts});
 const L=loadLote(id,lote);const project=stageFallback(L.project,L.project.stage?null:load(id));const port=process.env.PORT||4320,url=`http://127.0.0.1:${port}/`;
 try{await fetch(url);}catch{console.error(`La app no responde en ${url}. Arranca ./abrir.sh y repite.`);process.exit(1);}
-const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
-try{for(const block of L.plan){if(only&&block.id!==only)continue;const dir=path.join(L.paths.out,block.id);fs.mkdirSync(dir,{recursive:true});if(fs.existsSync(path.join(dir,'motion.mp4'))&&!opts.force){console.log('ya existe',block.id);continue;}
- const page=await browser.newPage({viewport:{width:1280,height:720}});
+await withChrome(async browser=>{for(const block of L.plan){if(only&&block.id!==only)continue;const dir=path.join(L.paths.out,block.id);fs.mkdirSync(dir,{recursive:true});if(fs.existsSync(path.join(dir,'motion.mp4'))&&!opts.force){console.log('ya existe',block.id);continue;}
+ const ctx=await newRenderContext(browser,VIEWPORTS.guia);await pinClock(ctx);const page=await ctx.newPage();
  if(!opts.labels)await page.route('**/stage.js',async route=>{const res=await route.fetch();await route.fulfill({response:res,body:(await res.text()).replace('group.add(label);','label.visible=false;group.add(label);')});});
  await page.goto(url);await page.waitForTimeout(800);await page.evaluate(()=>{document.body.innerHTML='<div id="render"></div>';});
  const total=block.length,frames=Math.ceil(total*12);const tmp=path.join(dir,'motion.tmp.mp4');
@@ -22,5 +21,4 @@ try{for(const block of L.plan){if(only&&block.id!==only)continue;const dir=path.
   const png=await page.evaluate(({t,local})=>{const l=t.lines.find(l=>local>=l.start&&local<l.start+(l.estimatedDuration||3));st.setSpeaker(l||null);return st.frame(local);},{t,local});const buf=Buffer.from(png.split(',')[1],'base64');
   if(i===0)fs.writeFileSync(path.join(dir,'frame-start.png'),buf);if(i===Math.floor(frames/2))fs.writeFileSync(path.join(dir,'frame-mid.png'),buf);
   if(!enc.stdin.write(buf))await once(enc.stdin,'drain');}
- enc.stdin.end();const [code]=await done;if(code)throw Error(err);fs.renameSync(tmp,path.join(dir,'motion.mp4'));await page.close();console.log('guía lista',block.id,`${total.toFixed(2)} s`);}}
-finally{await browser.close();}
+ enc.stdin.end();const [code]=await done;if(code)throw Error(err);fs.renameSync(tmp,path.join(dir,'motion.mp4'));await ctx.close();console.log('guía lista',block.id,`${total.toFixed(2)} s`);}});
