@@ -16,6 +16,7 @@ Reglas:
 - Para cambios en un repo de proyecto (`proyectos/<id>/`), trabaja en ese repo y no lo mezcles con la app.
 - Para comparar el antes y el después de un script que escribe en un proyecto, nunca lo ejecutes sobre `proyectos/`: copia el proyecto al scratchpad (`cp -r`, sin binarios si pesa) y usa `RODAJE_DATA=<copia>`. Al terminar, `git -C proyectos/<id> status --porcelain` debe seguir vacío.
 - Los tests se ejecutan SIEMPRE con `npm test` o con `node --import ./test/setup.mjs --test <fichero>`: sin `setup.mjs` algunos tests escriben en `proyectos/` reales.
+- Los servidores o procesos que arranques se paran SOLO por su PID (guárdalo al arrancar). Nunca `pkill`/`killall` por patrón: mata la app del usuario.
 - Prohibido: lanzar generaciones de pago (fal.ai, ElevenLabs, H3, nano-banana), hacer commits o push, editar a mano ficheros derivados (`hoja.md`, `personaje.json`, `escenario.json`, `capitulo.json`, `REGISTRO.md`).
 
 Informe final, en español (España):

@@ -24,6 +24,8 @@ Los scripts que escriben en un proyecto se prueban sobre una copia con `RODAJE_D
 
 Los tests se ejecutan SIEMPRE con `npm test` o con `node --import ./test/setup.mjs --test <fichero>`: sin `setup.mjs` algunos tests escriben en `proyectos/` reales.
 
+Los servidores o procesos que arranques se paran SOLO por su PID (guárdalo al arrancar). Nunca `pkill`/`killall` por patrón: mata la app del usuario.
+
 No corrijas código ni lances generaciones de pago.
 
 Informe, en español (España):
