@@ -1,0 +1,14 @@
+{
+ "durationRequested": 6,
+ "image": "storyboards/f1.png",
+ "endImage": "storyboards/f1.png",
+ "cast": [
+  "ana"
+ ],
+ "lineAudio": {
+  "file": "assets/voces/s01/l01-1.5s.wav",
+  "start": 0.5
+ },
+ "images": [],
+ "audios": []
+}

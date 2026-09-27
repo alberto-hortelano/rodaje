@@ -6,7 +6,7 @@
 //   node scripts/bloques/enviar.mjs <lote> <bloque> [--project id] [--changed "línea nueva"] [--changed-ref "…"] [--modelo h3] [--yes]
 // Sin --yes es un ensayo: muestra lo que enviaría y no gasta créditos. Cada envío crea prompt-vNN.txt, request-vNN.json
 // y una entrada en attempts.json. A partir del segundo intento exige --changed (una línea); rechaza el séptimo.
-import fs from 'node:fs';import path from 'node:path';import {execFileSync} from 'node:child_process';
+import fs from 'node:fs';import path from 'node:path';import {ffmpeg} from '../../lib/media.mjs';
 import {parseArgs,readJSON,writeJSON,falClient,cliProject,usageExit} from './lib.mjs';import {loadLote,loadAttempts,saveAttempts} from '../../lib/lotes.mjs';
 const USAGE='Uso: enviar.mjs <lote> <bloque> [--project id] [--changed "línea"] [--changed-ref "…"] [--modelo h3] [--yes]';
 const {args:[lote,blockId],opts}=parseArgs(process.argv.slice(2));if(!lote||!blockId)usageExit(USAGE);
@@ -20,7 +20,7 @@ const refs=readJSON(refsFile);
 if(frameMode){if(!refs.image||!fs.existsSync(path.join(L.paths.base,refs.image)))throw Error(`No existe el fotograma ${refs.image}`);for(const id of refs.cast||[]){const e=Object.entries(L.registry.assets).find(([,a])=>a.kind==='character'&&a.character===id);if(!e||e[1].status!=='approved')throw Error(`Tag sin aprobar para ${id}: congélalo con registro.mjs freeze`);}}
 // Pista de voz: silencio hasta el inicio de la línea + la frase, hasta la duración pedida.
 if(frameMode&&block.voices?.length&&!refs.lineAudio)console.warn('Aviso: el bloque tiene diálogo y la línea no tiene audio; genera las voces con voces.mjs y repite prompt.mjs, o el modelo inventará la voz.');
-let voiceTrack=null;if(frameMode&&refs.lineAudio){const src=path.join(L.paths.base,refs.lineAudio.file);if(!fs.existsSync(src))throw Error(`No existe el audio de la línea ${refs.lineAudio.file}`);voiceTrack=path.join(dir,'voz.wav');execFileSync('ffmpeg',['-y','-v','error','-i',src,'-af',`adelay=${Math.round(refs.lineAudio.start*1000)}:all=1,apad,atrim=0:${refs.durationRequested}`,'-ar','44100','-ac','1',voiceTrack]);}for(const r of [...refs.images,...refs.audios]){if(!r.file)throw Error(`Referencia sin fichero: ${r.tag}`);if(!fs.existsSync(path.join(L.paths.base,r.file)))throw Error(`No existe ${r.file} (${r.tag})`);const a=L.registry.assets[r.tag];if(!a||a.status!=='approved')throw Error(`Tag sin aprobar: ${r.tag}`);}
+let voiceTrack=null;if(frameMode&&refs.lineAudio){const src=path.join(L.paths.base,refs.lineAudio.file);if(!fs.existsSync(src))throw Error(`No existe el audio de la línea ${refs.lineAudio.file}`);voiceTrack=path.join(dir,'voz.wav');ffmpeg(['-i',src,'-af',`adelay=${Math.round(refs.lineAudio.start*1000)}:all=1,apad,atrim=0:${refs.durationRequested}`,'-ar','44100','-ac','1',voiceTrack]);}for(const r of [...refs.images,...refs.audios]){if(!r.file)throw Error(`Referencia sin fichero: ${r.tag}`);if(!fs.existsSync(path.join(L.paths.base,r.file)))throw Error(`No existe ${r.file} (${r.tag})`);const a=L.registry.assets[r.tag];if(!a||a.status!=='approved')throw Error(`Tag sin aprobar: ${r.tag}`);}
 const attempts=loadAttempts(L.paths.out,blockId);const n=attempts.length+1;const prev=attempts.at(-1);
 if(n>6)throw Error('R26: seis intentos sobre el mismo bloque; cambia el bloque (divide, quita una acción, inserto de objeto u otra cámara) y crea un lote nuevo');
 if(n>=5)console.warn('R26: quinto intento o más; el protocolo pide cambiar el bloque, no la frase.');

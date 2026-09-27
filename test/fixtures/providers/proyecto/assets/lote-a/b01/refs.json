@@ -1,0 +1,19 @@
+{
+ "durationRequested": 6,
+ "images": [
+  {
+   "tag": "ANA_REF",
+   "file": "ref/ana.png"
+  },
+  {
+   "tag": "LOC_REF",
+   "file": "ref/loc.png"
+  }
+ ],
+ "audios": [
+  {
+   "tag": "ANA_VOICE",
+   "file": "ref/ana.wav"
+  }
+ ]
+}

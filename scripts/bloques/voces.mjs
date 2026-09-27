@@ -14,7 +14,7 @@
 //     Diseña una voz nueva con MiniMax (3 $ por voz) y la guarda como candidata en el casting.json del personaje, con su muestra.
 //     Para conservarla hay que usarla en una generación de voz antes de 7 días. Para adoptarla: voz del personaje = su ID y
 //     "modelo": "minimax" en la entrada del idioma del casting.json.
-import fs from 'node:fs';import path from 'node:path';import {execFileSync} from 'node:child_process';
+import fs from 'node:fs';import path from 'node:path';import {ffmpeg} from '../../lib/media.mjs';
 import {load,save,dir} from '../../app/store.mjs';
 import {parseArgs,falClient,ffprobeDuration,writeJSON,cliProject,usageExit} from './lib.mjs';
 const {args:[cmd,...rest],opts}=parseArgs(process.argv.slice(2));
@@ -24,7 +24,7 @@ const {project}=cliProject({usage,opts}),base=dir(project);const p=load(project)
 // casting.json de la biblia: la entrada del idioma del proyecto cuya voz coincide con la del personaje.
 const castings=[];const bib=path.join(base,'biblia','personajes');if(fs.existsSync(bib))for(const d of fs.readdirSync(bib)){const f=path.join(bib,d,'voz','casting.json');if(fs.existsSync(f))castings.push(JSON.parse(fs.readFileSync(f,'utf8')));}
 const settingsFor=c=>castings.map(x=>x[p.language]).find(x=>x?.voice===c.voice)||{};
-const toWav=(mp3)=>{const wav=mp3.replace(/\.[a-z0-9]+$/,'.wav');execFileSync('ffmpeg',['-y','-v','error','-i',mp3,'-ar','44100','-ac','1',wav]);return wav;};
+const toWav=(mp3)=>{const wav=mp3.replace(/\.[a-z0-9]+$/,'.wav');ffmpeg(['-i',mp3,'-ar','44100','-ac','1',wav]);return wav;};
 // Solo por fal: da derechos de uso comercial (la cuenta propia de ElevenLabs del usuario es de uso no comercial). Devuelve el mp3 como Buffer.
 const fetchBuf=async url=>Buffer.from(await (await fetch(url)).arrayBuffer());
 const tts=async(client,text,voice,stability)=>{const r=await client.subscribe('fal-ai/elevenlabs/tts/eleven-v3',{input:{text,voice,stability,language_code:p.language}});const url=r.data?.audio?.url;if(!url)throw Error('ElevenLabs no devolvió audio');return fetchBuf(url);};

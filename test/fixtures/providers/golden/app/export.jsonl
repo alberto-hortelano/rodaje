@@ -1,0 +1,2 @@
+{"kind":"exec","bin":"ffmpeg","argv":["-y","-v","error","-i","<DATA>/fixture-app/assets/final.mp4","-vf","scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1","-r","24","-c:v","libx264","-c:a","aac","-ar","48000","-ac","2","<DATA>/fixture-app/assets/job-export/0.mp4"]}
+{"kind":"exec","bin":"ffmpeg","argv":["-y","-v","error","-f","concat","-safe","0","-i","<DATA>/fixture-app/assets/job-export/list.txt","-c","copy","-movflags","+faststart","<DATA>/fixture-app/assets/job-export/capitulo.mp4"]}

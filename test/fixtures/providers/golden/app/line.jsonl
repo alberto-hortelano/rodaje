@@ -1,0 +1,5 @@
+{"kind":"fetch","method":"POST","url":"https://queue.fal.run/fal-ai/elevenlabs/tts/eleven-v3","auth":"Key test:dummy","headers":{"accept":"application/json","content-type":"application/json","x-fal-queue-priority":"normal"},"body":"{\"text\":\"We leave at dawn.\",\"voice\":\"voz-ana\",\"stability\":0.5,\"language_code\":\"en\"}"}
+{"kind":"fetch","method":"GET","url":"https://queue.fal.run/fal-ai/elevenlabs/requests/mock-7-fal_ai_elevenlabs_tts_eleven_v3/status?logs=0","auth":"Key test:dummy","headers":{"accept":"application/json","content-type":"application/json"},"body":null}
+{"kind":"fetch","method":"GET","url":"https://queue.fal.run/fal-ai/elevenlabs/requests/mock-7-fal_ai_elevenlabs_tts_eleven_v3","auth":"Key test:dummy","headers":{"accept":"application/json","content-type":"application/json"},"body":null}
+{"kind":"fetch","method":"GET","url":"https://files.mock.invalid/result/mock-7-fal_ai_elevenlabs_tts_eleven_v3.mp3","auth":null,"headers":{},"body":null}
+{"kind":"exec","bin":"ffprobe","argv":["-v","error","-show_entries","format=duration","-of","default=nw=1:nk=1","<DATA>/fixture-app/assets/job-line.mp3"]}

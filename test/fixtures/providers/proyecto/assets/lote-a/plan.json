@@ -1,0 +1,74 @@
+[
+ {
+  "id": "b01",
+  "length": 6,
+  "voices": [
+   "ana"
+  ],
+  "parts": [
+   {
+    "shot": "p01",
+    "at": 0,
+    "from": 0,
+    "to": 6,
+    "lines": [
+     {
+      "id": "l01",
+      "character": "ana",
+      "text": "We leave at dawn.",
+      "start": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "b02",
+  "mode": "fotograma",
+  "length": 6,
+  "voices": [
+   "ana"
+  ],
+  "parts": [
+   {
+    "shot": "p01",
+    "at": 0,
+    "from": 0,
+    "to": 6,
+    "lines": [
+     {
+      "id": "l01",
+      "character": "ana",
+      "text": "We leave at dawn.",
+      "start": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "b03",
+  "length": 5,
+  "voices": [
+   "beto"
+  ],
+  "parts": [
+   {
+    "shot": "p01",
+    "at": 0,
+    "from": 0,
+    "to": 5,
+    "lines": [
+     {
+      "id": "l02",
+      "character": "beto",
+      "text": "Not without the map.",
+      "start": 3,
+      "delivery": "[tired]",
+      "offscreen": true
+     }
+    ]
+   }
+  ]
+ }
+]

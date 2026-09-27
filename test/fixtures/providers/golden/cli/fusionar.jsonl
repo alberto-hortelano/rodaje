@@ -1,0 +1,5 @@
+{"kind":"exec","bin":"ffmpeg","argv":["-v","error","-i","<DATA>/fixture-proveedores/portadas/a-v2.png","-vf","scale=96:64,format=gray","-f","rawvideo","-"]}
+{"kind":"exec","bin":"ffmpeg","argv":["-v","error","-i","<DATA>/fixture-proveedores/portadas/a.png","-vf","scale=96:64,format=gray","-f","rawvideo","-"]}
+{"kind":"exec","bin":"ffmpeg","argv":["-v","error","-i","<DATA>/fixture-proveedores/ref/ana.png","-vf","scale=96:64,format=gray","-f","rawvideo","-"]}
+{"kind":"exec","bin":"ffmpeg","argv":["-v","error","-i","<DATA>/fixture-proveedores/ref/loc.png","-vf","scale=96:64,format=gray","-f","rawvideo","-"]}
+{"kind":"pares","body":[{"original":"fixture-proveedores/portadas/a.png","editada":"fixture-proveedores/portadas/a-v2.png","tamano":[4,4],"media":0,"cambiado":0,"segura":true,"fusionada":null,"mascara":false}]}

@@ -3,3 +3,27 @@ test('H3 receives exact approved motion, audio, frame and reference order',async
 test('speech request uses selected voice, language and exact line',async()=>{const p=create('Voice adapter');p.language='es';p.characters=[{id:'c',voice:'selected-voice'}];const t=newShot();t.lines=[{id:'l',character:'c',text:'Gracias por venir.',start:1}];p.episodes=[{id:'e',sequences:[{id:'s',shots:[t]}]}];const r=await inputFor({type:'line',snapshot:p,target:t.id,extra:{line:'l'}},{});assert.equal(r.input.voice,'selected-voice');assert.equal(r.input.language_code,'es');assert.equal(r.input.text,'Gracias por venir.');});
 test('cover request sends the sequence prompt as a single 16:9 image without references',async()=>{const p=create('Cover adapter');p.style='Muted.';p.episodes=[{id:'e',title:'Acto I',sequences:[{id:'s',title:'La carga',text:'Dawn charge.',coverPrompt:'A knight at dawn.',cast:[],shots:[]}]}];const r=await inputFor({type:'cover',snapshot:p,target:'s'},{});assert.equal(r.endpoint,'fal-ai/nano-banana-pro');assert.equal(r.input.prompt,'A knight at dawn.');assert.equal(r.input.aspect_ratio,'16:9');assert.equal(r.input.image_urls,undefined);});
 
+
+// ---- Golden de peticiones y argv de ffmpeg/ffprobe (issue #5), sin red ni coste: harness.mjs y golden/ en test/fixtures/providers/.
+// Grabar solo sobre el código anterior al refactor: RODAJE_GOLDEN=grabar node --import ./test/setup.mjs --test --test-isolation=none test/providers.test.mjs
+const H=await import('./fixtures/providers/harness.mjs');
+test('el golden no se regraba sobre el código refactorizado',()=>assert.equal(H.RECORD_BLOCKED,null));
+const APP_JOBS=['character','character-ref','location','voice','line','ambience','keyframe','video','storyboard','cover','outline','export','preview'];
+let app;const appRun=()=>app??=H.runApp();
+for(const name of APP_JOBS)test(`golden app: ${name}`,()=>{const got=appRun().log(name);assert.ok(got.length,'sin registro para '+name);assert.deepEqual(got,H.golden(`app/${name}.jsonl`,got));});
+test('golden app: resumen de run()',()=>{const got=appRun().summary;assert.deepEqual(got,H.golden('app/resumen.json',got));});
+const cli=(name,script,args,data=H.cliData())=>test(`golden cli: ${name}`,()=>{const r=H.runCli(typeof data==='function'?data():data,script,args,{name});assert.equal(r.status,0,r.stderr);assert.deepEqual(r.lines,H.golden(`cli/${name}.jsonl`,r.lines));});
+cli('voces-prueba','scripts/bloques/voces.mjs',['prueba','--voz','voz-ana','--texto','Hello there.','--yes']);
+cli('voces-prueba-minimax','scripts/bloques/voces.mjs',['prueba','--voz','voz-beto','--texto','Hello there.','--modelo','minimax','--yes']);
+cli('voces-lineas','scripts/bloques/voces.mjs',['lineas','ep01','s01','--yes']);
+{const d=H.cliData();cli('voces-cambiar','scripts/bloques/voces.mjs',['cambiar','ep01','s01','l01',path.join(d,H.CLI_PROJECT,'grabacion.wav'),'--yes'],d);}
+cli('voces-disenar','scripts/bloques/voces.mjs',['disenar','--personaje','ana','--descripcion','Warm low voice','--texto','We leave at dawn.','--yes']);
+// Cadena sobre la misma copia: enviar referencia → enviar fotograma (la caché evita subir dos veces el mismo fotograma) → estado → montar.
+{const d=H.cliData();cli('enviar-b01','scripts/bloques/enviar.mjs',['lote-a','b01','--yes'],d);cli('enviar-b02','scripts/bloques/enviar.mjs',['lote-a','b02','--yes'],d);cli('estado','scripts/bloques/estado.mjs',['lote-a'],d);cli('montar','scripts/bloques/montar.mjs',['lote-a'],d);}
+test('golden cli: fusionar',async()=>{const got=await H.runFusionar(H.cliData());assert.deepEqual(got,H.golden('cli/fusionar.jsonl',got));});
+test('app sin clave: el trabajo falla con el mensaje de Ajustes y no hay peticiones',{skip:fs.existsSync(path.join(H.ROOT,'config.local.json'))&&'hay config.local.json en el repositorio'},()=>{const r=H.runApp({jobs:['character'],env:{FAL_KEY:''}});assert.equal(r.summary[0].status,'failed');assert.equal(r.summary[0].error,'Añade tu clave fal.ai en Ajustes');assert.deepEqual(r.log('character'),[]);});
+test('app: un ffmpeg fallido en la exportación deja su stderr en j.error',()=>{const r=H.runApp({jobs:['export'],env:{RODAJE_MOCK_FFMPEG_FAIL:'1'}});assert.equal(r.summary[0].status,'failed');assert.match(r.summary[0].error,/falla simulada/);});
+test('montar: un ffmpeg fallido sale con código distinto de 0 y su stderr heredado',()=>{const r=H.runCli(H.cliData(),'scripts/bloques/montar.mjs',['lote-a'],{env:{RODAJE_MOCK_FFMPEG_FAIL:'1'}});assert.notEqual(r.status,0);assert.match(r.stderr,/falla simulada/);});
+test('el golden solo contiene hosts simulados y la clave de prueba, sin ElevenLabs directo',()=>{const files=fs.readdirSync(H.GOLDEN,{recursive:true}).filter(f=>f.endsWith('.jsonl'));assert.ok(files.length>=23);
+ for(const f of files){const text=fs.readFileSync(path.join(H.GOLDEN,f),'utf8');assert.doesNotMatch(text,/api\.elevenlabs|xi-api/i,f);
+  for(const line of text.split('\n').filter(Boolean)){const e=JSON.parse(line);if(e.kind!=='fetch')continue;assert.ok(['rest.fal.ai','queue.fal.run'].includes(new URL(e.url).hostname)||new URL(e.url).hostname.endsWith('.mock.invalid'),e.url);assert.ok(e.auth===null||e.auth==='Key test:dummy',f);}}});

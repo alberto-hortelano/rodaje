@@ -1,0 +1,19 @@
+{
+ "assets": {
+  "ANA_REF": {
+   "kind": "character",
+   "character": "ana",
+   "status": "approved"
+  },
+  "LOC_REF": {
+   "kind": "location",
+   "location": "loc",
+   "status": "approved"
+  },
+  "ANA_VOICE": {
+   "kind": "voice",
+   "character": "ana",
+   "status": "approved"
+  }
+ }
+}

@@ -8,7 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
-import {execFileSync} from 'node:child_process';
+import {ffmpegStdout} from '../lib/media.mjs';
 import {ROOT, DATA, safe} from '../lib/paths.mjs';
 import {leerFusiones, registrarFusion, migrarFusiones} from '../lib/fusiones.mjs';
 
@@ -22,7 +22,7 @@ const SKIP_DIR = /^(node_modules|versiones|trabajos|capturas|texturas|\.git)$|^s
 const inData = rel => safe(DATA, rel);
 const pngSize = f => { const b = Buffer.alloc(24); const fd = fs.openSync(f, 'r'); fs.readSync(fd, b, 0, 24, 0); fs.closeSync(fd); return b.toString('ascii', 1, 4) === 'PNG' ? [b.readUInt32BE(16), b.readUInt32BE(20)] : null; };
 const thumbs = new Map();
-const thumb = f => { if (!thumbs.has(f)) thumbs.set(f, execFileSync('ffmpeg', ['-v', 'error', '-i', f, '-vf', 'scale=96:64,format=gray', '-f', 'rawvideo', '-'])); return thumbs.get(f); };
+const thumb = f => { if (!thumbs.has(f)) thumbs.set(f, ffmpegStdout(['-i', f, '-vf', 'scale=96:64,format=gray', '-f', 'rawvideo', '-'])); return thumbs.get(f); };
 const compare = (a, b) => { const A = thumb(a), B = thumb(b); let sum = 0, big = 0; for (let i = 0; i < A.length; i++) { const d = Math.abs(A[i] - B[i]); sum += d; if (d > 40) big++; } return {media: sum / A.length, cambiado: big / A.length}; };
 
 function walk(d, out = []) {

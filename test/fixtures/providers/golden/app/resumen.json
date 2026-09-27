@@ -1,0 +1,106 @@
+[
+ {
+  "id": "job-character",
+  "status": "done",
+  "error": null,
+  "output": "assets/job-character.png",
+  "endpoint": "fal-ai/nano-banana-pro",
+  "ext": ".png"
+ },
+ {
+  "id": "job-character-ref",
+  "status": "done",
+  "error": null,
+  "output": "assets/job-character-ref.png",
+  "endpoint": "fal-ai/nano-banana-pro/edit",
+  "ext": ".png"
+ },
+ {
+  "id": "job-location",
+  "status": "done",
+  "error": null,
+  "output": "assets/job-location.png",
+  "endpoint": "fal-ai/nano-banana-pro/edit",
+  "ext": ".png"
+ },
+ {
+  "id": "job-voice",
+  "status": "done",
+  "error": null,
+  "output": "assets/job-voice.mp3",
+  "endpoint": "fal-ai/elevenlabs/tts/eleven-v3",
+  "ext": ".mp3"
+ },
+ {
+  "id": "job-line",
+  "status": "done",
+  "error": null,
+  "output": "assets/job-line.mp3",
+  "endpoint": "fal-ai/elevenlabs/tts/eleven-v3",
+  "ext": ".mp3"
+ },
+ {
+  "id": "job-ambience",
+  "status": "done",
+  "error": null,
+  "output": "assets/job-ambience.mp3",
+  "endpoint": "fal-ai/elevenlabs/sound-effects/v2",
+  "ext": ".mp3"
+ },
+ {
+  "id": "job-keyframe",
+  "status": "done",
+  "error": null,
+  "output": "assets/job-keyframe.png",
+  "endpoint": "fal-ai/nano-banana-pro/edit",
+  "ext": ".png"
+ },
+ {
+  "id": "job-video",
+  "status": "done",
+  "error": null,
+  "output": "assets/job-video-original-audio.mp4",
+  "endpoint": "minimax/h3-max/reference-to-video",
+  "ext": ".mp4"
+ },
+ {
+  "id": "job-storyboard",
+  "status": "done",
+  "error": null,
+  "output": "assets/job-storyboard.png",
+  "endpoint": "fal-ai/nano-banana-pro/edit",
+  "ext": ".png"
+ },
+ {
+  "id": "job-cover",
+  "status": "done",
+  "error": null,
+  "output": "assets/job-cover.png",
+  "endpoint": "fal-ai/nano-banana-pro",
+  "ext": ".png"
+ },
+ {
+  "id": "job-outline",
+  "status": "done",
+  "error": null,
+  "output": "assets/job-outline.txt",
+  "endpoint": "openrouter/router",
+  "ext": ".txt"
+ },
+ {
+  "id": "job-export",
+  "status": "done",
+  "error": null,
+  "output": "assets/job-export/capitulo.mp4",
+  "endpoint": null,
+  "ext": null
+ },
+ {
+  "id": "job-preview",
+  "status": "failed",
+  "error": "<omitido>",
+  "output": null,
+  "endpoint": null,
+  "ext": null
+ }
+]

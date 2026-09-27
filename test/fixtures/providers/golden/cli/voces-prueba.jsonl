@@ -1,0 +1,6 @@
+{"kind":"fetch","method":"POST","url":"https://queue.fal.run/fal-ai/elevenlabs/tts/eleven-v3","auth":"Key test:dummy","headers":{"accept":"application/json","content-type":"application/json","x-fal-queue-priority":"normal"},"body":"{\"text\":\"Hello there.\",\"voice\":\"voz-ana\",\"stability\":0.5,\"language_code\":\"en\"}"}
+{"kind":"fetch","method":"GET","url":"https://queue.fal.run/fal-ai/elevenlabs/requests/mock-1-fal_ai_elevenlabs_tts_eleven_v3/status?logs=0","auth":"Key test:dummy","headers":{"accept":"application/json","content-type":"application/json"},"body":null}
+{"kind":"fetch","method":"GET","url":"https://queue.fal.run/fal-ai/elevenlabs/requests/mock-1-fal_ai_elevenlabs_tts_eleven_v3","auth":"Key test:dummy","headers":{"accept":"application/json","content-type":"application/json"},"body":null}
+{"kind":"fetch","method":"GET","url":"https://files.mock.invalid/result/mock-1-fal_ai_elevenlabs_tts_eleven_v3.mp3","auth":null,"headers":{},"body":null}
+{"kind":"exec","bin":"ffmpeg","argv":["-y","-v","error","-i","<DATA>/fixture-proveedores/assets/voces/pruebas/vozana-s0.5-<TS>.mp3","-ar","44100","-ac","1","<DATA>/fixture-proveedores/assets/voces/pruebas/vozana-s0.5-<TS>.wav"]}
+{"kind":"salida","status":0,"stdout":"Prueba: voz voz-ana · estabilidad 0.5 · «Hello there.»\n✓ assets/voces/pruebas/vozana-s0.5-<TS>.wav\n"}

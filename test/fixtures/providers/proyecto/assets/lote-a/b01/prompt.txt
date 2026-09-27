@@ -1,0 +1,2 @@
+@ANA_REF stands in @LOC_REF.
+She says: "We leave at dawn."

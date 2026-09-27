@@ -1,0 +1,111 @@
+{
+ "id": "fixture-proveedores",
+ "name": "Fixture proveedores",
+ "type": "serie",
+ "language": "en",
+ "style": "Muted naturalism.",
+ "premise": "",
+ "ideas": [],
+ "characters": [
+  {
+   "id": "ana",
+   "name": "Ana Ruiz",
+   "description": "A cartographer.",
+   "voice": "voz-ana"
+  },
+  {
+   "id": "beto",
+   "name": "Beto",
+   "description": "A smuggler.",
+   "voice": "voz-beto"
+  }
+ ],
+ "locations": [
+  {
+   "id": "loc",
+   "name": "Cabin",
+   "description": "A wooden cabin at night."
+  }
+ ],
+ "episodes": [
+  {
+   "id": "ep01",
+   "title": "Uno",
+   "sequences": [
+    {
+     "id": "s01",
+     "title": "La espera",
+     "location": "loc",
+     "silent": true,
+     "cast": [
+      {
+       "character": "ana",
+       "x": 0,
+       "z": 0,
+       "yaw": 0
+      },
+      {
+       "character": "beto",
+       "x": 1,
+       "z": 0,
+       "yaw": 0
+      }
+     ],
+     "shots": [
+      {
+       "id": "p01",
+       "title": "Plano 1",
+       "description": "Ana waits.",
+       "duration": 6,
+       "camera": {
+        "position": [
+         4,
+         2.5,
+         7
+        ],
+        "target": [
+         0,
+         1,
+         0
+        ],
+        "fov": 45
+       },
+       "cameraEnd": {
+        "position": [
+         4,
+         2.5,
+         7
+        ],
+        "target": [
+         0,
+         1,
+         0
+        ],
+        "fov": 45
+       },
+       "lines": [
+        {
+         "id": "l01",
+         "character": "ana",
+         "text": "We leave at dawn.",
+         "start": 1
+        },
+        {
+         "id": "l02",
+         "character": "beto",
+         "text": "Not without the map.",
+         "start": 3,
+         "delivery": "[tired]"
+        }
+       ],
+       "history": []
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "storyboards": [],
+ "issues": [],
+ "revision": 1
+}
