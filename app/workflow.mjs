@@ -179,6 +179,39 @@ export function chosenAttempt(list,has=()=>true){const accepted=acceptedAttempt(
 // Tramo de cada bloque en el vídeo montado: `at`/`length` del cut.json o, en cortes antiguos, la suma de usedRange (o la duración del plan).
 export function cutTimeline(cut,plan=[]){let at=0;return (cut?.blocks||[]).map(b=>{const length=b.length??(b.usedRange?.length?b.usedRange.reduce((n,[s,e])=>n+e-s,0):plan.find(x=>x.id===b.block)?.length||0);const start=b.at??at;at=start+length;return {...b,start,end:at};});}
 export const blockAt=(timeline,t)=>timeline.find(b=>t>=b.start&&t<b.end)||(t>=(timeline.at(-1)?.end??0)?timeline.at(-1):timeline[0])||null;
+// Storyboard ↔ lotes (#45). Viñeta de cada bloque: la de la primera parte cuyo plano tenga storyboardShot, en la instantánea del lote
+// o, si allí no lo tiene, en el plano vivo del mismo id. Mapas id→plano; los bloques sin enlace no aparecen.
+export function blockStoryboardLinks(plan,snapshotShots,liveShots={}){const out={};for(const b of plan||[])for(const p of b.parts||[]){const sb=snapshotShots?.[p.shot]?.storyboardShot||liveShots?.[p.shot]?.storyboardShot;if(sb){out[b.id]=sb;break;}}return out;}
+const sbPlace=(storyboards,shotId)=>{for(const b of storyboards||[])for(const s of b.sequences||[])if((s.shots||[]).some(t=>t.id===shotId))return {storyboard:b,sequence:s};return null;};
+const r3=n=>Math.round(n*1000)/1000;
+// Montaje por secuencia del storyboard dentro de un corte (montar.mjs): bloques del corte agrupados por (storyboard, secuencia) en el
+// orden del plan, sin los que faltan (missing) ni los sin enlace. at de la sección: inicio en el corte; at de cada bloque: inicio en el
+// mp4 de la sección. Fichero <corte>.<secuencia>.mp4 (sec-NN si el id no vale como nombre; -2, -3… si se repite). duration: suma de length.
+export function storyboardSections({plan,links,storyboards,blocks,name}){const groups=new Map();
+ for(const b of plan||[]){const sb=links?.[b.id],e=(blocks||[]).find(x=>x.block===b.id);if(!sb||!e||e.source==='missing')continue;const where=sbPlace(storyboards,sb);if(!where)continue;
+  const key=where.storyboard.id+'\u0000'+where.sequence.id;if(!groups.has(key))groups.set(key,{where,list:[]});groups.get(key).list.push(e);}
+ const used=new Set();return [...groups.values()].map(({where:{storyboard,sequence},list},i)=>{const id=/^[\w-][\w.-]*$/.test(sequence.id)?sequence.id:'sec-'+String(i+1).padStart(2,'0');
+  let file=`${name}.${id}.mp4`;for(let k=2;used.has(file);k++)file=`${name}.${id}-${k}.mp4`;used.add(file);let at=0;
+  const out=list.map(e=>{const x={block:e.block,at:r3(at),length:e.length||0};at+=x.length;return x;});
+  return {storyboard:storyboard.id,sequence:sequence.id,title:sequence.title||'',file,at:list[0].at??0,duration:r3(at),blocks:out};});}
+// Vídeo de un storyboard en la vista Storyboards, derivado de los lotes (orden de listLotes: del más reciente al más antiguo).
+// lotes: [{id, created, links, attempts:{bloque:[]}, cuts:[{name,file,at,duration,sequences?}]}]; has(lote,bloque,intento): el vídeo existe.
+// Toma vigente de una viñeta: la elegida (chosenAttempt) del lote más reciente que tenga una; las demás, agrupadas por lote y bloque.
+// Corte vigente: el último del lote más reciente con cortes; parcial si su lote no cubre todas las viñetas del storyboard.
+export function storyboardMedia(storyboard,lotes,has=()=>true){const ids=new Set((storyboard?.sequences||[]).flatMap(s=>(s.shots||[]).map(t=>t.id))),total=ids.size;
+ const rel=(lotes||[]).map(l=>({l,links:Object.entries(l.links||{}).filter(([,sb])=>ids.has(sb))})).filter(x=>x.links.length);
+ const info=rel.map(({l,links})=>{const covered=new Set(links.map(([,sb])=>sb)).size;return {id:l.id,created:l.created,covered,total,partial:covered<total};});
+ const shots={};for(const sb of ids){let current=null,pending=false;const groups=[];
+  for(const {l,links} of rel)for(const [block,x] of links){if(x!==sb)continue;const list=l.attempts?.[block]||[],ok=a=>has(l.id,block,a);
+   const takes=list.filter(a=>isDownloaded(a)&&ok(a)).sort((a,b)=>a.n-b.n).map(a=>({lote:l.id,block,n:a.n,at:a.at,video:`assets/${l.id}/${block}/${a.video}`,verdict:a.verdict??null,rules:a.failedRules||[],notes:a.notes||'',endpoint:a.endpoint,current:false}));
+   if(!takes.length)continue;if(!current){const c=chosenAttempt(list,ok);if(c.attempt){current=takes.find(t=>t.n===c.attempt.n);current.current=true;pending=c.pending;}}groups.push({lote:l.id,block,takes});}
+  if(groups.length)shots[sb]={current,pending,groups};}
+ const byLote=Object.fromEntries(info.map(x=>[x.id,x])),withCuts=rel.filter(({l})=>(l.cuts||[]).length);
+ const list=withCuts.flatMap(({l})=>l.cuts.map(c=>({lote:l.id,name:c.name,file:c.file,at:c.at,duration:c.duration,partial:byLote[l.id].partial,covered:byLote[l.id].covered,total})));
+ const cuts={current:withCuts.length?list.filter(c=>c.lote===withCuts[0].l.id).at(-1):null,list};
+ const sequences={};for(const s of storyboard?.sequences||[]){const found=withCuts.flatMap(({l})=>l.cuts.flatMap(c=>(c.sequences||[]).filter(x=>x.storyboard===storyboard.id&&x.sequence===s.id).map(x=>({lote:l.id,cut:c.name,file:x.file,at:x.at,duration:x.duration,blocks:x.blocks||[]}))));
+  if(found.length)sequences[s.id]={current:found.filter(x=>x.lote===found[0].lote).at(-1),list:found};}
+ return {storyboard:storyboard?.id,lotes:info,shots,sequences,cuts};}
 // Reglas de REGLAS.md: «### R04 · Nadie mira a cámara».
 export function parseRules(md){return [...String(md||'').matchAll(/^###\s+([A-Z]\d+)\s*·\s*(.+)$/gm)].map(m=>({id:m[1],title:m[2].trim()}));}
 // Veredicto de un intento: estado.mjs --verdict y la vista Montaje, ambos vía reviewBlock (lib/lotes.mjs). No muta la lista.

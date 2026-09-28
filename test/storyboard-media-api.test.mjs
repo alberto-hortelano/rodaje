@@ -1,0 +1,17 @@
+// GET /api/storyboard-media (#45): solo lectura; 200 con la forma de storyboardMedia y 400 con un storyboard desconocido.
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import {spawnServer} from './fixtures/hijos.mjs';
+const ROOT=path.resolve(import.meta.dirname,'..'),TMP=fs.mkdtempSync(path.join(os.tmpdir(),'rodaje-sbmedia-')),DATA=path.join(TMP,'data'),id='sbm-'+process.pid,base=path.join(DATA,id);
+const port=await new Promise(r=>{const s=net.createServer().listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>r(p));});});
+const w=(rel,v)=>{const f=path.join(base,rel);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,typeof v==='string'?v:JSON.stringify(v));};
+w('proyecto.json',{id,name:'SB',type:'serie',ideas:[],characters:[],locations:[],storyboards:[{id:'sb-a',title:'A',sequences:[{id:'sq-1',title:'Uno',shots:[{id:'v1'}]}]}],episodes:[{id:'e1',sequences:[{id:'s1',shots:[{id:'p1',storyboardShot:'v1'}]}]}]});
+w('assets/lote-1/plan.json',[{id:'b1',parts:[{shot:'p1'}]}]);w('assets/lote-1/lote.json',{episode:'e1',sequence:'s1',created:'2026-09-27T00:00:00.000Z'});
+w('assets/lote-1/b1/attempts.json',[{n:1,at:'t',status:'done',video:'generated-v01.mp4',verdict:null}]);w('assets/lote-1/b1/generated-v01.mp4','');
+let child;const origin=`http://127.0.0.1:${port}`;
+test.before(()=>new Promise((resolve,reject)=>{child=spawnServer(process.execPath,[path.join(ROOT,'app/server.mjs')],{cwd:ROOT,env:{...process.env,PORT:String(port),RODAJE_DATA:DATA,RODAJE_LAN:'',RODAJE_TLS_CERT:'',RODAJE_TLS_KEY:''},stdio:['ignore','pipe','pipe']});let out='';
+ const t=setTimeout(()=>reject(Error('El servidor no arrancó: '+out)),15000);child.stdout.on('data',d=>{out+=d;if(out.includes('Rodaje ·')){clearTimeout(t);resolve();}});child.stderr.on('data',d=>out+=d);child.on('exit',c=>reject(Error('El servidor salió con '+c+': '+out)));}));
+test.after(()=>{child?.kill();fs.rmSync(TMP,{recursive:true,force:true});});
+const get=async sb=>{const r=await fetch(`${origin}/api/storyboard-media?project=${encodeURIComponent(id)}&storyboard=${encodeURIComponent(sb)}`);return {status:r.status,body:await r.json()};};
+test('GET /api/storyboard-media: 200 con tomas por viñeta (enlace por el vivo sin instantánea) y 400 si el storyboard no existe',async()=>{
+ const r=await get('sb-a');assert.equal(r.status,200);assert.deepEqual(Object.keys(r.body),['storyboard','lotes','shots','sequences','cuts']);
+ assert.equal(r.body.shots.v1.current.video,'assets/lote-1/b1/generated-v01.mp4');assert.equal(r.body.shots.v1.pending,true);assert.deepEqual(r.body.cuts,{current:null,list:[]});
+ const bad=await get('nada');assert.equal(bad.status,400);assert.equal(bad.body.error,'Storyboard desconocido');});

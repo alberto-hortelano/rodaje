@@ -7,11 +7,13 @@
 // En una toma generada, las líneas fuera de campo con audio (instantánea del lote) se mezclan sobre su audio en su instante del edit
 // (el tramo usado desplaza el tiempo; si su inicio cae en un tramo descartado, se omite con aviso). Con guía 3D solo se rotulan.
 // Los edit.mp4 cuya toma, tramo y voces fuera de campo no han cambiado (edit.json) no se vuelven a codificar.
+// Montaje por secuencia del storyboard (#45): si los planos del lote enlazan viñetas (storyboardShot, en la instantánea o en el vivo),
+// además un <nombre>.<secuencia>.mp4 por secuencia cubierta, unido sin recodificar de los mismos edit.mp4; cut.json lo lista en sequences.
 import fs from 'node:fs';import path from 'node:path';
-import {parseArgs,ff,readJSON,writeJSON,ffprobeDuration,cliProject,usageExit,loteProject} from './lib.mjs';import {loadLote,loadAttempts} from '../../lib/lotes.mjs';import {chosenAttempt,projectChannels,lineOffscreen,blockVoices,offscreenMix} from '../../app/workflow.mjs';import {concatList,editFilterComplex} from '../../lib/media.mjs';
+import {parseArgs,ff,readJSON,writeJSON,ffprobeDuration,cliProject,usageExit,loteProject,loteLive} from './lib.mjs';import {loadLote,loadAttempts} from '../../lib/lotes.mjs';import {chosenAttempt,blockStoryboardLinks,storyboardSections,projectChannels,lineOffscreen,blockVoices,offscreenMix} from '../../app/workflow.mjs';import {concatList,editFilterComplex} from '../../lib/media.mjs';
 const USAGE='Uso: montar.mjs <lote> [--project id] [--out nombre]';
 const {args:[lote],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
-const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);L.project=loteProject(L);const CH=projectChannels(L.project);const outDir=path.join(L.paths.out,'montaje');fs.mkdirSync(outDir,{recursive:true});
+const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);const live=loteLive(L);L.project=loteProject(L);const CH=projectChannels(L.project);const outDir=path.join(L.paths.out,'montaje');fs.mkdirSync(outDir,{recursive:true});
 const existing=fs.readdirSync(outDir).filter(f=>/-cut-v\d+\.mp4$/.test(f)).length;const name=opts.out||`${lote}-cut-v${String(existing).padStart(2,'0')}`;
 const esc=s=>String(s).replace(/\\/g,'\\\\').replace(/'/g,'\u2019').replace(/:/g,'\\:').replace(/%/g,'\\%');
 const font='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';const entries=[],cut=[];let clock=0;
@@ -31,5 +33,10 @@ for(const block of L.plan){const dir=path.join(L.paths.out,block.id);const targe
   ff(['-i',guide,'-f','lavfi','-i','anullsrc=r=48000:cl=stereo','-t',block.length,'-vf',vf,'-map','0:v:0','-map','1:a:0','-shortest','-c:v','libx264','-preset','fast','-crf','18','-c:a','aac','-b:a','128k',target],`${block.id} (guía 3D)`);cut.push({block:block.id,source:'guide',lines:lines.length});}
  const length=ffprobeDuration(target)||0;Object.assign(cut.at(-1),{at:Math.round(clock*1000)/1000,length:Math.round(length*1000)/1000});clock+=length;entries.push(target);}
 const list=path.join(outDir,'concat.txt');fs.writeFileSync(list,concatList(entries,outDir));const outFile=path.join(outDir,name+'.mp4');ff(['-f','concat','-safe','0','-i',list,'-c','copy','-movflags','+faststart',outFile],'concat final');
-writeJSON(path.join(outDir,name+'.cut.json'),{lote,at:new Date().toISOString(),duration:ffprobeDuration(outFile),blocks:cut});
+const vivos=Object.fromEntries((live?.episodes?.find(e=>e.id===L.meta.episode)?.sequences?.find(s=>s.id===L.meta.sequence)?.shots||[]).map(t=>[t.id,t]));
+const sections=storyboardSections({plan:L.plan,links:blockStoryboardLinks(L.plan,L.shots,vivos),storyboards:[...(L.project.storyboards||[]),...(live?.storyboards||[])],blocks:cut,name});
+for(const s of sections){const secList=path.join(outDir,'concat.sec.txt'),secFile=path.join(outDir,s.file);fs.writeFileSync(secList,concatList(s.blocks.map(b=>path.join(L.paths.out,b.block,'edit.mp4')),outDir));
+ ff(['-f','concat','-safe','0','-i',secList,'-c','copy','-movflags','+faststart',secFile],`secuencia ${s.sequence}`);fs.rmSync(secList,{force:true});const d=ffprobeDuration(secFile);if(d)s.duration=Math.round(d*1000)/1000;}
+if(sections.length)console.log(`secuencias: ${sections.length} (${sections.map(s=>s.file).join(', ')})`);
+writeJSON(path.join(outDir,name+'.cut.json'),{lote,at:new Date().toISOString(),duration:ffprobeDuration(outFile),blocks:cut,sequences:sections});
 const gen=cut.filter(c=>c.source==='generated').length,pend=cut.filter(c=>c.pending).length;console.log(`${path.relative(L.paths.base,outFile)}: ${cut.length} bloques, ${gen} generados (${pend} sin revisar), ${cut.filter(c=>c.source==='guide').length} en guía, ${cut.filter(c=>c.source==='missing').length} sin nada`);

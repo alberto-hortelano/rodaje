@@ -31,3 +31,21 @@ test('el golden solo contiene hosts simulados y la clave de prueba, sin ElevenLa
 test('montar: concat.txt con rutas relativas a la carpeta del montaje',async()=>{const {ABS_RE}=await import('../lib/proyecto-check.mjs');const d=H.cliData(),r=H.runCli(d,'scripts/bloques/montar.mjs',['lote-a']);assert.equal(r.status,0,r.stderr);
  const text=fs.readFileSync(path.join(d,H.CLI_PROJECT,'assets/lote-a/montaje/concat.txt'),'utf8'),lines=text.trimEnd().split('\n');
  assert.doesNotMatch(text,ABS_RE);assert.ok(text.endsWith('\n'));assert.ok(lines.length>0);for(const l of lines)assert.match(l,/^file '\.\.\/b0\d\/edit\.mp4'$/);});
+// #45: montaje por secuencia del storyboard. La instantánea de lote-a enlaza b01–b02 con sq-1 y b03 con sq-2; b01 y b03 van en guía 3D
+// y b02 no tiene nada (missing), así que no entra.
+test('montar: un mp4 por secuencia del storyboard, unido sin recodificar, y sequences en cut.json',()=>{const d=H.cliData(),lote=path.join(d,H.CLI_PROJECT,'assets/lote-a'),mj=path.join(lote,'montaje');
+ const rd=f=>JSON.parse(fs.readFileSync(path.join(lote,f),'utf8')),wr=(f,v)=>fs.writeFileSync(path.join(lote,f),JSON.stringify(v,null,1));
+ const snap=rd('project-snapshot.json'),seq=snap.episodes[0].sequences[0],[p01]=seq.shots;seq.shots=[{...p01,storyboardShot:'v1'},{...p01,id:'p02',storyboardShot:'v3'}];
+ snap.storyboards=[{id:'sb-a',title:'A',sequences:[{id:'sq-1',title:'Cruce',shots:[{id:'v1'},{id:'v2'}]},{id:'sq-2',title:'Pie',shots:[{id:'v3'}]}]}];wr('project-snapshot.json',snap);
+ const plan=rd('plan.json');plan[2].parts=plan[2].parts.map(x=>({...x,shot:'p02'}));wr('plan.json',plan);
+ const r=H.runCli(d,'scripts/bloques/montar.mjs',['lote-a']);assert.equal(r.status,0,r.stderr);
+ const cut=rd('montaje/lote-a-cut-v00.cut.json');assert.deepEqual(cut.sequences.map(s=>[s.storyboard,s.sequence,s.file,s.at,s.blocks.map(b=>[b.block,b.at])]),[['sb-a','sq-1','lote-a-cut-v00.sq-1.mp4',0,[['b01',0]]],['sb-a','sq-2','lote-a-cut-v00.sq-2.mp4',9.5,[['b03',0]]]]);
+ for(const s of cut.sequences){assert.ok(fs.existsSync(path.join(mj,s.file)),s.file);assert.equal(s.duration,9.5);}
+ const concats=r.lines.map(l=>JSON.parse(l)).filter(e=>e.bin==='ffmpeg'&&e.argv.includes('concat'));assert.equal(concats.length,3);
+ for(const e of concats)assert.deepEqual(e.argv.slice(e.argv.indexOf('-c'),e.argv.indexOf('-c')+2),['-c','copy']);
+ assert.deepEqual(concats.slice(1).map(e=>path.basename(e.argv.at(-1))),['lote-a-cut-v00.sq-1.mp4','lote-a-cut-v00.sq-2.mp4']);
+ assert.equal(fs.existsSync(path.join(mj,'concat.sec.txt')),false);assert.match(JSON.parse(r.lines.at(-1)).stdout,/secuencias: 2 \(/);
+ const r2=H.runCli(d,'scripts/bloques/montar.mjs',['lote-a']);assert.equal(r2.status,0,r2.stderr);
+ assert.deepEqual(fs.readdirSync(mj).filter(f=>f.endsWith('.cut.json')).sort(),['lote-a-cut-v00.cut.json','lote-a-cut-v01.cut.json']);assert.ok(fs.existsSync(path.join(mj,'lote-a-cut-v01.sq-2.mp4')));});
+test('montar: lote sin storyboard deja sequences vacío y ningún mp4 más',()=>{const d=H.cliData(),mj=path.join(d,H.CLI_PROJECT,'assets/lote-a/montaje'),r=H.runCli(d,'scripts/bloques/montar.mjs',['lote-a']);assert.equal(r.status,0,r.stderr);
+ assert.deepEqual(JSON.parse(fs.readFileSync(path.join(mj,'lote-a-cut-v00.cut.json'),'utf8')).sequences,[]);assert.deepEqual(fs.readdirSync(mj).sort(),['concat.txt','lote-a-cut-v00.cut.json','lote-a-cut-v00.mp4']);});

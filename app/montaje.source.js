@@ -1,7 +1,8 @@
 import {storyboardShot,chosenAttempt,blockAt} from './workflow.mjs';
 // Vista Montaje: el corte de un lote con, en cada momento, su bloque, la toma, la viñeta del storyboard y la escena.
 // Debajo, el editor del bloque: tomas generadas, tramo usado, veredicto y prompt. «Volver a montar» lanza montar.mjs.
-export async function mountMontaje(root,{project:p,api,toast}){
+// focus {lote, block} (botón «Montaje →» de la vista Storyboards): abre ese lote en vez del último usado y edita ese bloque.
+export async function mountMontaje(root,{project:p,api,toast,focus=null}){
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const media=f=>'/api/asset?project='+p.id+'&file='+encodeURIComponent(f);const fmt=s=>Number.isFinite(s)?`${Math.floor(s/60)}:${(s%60).toFixed(1).padStart(4,'0')}`:'–';
  const store=(k,v)=>{try{if(v===undefined)return localStorage.getItem('rodaje-montaje-'+p.id+'-'+k);localStorage.setItem('rodaje-montaje-'+p.id+'-'+k,v);}catch{}};
@@ -27,7 +28,7 @@ export async function mountMontaje(root,{project:p,api,toast}){
   <aside class="mt-side" data-mt="side"></aside></div>
   <section class="mt-editor panel" data-mt="editor"></section></div>`;
  const $=s=>root.querySelector(`[data-mt="${s}"]`),video=$('video');
- const lastLote=store('lote');$('lote').value=lotes.some(l=>l.id===lastLote)?lastLote:lotes[0].id;
+ const lastLote=lotes.some(l=>l.id===focus?.lote)?focus.lote:store('lote');$('lote').value=lotes.some(l=>l.id===lastLote)?lastLote:lotes[0].id;
  function renderBar(){$('cut').innerHTML=lote.cuts.length?lote.cuts.map(c=>`<option value="${esc(c.name)}" ${c===cut?'selected':''}>${esc(c.name)} · ${fmt(c.duration)}</option>`).join(''):'<option>Sin montar</option>';
   const changed=lote.blocks.filter(stale).length,counts=lote.blocks.reduce((n,b)=>(n[stateOf(b)]++,n),{accepted:0,pending:0,missing:0}),m=lote.montando;
   root.querySelector('.mt-bar-info').innerHTML=`<span class="pill ok">${counts.accepted} aceptados</span> <span class="pill warn">${counts.pending} sin revisar</span>${counts.missing?` <span class="pill">${counts.missing} sin toma</span>`:''}${changed?` <span class="pill mt-stale-pill">${changed} cambiados desde este corte</span>`:''}${m?.state==='running'?' <span class="pill">Montando…</span>':m?.state==='failed'?` <span class="pill warn" title="${esc(m.error)}">El montaje falló</span>`:''}`;
@@ -87,4 +88,5 @@ export async function mountMontaje(root,{project:p,api,toast}){
  const keys=e=>{if(e.target.closest?.('input,textarea,select')||!root.isConnected)return;if(e.key===' '&&!e.target.closest?.('video,button')){e.preventDefault();video.paused?video.play():video.pause();}else if(e.key==='ArrowRight'||e.key==='ArrowLeft'){if(e.target.closest?.('video'))return;e.preventDefault();const i=timeline.indexOf(current),c=timeline[Math.max(0,Math.min(timeline.length-1,i+(e.key==='ArrowRight'?1:-1)))];if(c){video.currentTime=c.start+.01;tick();select(c.block);}}else if(e.key==='e'||e.key==='E'){if(current){select(current.block);$('editor').scrollIntoView({behavior:'smooth'});}}};
  document.addEventListener('keydown',keys);
  await open($('lote').value);
+ if(focus?.block&&lote.id===focus.lote&&blockById(focus.block)){const c=timeline.find(x=>x.block===focus.block);if(c){video.currentTime=c.start+.01;tick();}select(focus.block);$('editor').scrollIntoView({behavior:'smooth'});}
  return {dispose(){disposed=true;clearInterval(poll);document.removeEventListener('keydown',keys);video.removeAttribute('src');video.load();}};}

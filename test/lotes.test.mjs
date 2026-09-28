@@ -172,3 +172,34 @@ test('informe.mjs y chosenAttempt eligen la misma toma; varias aceptadas rompen 
   for(const t of [r.stderr,informe()])assert.match(t,/b02: varias tomas aceptadas \(v1, v3\)/);
   w5(`assets/${LOTE}/${block.id}/attempts.json`,[at(1,null,{replacedBy:3}),list[1],list[2]]);r=run();assert.equal(r.status,0,r.stderr);assert.match(informe(),/\| ✓ v3 \|/);assert.doesNotMatch(informe(),/Protocolo roto/);}
  finally{fs.rmSync(b5,{recursive:true,force:true});}});
+
+// #45: vídeo del storyboard derivado de los lotes (storyboardMediaFor) y sequences de cut.json en loteCuts.
+{const P4='lotes-sb-test',b4=path.join(DATA,P4),w4=(rel,v)=>{const f=path.join(b4,rel);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,typeof v==='string'?v:text(v));};
+ fs.rmSync(b4,{recursive:true,force:true});
+ const sbs=[{id:'sb-a',title:'A',sequences:[{id:'sq-1',title:'Cruce',shots:[{id:'v1'},{id:'v2'}]},{id:'sq-2',title:'Pie',shots:[{id:'v3'}]}]}];
+ const live={id:P4,storyboards:sbs,episodes:[{id:'e1',sequences:[{id:'s1',shots:[{id:'p1'},{id:'p2'},{id:'p3',storyboardShot:'v3'}]}]}]};
+ const snap={storyboards:sbs,episodes:[{id:'e1',sequences:[{id:'s1',shots:[{id:'p1',storyboardShot:'v1'},{id:'p2',storyboardShot:'v2'},{id:'p3'}]}]}]};
+ const plan=[{id:'b1',parts:[{shot:'p1'}]},{id:'b2',parts:[{shot:'p2'}]},{id:'b3',parts:[{shot:'p3'}]}];
+ w4('proyecto.json',live);w4('assets/lote-1/plan.json',plan);w4('assets/lote-1/lote.json',{episode:'e1',sequence:'s1',created:'2026-09-27T00:00:00.000Z'});w4('assets/lote-1/project-snapshot.json',snap);
+ w4('assets/lote-1/b1/attempts.json',[{n:1,at:'t1',status:'done',video:'generated-v01.mp4',verdict:'accepted',endpoint:'minimax/h3'},{n:2,at:'t2',status:'done',video:'generated-v02.mp4',verdict:null}]);w4('assets/lote-1/b1/generated-v01.mp4','');
+ w4('assets/lote-1/b3/attempts.json',[{n:1,at:'t3',status:'done',video:'generated-v01.mp4',verdict:null}]);w4('assets/lote-1/b3/generated-v01.mp4','');
+ const cutJSON={lote:'lote-1',at:'2026-09-27T01:00:00.000Z',duration:20,blocks:[{block:'b1',source:'generated',attempt:1,at:0,length:8},{block:'b2',source:'guide',at:8,length:6},{block:'b3',source:'generated',attempt:1,pending:true,at:14,length:6}],
+  sequences:[{storyboard:'sb-a',sequence:'sq-1',title:'Cruce',file:'lote-1-cut-v00.sq-1.mp4',at:0,duration:14,blocks:[{block:'b1',at:0,length:8},{block:'b2',at:8,length:6}]},{storyboard:'sb-a',sequence:'sq-2',title:'Pie',file:'lote-1-cut-v00.sq-2.mp4',at:14,duration:6,blocks:[{block:'b3',at:0,length:6}]},{file:'../fuera.mp4'}]};
+ w4('assets/lote-1/montaje/lote-1-cut-v00.cut.json',cutJSON);w4('assets/lote-1/montaje/lote-1-cut-v00.mp4','');w4('assets/lote-1/montaje/lote-1-cut-v00.sq-1.mp4','');
+ // Lote sin instantánea ni enlaces: se omite; lote de otro storyboard, también.
+ w4('assets/lote-0/plan.json',[{id:'b1',parts:[{shot:'zz'}]}]);w4('assets/lote-0/lote.json',{episode:'e1',sequence:'s1',created:'2026-09-20T00:00:00.000Z'});
+ test('loteCuts añade sequences solo si el cut.json las trae, con ruta del proyecto y sin las que no tienen mp4',()=>{
+  const [c]=L.loteCuts(P4,'lote-1');assert.deepEqual(c.sequences,[{...cutJSON.sequences[0],file:'assets/lote-1/montaje/lote-1-cut-v00.sq-1.mp4'}]);
+  assert.equal('sequences' in M.loteDetail(P,LOTE2).cuts[0],false);
+  assert.deepEqual(L.listLotes(P4).find(l=>l.id==='lote-1').cuts,[{name:'lote-1-cut-v00',file:'assets/lote-1/montaje/lote-1-cut-v00.mp4',at:cutJSON.at,duration:20}]);});
+ test('storyboardMediaFor: tomas por viñeta, cortes y montajes por secuencia; storyboard desconocido lanza',()=>{
+  const r=L.storyboardMediaFor(P4,live,'sb-a');
+  assert.deepEqual(r.lotes,[{id:'lote-1',created:'2026-09-27T00:00:00.000Z',covered:3,total:3,partial:false}]);
+  assert.deepEqual(Object.keys(r.shots).sort(),['v1','v3']);
+  assert.deepEqual(r.shots.v1.current,{lote:'lote-1',block:'b1',n:1,at:'t1',video:'assets/lote-1/b1/generated-v01.mp4',verdict:'accepted',rules:[],notes:'',endpoint:'minimax/h3',current:true});
+  assert.equal(r.shots.v1.pending,false);assert.deepEqual(r.shots.v1.groups[0].takes.map(t=>t.n),[1]);
+  assert.equal(r.shots.v3.pending,true);assert.equal(r.shots.v3.current.block,'b3');
+  assert.deepEqual(r.cuts,{current:r.cuts.list[0],list:[{lote:'lote-1',name:'lote-1-cut-v00',file:'assets/lote-1/montaje/lote-1-cut-v00.mp4',at:cutJSON.at,duration:20,partial:false,covered:3,total:3}]});
+  assert.deepEqual(Object.keys(r.sequences),['sq-1']);assert.equal(r.sequences['sq-1'].current.file,'assets/lote-1/montaje/lote-1-cut-v00.sq-1.mp4');
+  assert.throws(()=>L.storyboardMediaFor(P4,live,'no-existe'),/Storyboard desconocido/);
+  assert.equal(M.storyboardMediaFor,L.storyboardMediaFor);});}

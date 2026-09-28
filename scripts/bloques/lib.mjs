@@ -10,4 +10,6 @@ export function fail(msg){console.error(`${path.basename(process.argv[1]||'scrip
 export function prices(){const f=path.join(ROOT,'precios.json');return fs.existsSync(f)?readJSON(f):{};}
 export {falClient} from '../../lib/fal.mjs';
 // Instantánea del lote completada con el stage del proyecto vivo (catálogo y ensayo que no traiga); sin proyecto vivo, tal cual.
-export function loteProject(L){const f=path.join(L.paths.base,'proyecto.json');let live=null;try{if(fs.existsSync(f))live=readJSON(f);}catch{}return stageFallback(L.project,live);}
+// proyecto.json vivo del proyecto del lote, o null si no hay o no se puede leer.
+export function loteLive(L){const f=path.join(L.paths.base,'proyecto.json');try{if(fs.existsSync(f))return readJSON(f);}catch{}return null;}
+export function loteProject(L){return stageFallback(L.project,loteLive(L));}

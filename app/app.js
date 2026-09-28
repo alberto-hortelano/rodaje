@@ -214,7 +214,7 @@ ${l3.spokenText || l3.text}`;
 
 // app/montaje.source.js
 import { storyboardShot, chosenAttempt, blockAt } from "./workflow.mjs";
-async function mountMontaje(root, { project: p2, api: api2, toast: toast2 }) {
+async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus = null }) {
   const esc2 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const media2 = (f2) => "/api/asset?project=" + p2.id + "&file=" + encodeURIComponent(f2);
   const fmt = (s) => Number.isFinite(s) ? `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0")}` : "\u2013";
@@ -272,7 +272,7 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2 }) {
   <aside class="mt-side" data-mt="side"></aside></div>
   <section class="mt-editor panel" data-mt="editor"></section></div>`;
   const $3 = (s) => root.querySelector(`[data-mt="${s}"]`), video = $3("video");
-  const lastLote = store("lote");
+  const lastLote = lotes.some((l3) => l3.id === focus?.lote) ? focus.lote : store("lote");
   $3("lote").value = lotes.some((l3) => l3.id === lastLote) ? lastLote : lotes[0].id;
   function renderBar() {
     $3("cut").innerHTML = lote.cuts.length ? lote.cuts.map((c) => `<option value="${esc2(c.name)}" ${c === cut ? "selected" : ""}>${esc2(c.name)} \xB7 ${fmt(c.duration)}</option>`).join("") : "<option>Sin montar</option>";
@@ -513,6 +513,15 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2 }) {
   };
   document.addEventListener("keydown", keys);
   await open($3("lote").value);
+  if (focus?.block && lote.id === focus.lote && blockById(focus.block)) {
+    const c = timeline.find((x2) => x2.block === focus.block);
+    if (c) {
+      video.currentTime = c.start + 0.01;
+      tick();
+    }
+    select2(focus.block);
+    $3("editor").scrollIntoView({ behavior: "smooth" });
+  }
   return { dispose() {
     disposed = true;
     clearInterval(poll);
@@ -28899,6 +28908,8 @@ var id2 = () => crypto.randomUUID();
 var esc = (v2) => String(v2 ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 var renderedRoute = null;
 var renderGeneration = 0;
+var sbMedia = null;
+var montajeFocus = null;
 var routeKey = () => JSON.stringify([p?.id || "", view, ["shot", "rehearsal"].includes(view) ? episodeId || "" : "", view === "shot" ? sequenceId || "" : "", view === "shot" ? shotId || "" : "", view === "storyboard" ? storyboardId || "" : "", view === "environment" ? environmentId || "" : ""]);
 function rememberPosition() {
   if (renderedRoute) try {
@@ -29092,6 +29103,7 @@ async function render() {
   rememberPosition();
   renderedRoute = null;
   const generation = ++renderGeneration;
+  if (view !== "storyboard") sbMedia = null;
   stage?.dispose();
   stage = null;
   const nav2 = p ? [["overview", "Vista del proyecto"], ["ideas", "Historia e ideas"], ["characters", "Personajes y voces"], ["locations", "Ambientes"], ["environments", "Entornos 3D"], ["storyboards", "Storyboards"], ["outline", "Escaleta"], ["episodes", p?.type === "serie" ? "Cap\xEDtulos" : "Actos"], ["montaje", "Montaje"], ["issues", "Pendientes"], ["jobs", "Generaciones"]] : [["library", "Mis proyectos"], ["jobs", "Generaciones"]];
@@ -29136,10 +29148,17 @@ async function render() {
     const chars = view === "characters", list = chars ? p.characters : p.locations;
     html3 = heading2(chars ? "El reparto." : "Los lugares de la historia.", chars ? "Identidad visual, vestuario y voz de cada personaje." : "Referencias de luz, color y geograf\xEDa para cada escenario.", btn(chars ? "+ Personaje" : "+ Escenario", chars ? "new-character" : "new-location", "primary")) + `<div class="grid${chars ? " cast" : ""}">${list.map((c) => `<article class="card">${image(c.image)}<div class="inner"><div class="row between"><h2>${esc(c.name)}</h2><span class="pill">${chars ? "PERSONAJE" : esc(c.kind)}</span></div><p>${esc(c.description.slice(0, 160))}</p>${chars ? `<small>Voz: ${esc(c.voice || "Sin asignar")}${/^[A-Za-z0-9]{20}$/.test(c.voice || "") ? ` \xB7 <a href="https://elevenlabs.io/app/voice-library?voiceId=${esc(c.voice)}" target="_blank" rel="noopener">escuchar en ElevenLabs \u2197</a>` : ""}</small>${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}` : ""}<div class="actions">${btn("Editar", (chars ? "character:" : "location:") + c.id)}${btn("Subir imagen", (chars ? "upload-character:" : "upload-location:") + c.id)}${btn("Generar hoja", (chars ? "gen-character:" : "gen-location:") + c.id)}</div>${chars ? `<div class="actions">${btn("Probar voz", "voice:" + c.id)}${btn("Subir muestra", "upload-voice:" + c.id)}${c.kind !== "voice" && projectVariants(p).length > 1 ? btn("Variantes por zona", "variants:" + c.id) : ""}</div>` : ""}${chars && c.variants ? `<div class="actions">${Object.entries(c.variants).map(([v2, x2]) => `<div class="note"><b>${esc(projectVariants(p).find((x3) => x3.id === v2)?.label || v2)}</b><p>${esc((x2.description || "").slice(0, 85))}</p>${x2.image ? `<img style="height:90px;width:120px;object-fit:cover" src="${media(x2.image)}" alt="${esc(v2)}">` : ""}<div class="row">${btn("Generar", "gen-variant:" + c.id + ":" + v2)}${btn("Subir", "upload-variant:" + c.id + ":" + v2)}</div></div>`).join("")}</div>` : ""}${!chars && c.modelSpace?.snapshot ? `<div class="note"><b>Encuadre 3D</b><p class="tiny">La imagen principal define el aspecto; esta vista fija la distribuci\xF3n y la c\xE1mara.</p><img src="${media(c.modelSpace.snapshot)}" alt="Encuadre 3D de ${esc(c.name)}" style="width:100%;height:auto;object-fit:contain">${c.modelSpace.room !== "exterior" && modelSpaceEnvironment(p, c.modelSpace) ? btn("Visitar estancia en 3D", "visit-room:" + modelSpaceEnvironment(p, c.modelSpace).id + ":" + c.modelSpace.room) : ""}</div>` : ""}${c.images?.length > 1 ? `<label>Versi\xF3n visual<select data-version="${c.id}" data-kind="${view}">${opts(c.images.map((f2, i2) => [f2, "Versi\xF3n " + (i2 + 1)]), c.image)}</select></label>` : ""}</div></article>`).join("") || `<div class="empty"><h2>${chars ? "Presenta a tu protagonista." : "Define el primer escenario."}</h2><p>Puedes generar im\xE1genes o importar las que ya tienes.</p></div>`}</div>`;
   }
-  const sbFrame = (t2) => {
-    const main = t2.render || t2.sketch;
-    return `<div class="sb-frame">${main ? `<img src="${media(main)}" alt="${esc((t2.code ? t2.code + " \xB7 " : "") + t2.title)}">` : '<div class="sb-empty">Sin vi\xF1eta \xB7 sube un boceto o genera el fotograma</div>'}${t2.code ? `<span class="sb-code">${esc(t2.code)}</span>` : ""}${t2.duration ? `<span class="sb-dur">${esc(t2.duration)} s</span>` : ""}${t2.render && t2.sketch ? `<img class="sb-sketch" src="${media(t2.sketch)}" alt="Boceto ${esc(t2.code || t2.title)}">` : ""}</div>`;
+  const sbVerdict = (x2) => x2.verdict === "accepted" ? "Aceptada" : x2.verdict === "rejected" ? "Rechazada" + (x2.rules?.length ? ": " + x2.rules.join(", ") : "") : "Sin revisar", sbPillClass = (x2) => x2.verdict === "accepted" ? "ok" : x2.verdict === "rejected" ? "bad" : "warn", sbShown = (m2) => m2 ? m2.current || m2.groups[0].takes.at(-1) : null, sbWhen = (d2) => d2 ? new Date(d2).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" }) : "", sbTime = (n) => Number.isFinite(n) ? `${Math.floor(n / 60)}:${String(Math.round(n % 60)).padStart(2, "0")}` : "\u2013", sbByLote = (list) => [...new Set(list.map((x2) => x2.lote))].map((l3) => [l3, list.filter((x2) => x2.lote === l3)]);
+  const sbFrame = (t2, m2) => {
+    const main = t2.render || t2.sketch, v2 = sbShown(m2);
+    return `<div class="sb-frame${v2 ? " has-video" + (m2.current ? "" : " show-img") : ""}">${main ? `<img src="${media(main)}" alt="${esc((t2.code ? t2.code + " \xB7 " : "") + t2.title)}">` : '<div class="sb-empty">Sin vi\xF1eta \xB7 sube un boceto o genera el fotograma</div>'}${v2 ? `<video class="sb-video" controls preload="none"${main ? ` poster="${media(main)}"` : ""} src="${media(v2.video)}"></video>` : ""}${t2.code ? `<span class="sb-code">${esc(t2.code)}</span>` : ""}${t2.duration ? `<span class="sb-dur">${esc(t2.duration)} s</span>` : ""}${t2.render && t2.sketch ? `<img class="sb-sketch" src="${media(t2.sketch)}" alt="Boceto ${esc(t2.code || t2.title)}">` : ""}${v2 ? `<span class="pill sb-take ${sbPillClass(v2)}" data-sb-pill>v${v2.n} \xB7 ${esc(sbVerdict(v2))}</span><button type="button" class="sb-toggle" data-sb-toggle>${m2.current ? "Imagen" : "V\xEDdeo"}</button>` : ""}</div>`;
   };
+  const sbTakes = (t2, m2) => {
+    if (!m2) return "";
+    const v2 = sbShown(m2);
+    return `<select data-sb-take="${t2.id}" aria-label="Toma de v\xEDdeo">${m2.groups.map((g) => `<optgroup label="${esc(g.lote + " \xB7 " + g.block)}">${g.takes.map((x2) => `<option value="${esc(x2.lote + "/" + x2.block + "/" + x2.n)}" ${x2 === v2 ? "selected" : ""}>${esc(`v${x2.n} \xB7 ${sbWhen(x2.at)} \xB7 ${sbVerdict(x2)}${x2.current ? " \xB7 vigente" : ""}`)}</option>`).join("")}</optgroup>`).join("")}</select>${btn("Montaje \u2192", "sb-montaje:" + v2.lote + ":" + v2.block)}`;
+  };
+  const sbVersions = (key, list, current2, label) => `<video class="sb-cut-video" controls preload="none" data-sb-vid="${esc(key)}" src="${media(current2.file)}"></video><select data-sb-src="${esc(key)}" aria-label="Versi\xF3n del montaje">${sbByLote(list).map(([l3, xs]) => `<optgroup label="${esc(l3)}">${xs.map((x2) => `<option value="${esc(x2.file)}" ${x2.file === current2.file ? "selected" : ""}>${esc(label(x2) + (x2.file === current2.file ? " \xB7 vigente" : ""))}</option>`).join("")}</optgroup>`).join("")}</select>`;
   if (view === "storyboards") {
     const list = p.storyboards || [];
     html3 = heading2("Storyboards.", "Vi\xF1etas con boceto, fotograma generado, encuadre y di\xE1logo. Cuando un storyboard est\xE1 listo se convierte en cap\xEDtulo.", `<div class="row">${btn("Importar JSON", "import-storyboard")}${btn("+ Storyboard", "new-storyboard", "primary")}</div>`) + (list.length ? `<div class="grid">${list.map((b2) => {
@@ -29153,8 +29172,15 @@ async function render() {
       view = "storyboards";
       return render();
     }
+    const sbKey = p.id + "/" + b2.id;
+    if (sbMedia?.key !== sbKey) {
+      const data2 = await api("/api/storyboard-media?project=" + encodeURIComponent(p.id) + "&storyboard=" + encodeURIComponent(b2.id)).catch(() => null);
+      if (generation !== renderGeneration) return;
+      sbMedia = { key: sbKey, data: data2 };
+    }
+    const M2 = sbMedia.data;
     const shots = sbShots(b2), CH = projectChannels(p);
-    html3 = heading2(esc(b2.title), esc(b2.subtitle || ""), `<div class="row">${btn("\u2190 Storyboards", "nav:storyboards")}${btn("Editar", "edit-storyboard:" + b2.id)}${btn("+ Secuencia", "new-sb-sequence:" + b2.id)}${btn("Exportar JSON", "sb-export:" + b2.id)}${btn("Eliminar", "delete-storyboard:" + b2.id)}${btn("Crear cap\xEDtulo", "sb-to-episode:" + b2.id, "primary")}</div>`) + `<div class="two"><section class="panel"><div class="eyebrow">Planteamiento</div><p style="white-space:pre-wrap">${esc(b2.description || "Sin descripci\xF3n todav\xEDa.")}</p>${b2.notes ? `<div class="note" style="margin-top:16px;white-space:pre-wrap">${esc(b2.notes)}</div>` : ""}</section><section class="panel"><div class="row between"><div><span class="stat">${b2.sequences.length}</span>Secuencias</div><div><span class="stat">${shots.length}</span>Vi\xF1etas</div><div><span class="stat">${shots.filter((t2) => t2.render).length}</span>Fotogramas</div><div><span class="stat" style="font-size:22px">${sbDur(shots.reduce((n, t2) => n + (Number(t2.duration) || 0), 0))}</span>Duraci\xF3n</div></div><p style="margin-top:22px">Cada vi\xF1eta guarda su boceto, el fotograma generado, las referencias y el prompt. \xABGenerar fotograma\xBB env\xEDa el boceto y las referencias al modelo de imagen; \xABCrear cap\xEDtulo\xBB convierte las vi\xF1etas en planos editables con su di\xE1logo. Arrastra una vi\xF1eta sobre otra (o sobre el hueco final de una secuencia) para reordenarla; las flechas \u25C0 \u25B6 hacen lo mismo con el teclado.</p></section></div>` + b2.sequences.map((s) => `<div class="panel"><div class="row between"><div><span class="eyebrow">SECUENCIA</span><h2>${esc(s.title)}</h2><p>${esc(s.note || "")}${s.location ? ` <span class="tiny">\xB7 ${esc(p.locations.find((l3) => l3.id === s.location)?.name || s.location)}</span>` : ""}</p></div><div class="row">${btn("Editar", "sb-sequence:" + b2.id + ":" + s.id)}${btn("+ Vi\xF1eta", "new-sb-shot:" + b2.id + ":" + s.id)}${btn("Eliminar", "delete-sb-sequence:" + b2.id + ":" + s.id)}</div></div><div class="sb-grid" data-sb-grid="${s.id}" style="margin-top:16px">${s.shots.map((t2) => `<article class="sb-card" draggable="true" data-sb-drag="${t2.id}">${sbFrame(t2)}<div class="inner"><div class="row between"><h3>${esc(t2.title)}</h3>${((z) => `<span class="pill zone" style="${catalogStyle(z, "zone")}">${esc(t2.zone ? z.unknown ? t2.zone : z.label : "")}</span>`)(zoneOf(p, t2.zone))}</div>${t2.camera ? `<p class="tiny" style="margin:6px 0 0">${esc(t2.camera)}</p>` : ""}${t2.action ? `<p style="margin:8px 0 0">${esc(t2.action)}</p>` : ""}${t2.dialogue?.length ? `<ul class="sb-dial">${t2.dialogue.map((l3) => `<li style="${catalogStyle(channelOf(CH, l3.channel), "ch")}"><b>${esc(l3.who || p.characters.find((c) => c.id === l3.character)?.name || "")}</b>${l3.channel ? `<span class="tiny">(${esc(channelShort(channelOf(CH, l3.channel)))})</span> ` : ""}${esc(l3.text)}</li>`).join("")}</ul>` : ""}${t2.sound ? `<p class="tiny" style="margin-top:8px;font-style:italic">${esc(t2.sound)}</p>` : ""}${t2.cast?.length ? `<p class="tiny" style="margin-top:6px">Reparto: ${esc(t2.cast.map((c) => p.characters.find((x2) => x2.id === c)?.name || c).join(", "))}</p>` : ""}<div class="actions">${btn("Editar", "sb-shot:" + b2.id + ":" + s.id + ":" + t2.id)}${btn("Subir boceto", "upload-sb-sketch:" + t2.id)}${btn("Subir fotograma", "upload-sb-render:" + t2.id)}${btn("Generar fotograma", "gen-sb:" + t2.id, t2.render ? "" : "lime")}${btn("Prompt", "sb-prompt:" + t2.id)}${btn("\u25C0", "sb-move:" + t2.id + ":-1")}${btn("\u25B6", "sb-move:" + t2.id + ":1")}${btn("\u2715", "delete-sb-shot:" + t2.id)}${t2.renders?.length > 1 ? `<select data-sb-render="${t2.id}" aria-label="Versi\xF3n del fotograma">${opts(t2.renders.map((r, i2) => [r.file, "Fotograma " + (i2 + 1)]), t2.render)}</select>` : ""}</div></div></article>`).join("") || '<p class="tiny">Sin vi\xF1etas todav\xEDa.</p>'}</div></div>`).join("") + (b2.sequences.length ? "" : '<div class="empty"><h2>Empieza por una secuencia.</h2><p>Cada secuencia agrupa vi\xF1etas con su encuadre, acci\xF3n y di\xE1logo.</p></div>');
+    html3 = heading2(esc(b2.title), esc(b2.subtitle || ""), `<div class="row">${btn("\u2190 Storyboards", "nav:storyboards")}${btn("Editar", "edit-storyboard:" + b2.id)}${btn("+ Secuencia", "new-sb-sequence:" + b2.id)}${btn("Exportar JSON", "sb-export:" + b2.id)}${btn("Eliminar", "delete-storyboard:" + b2.id)}${btn("Crear cap\xEDtulo", "sb-to-episode:" + b2.id, "primary")}</div>`) + `<div class="two"><section class="panel"><div class="eyebrow">Planteamiento</div><p style="white-space:pre-wrap">${esc(b2.description || "Sin descripci\xF3n todav\xEDa.")}</p>${b2.notes ? `<div class="note" style="margin-top:16px;white-space:pre-wrap">${esc(b2.notes)}</div>` : ""}</section><section class="panel"><div class="row between"><div><span class="stat">${b2.sequences.length}</span>Secuencias</div><div><span class="stat">${shots.length}</span>Vi\xF1etas</div><div><span class="stat">${shots.filter((t2) => t2.render).length}</span>Fotogramas</div><div><span class="stat" style="font-size:22px">${sbDur(shots.reduce((n, t2) => n + (Number(t2.duration) || 0), 0))}</span>Duraci\xF3n</div></div><p style="margin-top:22px">Cada vi\xF1eta guarda su boceto, el fotograma generado, las referencias y el prompt. \xABGenerar fotograma\xBB env\xEDa el boceto y las referencias al modelo de imagen; \xABCrear cap\xEDtulo\xBB convierte las vi\xF1etas en planos editables con su di\xE1logo. Arrastra una vi\xF1eta sobre otra (o sobre el hueco final de una secuencia) para reordenarla; las flechas \u25C0 \u25B6 hacen lo mismo con el teclado.</p>${M2?.cuts?.list.length ? `<div class="sb-cuts"><div class="row between"><span class="eyebrow">Montaje del storyboard</span>${btn("Montaje \u2192", "sb-montaje:" + M2.cuts.current.lote + ":")}</div>${sbVersions("storyboard", M2.cuts.list, M2.cuts.current, (c) => `${c.name} \xB7 ${sbWhen(c.at)} \xB7 ${sbTime(c.duration)}${c.partial ? ` \xB7 parcial (${c.covered}/${c.total} vi\xF1etas)` : ""}`)}</div>` : ""}</section></div>` + b2.sequences.map((s) => `<div class="panel"><div class="row between"><div><span class="eyebrow">SECUENCIA</span><h2>${esc(s.title)}</h2><p>${esc(s.note || "")}${s.location ? ` <span class="tiny">\xB7 ${esc(p.locations.find((l3) => l3.id === s.location)?.name || s.location)}</span>` : ""}</p></div><div class="row">${btn("Editar", "sb-sequence:" + b2.id + ":" + s.id)}${btn("+ Vi\xF1eta", "new-sb-shot:" + b2.id + ":" + s.id)}${btn("Eliminar", "delete-sb-sequence:" + b2.id + ":" + s.id)}</div></div>${((q) => q ? `<details class="sb-cuts"><summary>Montaje de la secuencia</summary>${sbVersions("seq-" + s.id, q.list, q.current, (x2) => `${x2.cut} \xB7 ${sbTime(x2.duration)} \xB7 ${x2.blocks.length} bloques`)}</details>` : "")(M2?.sequences?.[s.id])}<div class="sb-grid" data-sb-grid="${s.id}" style="margin-top:16px">${s.shots.map((t2) => `<article class="sb-card" draggable="true" data-sb-drag="${t2.id}">${sbFrame(t2, M2?.shots?.[t2.id])}<div class="inner"><div class="row between"><h3>${esc(t2.title)}</h3>${((z) => `<span class="pill zone" style="${catalogStyle(z, "zone")}">${esc(t2.zone ? z.unknown ? t2.zone : z.label : "")}</span>`)(zoneOf(p, t2.zone))}</div>${t2.camera ? `<p class="tiny" style="margin:6px 0 0">${esc(t2.camera)}</p>` : ""}${t2.action ? `<p style="margin:8px 0 0">${esc(t2.action)}</p>` : ""}${t2.dialogue?.length ? `<ul class="sb-dial">${t2.dialogue.map((l3) => `<li style="${catalogStyle(channelOf(CH, l3.channel), "ch")}"><b>${esc(l3.who || p.characters.find((c) => c.id === l3.character)?.name || "")}</b>${l3.channel ? `<span class="tiny">(${esc(channelShort(channelOf(CH, l3.channel)))})</span> ` : ""}${esc(l3.text)}</li>`).join("")}</ul>` : ""}${t2.sound ? `<p class="tiny" style="margin-top:8px;font-style:italic">${esc(t2.sound)}</p>` : ""}${t2.cast?.length ? `<p class="tiny" style="margin-top:6px">Reparto: ${esc(t2.cast.map((c) => p.characters.find((x2) => x2.id === c)?.name || c).join(", "))}</p>` : ""}<div class="actions">${btn("Editar", "sb-shot:" + b2.id + ":" + s.id + ":" + t2.id)}${btn("Subir boceto", "upload-sb-sketch:" + t2.id)}${btn("Subir fotograma", "upload-sb-render:" + t2.id)}${btn("Generar fotograma", "gen-sb:" + t2.id, t2.render ? "" : "lime")}${btn("Prompt", "sb-prompt:" + t2.id)}${btn("\u25C0", "sb-move:" + t2.id + ":-1")}${btn("\u25B6", "sb-move:" + t2.id + ":1")}${btn("\u2715", "delete-sb-shot:" + t2.id)}${sbTakes(t2, M2?.shots?.[t2.id])}${t2.renders?.length > 1 ? `<select data-sb-render="${t2.id}" aria-label="Versi\xF3n del fotograma">${opts(t2.renders.map((r, i2) => [r.file, "Fotograma " + (i2 + 1)]), t2.render)}</select>` : ""}</div></div></article>`).join("") || '<p class="tiny">Sin vi\xF1etas todav\xEDa.</p>'}</div></div>`).join("") + (b2.sequences.length ? "" : '<div class="empty"><h2>Empieza por una secuencia.</h2><p>Cada secuencia agrupa vi\xF1etas con su encuadre, acci\xF3n y di\xE1logo.</p></div>');
   }
   if (view === "outline") {
     const rows = outline(p);
@@ -29188,7 +29214,11 @@ async function render() {
   }
   $2("#workspace").innerHTML = html3;
   enableImageViewer();
-  if (view === "montaje") stage = await mountMontaje($2("#montaje"), { project: p, api, toast });
+  if (view === "montaje") {
+    const focus = montajeFocus;
+    montajeFocus = null;
+    stage = await mountMontaje($2("#montaje"), { project: p, api, toast, focus });
+  }
   if (view === "rehearsal") stage = await mountRehearsal($2("#rehearsal"), { project: p, episode: p.episodes.find((e) => e.id === episodeId) });
   if (view === "environment") {
     const e = (p.environments || []).find((x2) => x2.id === environmentId), el = $2("#environment-model");
@@ -29208,10 +29238,36 @@ async function render() {
   }
   document.querySelectorAll("[data-action]").forEach((b2) => b2.onclick = () => act(b2.dataset.action).catch((e) => toast(e.message)));
   if (view === "storyboard") {
+    const sbToggle = (f2, img) => {
+      f2.classList.toggle("show-img", img);
+      const v2 = f2.querySelector(".sb-video");
+      if (img) v2.pause();
+      f2.querySelector("[data-sb-toggle]").textContent = img ? "V\xEDdeo" : "Imagen";
+    };
+    document.querySelectorAll("[data-sb-toggle]").forEach((el) => el.onclick = (e) => {
+      e.stopPropagation();
+      const f2 = el.closest(".sb-frame");
+      sbToggle(f2, !f2.classList.contains("show-img"));
+    });
+    document.querySelectorAll("[data-sb-take]").forEach((el) => el.onchange = () => {
+      const x2 = sbMedia?.data?.shots?.[el.dataset.sbTake]?.groups.flatMap((g) => g.takes).find((x3) => x3.lote + "/" + x3.block + "/" + x3.n === el.value), f2 = el.closest(".sb-card")?.querySelector(".sb-frame");
+      if (!x2 || !f2) return;
+      f2.querySelector(".sb-video").src = media(x2.video);
+      const pill = f2.querySelector("[data-sb-pill]");
+      pill.className = "pill sb-take " + sbPillClass(x2);
+      pill.textContent = `v${x2.n} \xB7 ${sbVerdict(x2)}`;
+      sbToggle(f2, false);
+      const go = el.nextElementSibling;
+      if (go?.dataset.action) go.dataset.action = "sb-montaje:" + x2.lote + ":" + x2.block;
+    });
+    document.querySelectorAll("[data-sb-src]").forEach((el) => el.onchange = () => {
+      const v2 = document.querySelector(`[data-sb-vid="${CSS.escape(el.dataset.sbSrc)}"]`);
+      if (v2) v2.src = media(el.value);
+    });
     let dragging = null;
     const clear = () => document.querySelectorAll(".drop-target,.dragging").forEach((x2) => x2.classList.remove("drop-target", "dragging"));
     document.querySelectorAll("[data-sb-drag]").forEach((el) => {
-      el.querySelectorAll("img").forEach((i2) => i2.draggable = false);
+      el.querySelectorAll("img,video").forEach((i2) => i2.draggable = false);
       el.ondragstart = (e) => {
         dragging = el.dataset.sbDrag;
         e.dataTransfer.effectAllowed = "move";
@@ -29406,6 +29462,7 @@ async function act(action) {
   }
   if (a === "refresh") {
     if (dirty) await save();
+    sbMedia = null;
     state = await api("/api/state");
     if (p) await reload();
     return render();
@@ -29584,6 +29641,12 @@ async function act(action) {
     if (dirty) await save();
     storyboardId = b2;
     view = "storyboard";
+    return render();
+  }
+  if (a === "sb-montaje") {
+    if (dirty) await save();
+    montajeFocus = { lote: b2, block: c || null };
+    view = "montaje";
     return render();
   }
   if (a === "new-storyboard" || a === "edit-storyboard") {
