@@ -76,7 +76,7 @@ return {prompt,refs,warnings,duration,requested,budget};}
 export function framePrompt({project,sequence,shots,block,registry,map,scene,cast=[]}){const warnings=[],CH=projectChannels(project);const part=block.parts?.[0];const t=shots[part?.shot];if(!t)throw Error('El bloque no tiene planos');if((block.parts||[]).length>1)warnings.push('Modo fotograma: el bloque tiene más de un plano; solo el primero tiene fotograma inicial');const image=t.storyboardRender||null;if(!image)warnings.push(`El plano ${t.title} no tiene fotograma de storyboard`);const duration=block.duration??Math.ceil(block.length||5);const requested=Math.max(5,Math.ceil(duration));const spoken=spokenLines(block,shots,CH);const budget=dialogueBudget(spoken);if(spoken.length&&budget>duration-1+.01)warnings.push(`Diálogo de ${budget.toFixed(1)} s no cabe en ${duration} s − 1 s de cola (R12)`);
 const assets=Object.entries(registry?.assets||{});const person=id=>assets.find(([,a])=>a.kind==='character'&&a.character===id&&!a.variant)||assets.find(([,a])=>a.kind==='character'&&a.character===id);const voice=id=>assets.find(([,a])=>a.kind==='voice'&&a.character===id)?.[1];const nameOf=id=>characterName(registry,project,id);
 const people=cast.map(id=>{const e=person(id);if(!e)warnings.push(`Sin entrada de registro para ${id}`);else if(e[1].status!=='approved')warnings.push(`Tag sin aprobar: ${e[0]}`);return e?e[1].descriptor||'[[DESCRIPTOR]]':`${nameOf(id)}: [[DESCRIPTOR]]`;});
-const lines=[];for(const p of block.parts||[])for(const l of p.lines||[]){const at=(p.at+l.start).toFixed(2);if(l.offscreen)lines.push(`${at}s: ${nameOf(l.character)} is heard offscreen; nobody in frame mouths the words.`);else lines.push(`At approximately ${at}s, ${nameOf(l.character)} says exactly: <d>[English] ${(l.spokenText||l.text).trim()}</d>`);}
+const lines=[];for(const p of block.parts||[])for(const l of p.lines||[]){const at=(p.at+l.start).toFixed(2);if(lineOffscreen(CH,l))lines.push(`${at}s: ${nameOf(l.character)} is heard offscreen; nobody in frame mouths the words.`);else lines.push(`At approximately ${at}s, ${nameOf(l.character)} says exactly: <d>[English] ${(l.spokenText||l.text).trim()}</d>`);}
 const axis=[map?.side?`Camera side: ${map.side.replace(/\.+$/,'')}.`:'',map?.axis?`The 180° line is ${map.axis.replace(/\.+$/,'')}; the camera stays on its side of that line.`:''].filter(Boolean).join(' ');const acting=scene?actingText(scene,cast,project):'';const local='';const zone=promptZone(project,sequence),F=promptTexts(registry).frame;const light=pickText(registry?.lighting,zone)||'[[LIGHTING]]';
 const summary=`[image-to-video, first frame supplied${spoken.length?', dialogue':''}] ${registry?.summary||'Photorealistic live-action drama.'} Shot ${String(t.title).split(' · ')[0]}. The supplied image IS frame zero: the take starts exactly on it and moves on in one continuous take. Exactly ${cast.length} ${cast.length===1?'person':'people'} in the scene${cast.length?`: ${cast.map(nameOf).join(', ')}`:''}.`;
 const retention=`Keep every ${F.keep} exactly as in the first frame for the whole take. Nobody new appears unless the action says so; nobody is duplicated; nobody changes ${F.changes}. Keep the location, the light and the colour of the first frame.`;
@@ -85,6 +85,34 @@ const sound=[sequence.ambiencePrompt||pickText(registry?.sound,zone)||'[[SOUND]]
 const prompt=`summary:\n${summary}\nretention_analysis:\n${retention}\ndetailed_description:\n${detailed}\noverall_soundscape:\n${sound}\nnon_diegetic_music:\nNone.`;
 const emo=forbiddenEmotionWords(acting+' '+local);if(emo.length)warnings.push(`Palabras de emoción en la interpretación: ${emo.join(', ')} (skill interpretacion)`);
 return {prompt,image,warnings,duration,requested,budget,names:cast.map(nameOf)};}
+
+// ---- Voces del bloque (modo fotograma y montaje): qué líneas van a voz.wav, cuáles faltan y cuáles se mezclan en post.
+const clip=s=>{s=String(s||'').trim();return s.length>32?s.slice(0,30).trimEnd()+'…':s;};
+const secs=n=>n.toFixed(2)+' s';
+// Líneas del bloque en tiempo de bloque (part.at + l.start, a ms), ordenadas por inicio. El audio sale de shots[part.shot].lines por id (instantánea del lote); si no, de la línea del plan.
+export function blockVoices(block,shots,channels=projectChannels(null)){const lineAudios=[],missing=[],offscreen=[];
+ const all=(block?.parts||[]).flatMap(part=>(part.lines||[]).map(l=>{const src=(shots?.[part.shot]?.lines||[]).find(x=>x.id===l.id);const from=src?.audio?src:l;return {l,start:Math.round((part.at+l.start)*1000)/1000,file:from.audio||null,duration:Number.isFinite(from.audioDuration)?from.audioDuration:null};})).sort((a,b)=>a.start-b.start);
+ for(const {l,start,file,duration} of all){const base={start,character:l.character,lineId:l.id,text:String(l.spokenText||l.text||'').trim()};
+  if(lineOffscreen(channels,l))offscreen.push({file,...base,duration:file?duration:null});else if(file)lineAudios.push({file,...base,duration});else missing.push(base);}
+ return {lineAudios,missing,offscreen};}
+// Avisos de la pista de voz de un bloque: líneas en cuadro sin audio, solapes y audio que se corta o no se oye con la duración pedida.
+export function voiceTrackWarnings({lineAudios,missing=[],duration,blockId}){const out=[],pre=blockId?blockId+': ':'',who=a=>`${a.character||'la línea'} a ${secs(a.start)}${a.text?` («${clip(a.text)}»)`:''}`;
+ for(const m of missing)out.push(`${pre}${who(m)} está en cuadro y no tiene audio: genera las voces con voces.mjs y repite prompt.mjs, o el modelo inventará la voz`);
+ const list=[...(lineAudios||[])].sort((a,b)=>a.start-b.start);
+ for(let i=0;i<list.length;i++)for(let k=i+1;k<list.length;k++){const a=list[i],b=list[k];if(Number.isFinite(a.duration)&&a.start+a.duration>b.start+.001)out.push(`${pre}${who(a)} dura ${secs(a.duration)} y se solapa con ${who(b)}`);}
+ if(Number.isFinite(duration))for(const a of list){if(a.start>=duration)out.push(`${pre}${who(a)} empieza después de la duración pedida (${secs(duration)}): no se oye`);else if(Number.isFinite(a.duration)&&a.start+a.duration>duration+.01)out.push(`${pre}${who(a)} acaba a ${secs(a.start+a.duration)}, después de la duración pedida (${secs(duration)}): se corta`);}
+ return out;}
+// Tiempo de bloque → tiempo en edit.mp4 (tramos usedRange concatenados). null si cae fuera de todos los tramos.
+export function editTime(t,spans){let acc=0;for(const [s,e] of spans||[]){if(t>=s&&t<e)return Math.round((acc+t-s)*1000)/1000;acc+=e-s;}return null;}
+// Voces fuera de campo que se mezclan sobre la toma en edit.mp4: su instante en el montaje y los avisos de las que se omiten o se cortan.
+export function offscreenMix({offscreen,spans}){const items=[],warnings=[],total=(spans||[]).reduce((n,[s,e])=>n+e-s,0),who=o=>`${o.character} fuera de campo a ${secs(o.start)} («${clip(o.text)}»)`;
+ for(const o of offscreen||[]){if(!o.file){warnings.push(`${who(o)} no tiene audio: no se mezcla (genera con voces.mjs y repite planificar --force)`);continue;}
+  const at=editTime(o.start,spans);if(at===null){warnings.push(`${who(o)} empieza fuera del tramo usado: no se mezcla`);continue;}
+  if(Number.isFinite(o.duration)&&at+o.duration>total+.01)warnings.push(`${who(o)} acaba después del final del bloque en el montaje: se corta`);
+  items.push({file:o.file,at,lineId:o.lineId,character:o.character,duration:o.duration??null});}
+ return {items,warnings};}
+// Líneas de una secuencia que voces.mjs genera: sin audio (o todas con force), una sola con linea; por defecto también las fuera de campo, que el montaje mezcla.
+export function pendingVoiceLines(shots,channels,{linea=null,force=false,soloEnCuadro=false}={}){return (shots||[]).flatMap(t=>(t.lines||[]).map(l=>({t,l,offscreen:lineOffscreen(channels,l)}))).filter(({l,offscreen})=>(!linea||l.id===linea)&&(force||!l.audio)&&!(soloEnCuadro&&offscreen));}
 
 // Preview 3D estándar: un plano con render propio (customRenderer) no pasa por stage; se reproduce la preview guardada.
 export function previewIssues(shot){return shot?.customRenderer?['Plano con render propio: reproduce la preview guardada']:[];}

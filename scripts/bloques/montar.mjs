@@ -4,9 +4,11 @@
 // Por bloque: el intento aceptado (recortado por usedRange) → edit.mp4; si no hay, el último generado sin rechazar (pendiente de
 // revisión) y, si tampoco, la guía 3D con las líneas rotuladas.
 // Salida: assets/<lote>/montaje/<nombre>.mp4 y cut.json (qué bloque viene de qué fuente y su tramo at/length en el montaje).
-// Los edit.mp4 cuya toma y tramo no han cambiado (edit.json) no se vuelven a codificar.
+// En una toma generada, las líneas fuera de campo con audio (instantánea del lote) se mezclan sobre su audio en su instante del edit
+// (el tramo usado desplaza el tiempo; si su inicio cae en un tramo descartado, se omite con aviso). Con guía 3D solo se rotulan.
+// Los edit.mp4 cuya toma, tramo y voces fuera de campo no han cambiado (edit.json) no se vuelven a codificar.
 import fs from 'node:fs';import path from 'node:path';
-import {parseArgs,ff,readJSON,writeJSON,ffprobeDuration,cliProject,usageExit,loteProject} from './lib.mjs';import {loadLote,loadAttempts} from '../../lib/lotes.mjs';import {chosenAttempt,projectChannels,lineOffscreen} from '../../app/workflow.mjs';import {concatList} from '../../lib/media.mjs';
+import {parseArgs,ff,readJSON,writeJSON,ffprobeDuration,cliProject,usageExit,loteProject} from './lib.mjs';import {loadLote,loadAttempts} from '../../lib/lotes.mjs';import {chosenAttempt,projectChannels,lineOffscreen,blockVoices,offscreenMix} from '../../app/workflow.mjs';import {concatList,editFilterComplex} from '../../lib/media.mjs';
 const USAGE='Uso: montar.mjs <lote> [--project id] [--out nombre]';
 const {args:[lote],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
 const L=loadLote(cliProject({usage:USAGE,opts}).project,lote);L.project=loteProject(L);const CH=projectChannels(L.project);const outDir=path.join(L.paths.out,'montaje');fs.mkdirSync(outDir,{recursive:true});
@@ -18,9 +20,10 @@ for(const block of L.plan){const dir=path.join(L.paths.out,block.id);const targe
  const {attempt:a,pending}=chosenAttempt(attempts,x=>fs.existsSync(path.join(dir,x.video)));
  if(a){const spans=a.usedRange?.length?a.usedRange:[[0,block.length]];
   // edit.json recuerda de qué toma y tramo sale edit.mp4: si no cambian, no se vuelve a codificar.
-  const sig={video:a.video,spans},sigFile=path.join(dir,'edit.json'),fresh=fs.existsSync(target)&&fs.existsSync(sigFile)&&JSON.stringify(readJSON(sigFile))===JSON.stringify(sig)&&fs.statSync(target).mtimeMs>=fs.statSync(path.join(dir,a.video)).mtimeMs;
-  if(!fresh){const f=[],labels=[];spans.forEach(([s,e],i)=>{f.push(`[0:v]trim=start=${s}:end=${e},setpts=PTS-STARTPTS[v${i}]`,`[0:a]atrim=start=${s}:end=${e},asetpts=PTS-STARTPTS[a${i}]`);labels.push(`[v${i}][a${i}]`);});f.push(`${labels.join('')}concat=n=${spans.length}:v=1:a=1[cv][ca]`,'[cv]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1,fps=24[v]','[ca]afade=t=in:d=0.015,aresample=48000[a]');
-  ff(['-i',path.join(dir,a.video),'-filter_complex',f.join(';'),'-map','[v]','-map','[a]','-c:v','libx264','-preset','fast','-crf','18','-c:a','aac','-b:a','192k','-ac','2',target],`${block.id} (toma ${a.video})`);writeJSON(sigFile,sig);}cut.push({block:block.id,source:'generated',attempt:a.n,video:a.video,usedRange:spans,...(pending?{pending:true}:{})});}
+  const mix=offscreenMix({offscreen:blockVoices(block,L.shots,CH).offscreen,spans});
+  const items=mix.items.filter(o=>{if(fs.existsSync(path.join(L.paths.base,o.file)))return true;mix.warnings.push(`${o.character} fuera de campo: no existe ${o.file}; no se mezcla`);return false;});for(const w of mix.warnings)console.log(`aviso: ${block.id}: ${w}`);
+  const sig=items.length?{video:a.video,spans,offscreen:items.map(o=>({file:o.file,at:o.at,mtime:fs.statSync(path.join(L.paths.base,o.file)).mtimeMs}))}:{video:a.video,spans},sigFile=path.join(dir,'edit.json'),fresh=fs.existsSync(target)&&fs.existsSync(sigFile)&&JSON.stringify(readJSON(sigFile))===JSON.stringify(sig)&&fs.statSync(target).mtimeMs>=fs.statSync(path.join(dir,a.video)).mtimeMs;
+  if(!fresh){ff(['-i',path.join(dir,a.video),...items.flatMap(o=>['-i',path.join(L.paths.base,o.file)]),'-filter_complex',editFilterComplex(spans,items),'-map','[v]','-map','[a]','-c:v','libx264','-preset','fast','-crf','18','-c:a','aac','-b:a','192k','-ac','2',target],`${block.id} (toma ${a.video})`);writeJSON(sigFile,sig);}cut.push({block:block.id,source:'generated',attempt:a.n,video:a.video,usedRange:spans,...(pending?{pending:true}:{}),...(items.length?{offscreen:items.length}:{})});}
  else{const guide=path.join(dir,'motion.mp4');if(!fs.existsSync(guide)){cut.push({block:block.id,source:'missing'});console.warn('sin guía ni generado:',block.id);continue;}
   fs.rmSync(path.join(dir,'edit.json'),{force:true});
   const lines=block.parts.flatMap(p=>(p.lines||[]).map(l=>({...l,start:p.at+l.start})));const draw=lines.map(l=>`drawtext=fontfile=${font}:fontsize=26:fontcolor=white:borderw=2:x=(w-text_w)/2:y=h-60:text='${esc((L.project.characters.find(c=>c.id===l.character)?.name||l.character).split(' ')[0].toUpperCase()+(lineOffscreen(CH,l)?' (OFF)':'')+': '+(l.spokenText||l.text))}':enable='between(t,${l.start.toFixed(2)},${(l.start+Math.max(1.5,(l.estimatedDuration||2))).toFixed(2)})'`);

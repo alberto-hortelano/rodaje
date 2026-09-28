@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Voces de los personajes con ElevenLabs a través de fal (derechos comerciales incluidos; solo voces de serie y de la biblioteca
 // pública). Todo es de pago salvo el ensayo sin --yes: pedir aprobación antes (CLAUDE.md).
-//   node scripts/bloques/voces.mjs lineas <episodio> <secuencia> [--linea <id>] [--project id] [--yes] [--force]
-//     Genera con eleven-v3 cada línea en cuadro sin audio y la guarda en la línea (l.audio, l.audioDuration).
+//   node scripts/bloques/voces.mjs lineas <episodio> <secuencia> [--linea <id>] [--solo-en-cuadro] [--project id] [--yes] [--force]
+//     Genera con eleven-v3 cada línea sin audio y la guarda en la línea (l.audio, l.audioDuration). Incluye las fuera de campo
+//     (marcadas o por un canal offscreen), que montar.mjs mezcla sobre la toma; --solo-en-cuadro las deja fuera. El ensayo las marca «(off)».
 //     Voz: la del personaje. Estabilidad y etiquetas por defecto («tags», p. ej. "[quietly]"): del casting.json de su carpeta
 //     de la biblia. Etiquetas de una frase concreta: campo `delivery` de la línea (p. ej. "[tired] [kindly]"); no se pronuncian.
 //   node scripts/bloques/voces.mjs prueba --voz <id|nombre> --texto "<frase>" [--estabilidad 0.4] [--modelo minimax] [--project id] [--yes]
@@ -15,10 +16,10 @@
 //     Para conservarla hay que usarla en una generación de voz antes de 7 días. Para adoptarla: voz del personaje = su ID y
 //     "modelo": "minimax" en la entrada del idioma del casting.json.
 import fs from 'node:fs';import path from 'node:path';import {ffmpeg} from '../../lib/media.mjs';import {download} from '../../lib/fal.mjs';import {speak,changeVoice,designVoice} from '../../lib/tts.mjs';
-import {load,save,dir} from '../../app/store.mjs';
+import {load,save,dir} from '../../app/store.mjs';import {pendingVoiceLines,projectChannels} from '../../app/workflow.mjs';
 import {parseArgs,falClient,ffprobeDuration,writeJSON,cliProject,usageExit} from './lib.mjs';
 const {args:[cmd,...rest],opts}=parseArgs(process.argv.slice(2));
-const usage='Uso: voces.mjs lineas <episodio> <secuencia> | prueba --voz <id> --texto "…" [--modelo minimax] | disenar --personaje <id> --descripcion "…" --texto "…" | cambiar <episodio> <secuencia> <línea> <grabación>  [--project id] [--yes]';
+const usage='Uso: voces.mjs lineas <episodio> <secuencia> [--linea id] [--solo-en-cuadro] [--force] | prueba --voz <id> --texto "…" [--modelo minimax] | disenar --personaje <id> --descripcion "…" --texto "…" | cambiar <episodio> <secuencia> <línea> <grabación>  [--project id] [--yes]';
 if(!['lineas','prueba','cambiar','disenar'].includes(cmd))usageExit(usage);
 const {project}=cliProject({usage,opts}),base=dir(project);const p=load(project);
 // casting.json de la biblia: la entrada del idioma del proyecto cuya voz coincide con la del personaje.
@@ -61,10 +62,10 @@ if(cmd==='cambiar'){
  save(p,p.revision);console.log('✓',c.name,l.audio,l.audioDuration+' s · revisión',p.revision);process.exit(0);}
 
 // lineas
-const todo=seq.shots.flatMap(t=>t.lines.map(l=>({t,l}))).filter(({l})=>!l.offscreen&&(!opts.linea||l.id===opts.linea)&&(opts.force||!l.audio));
-if(!todo.length){console.log('Todas las líneas en cuadro ya tienen audio (--force para regenerarlas).');process.exit(0);}
-for(const {t,l} of todo){const c=p.characters.find(c=>c.id===l.character);if(!c?.voice)throw Error(`${c?.name||l.character} no tiene voz asignada`);console.log(`${t.title}: ${c.name} «${lineText(c,l)}» · voz ${c.voice} · estabilidad ${settingsFor(c).stability??.5}`);}
-if(!opts.yes){console.log(`Ensayo: ${todo.length} líneas, ${todo.reduce((n,{l})=>n+l.text.length,0)} caracteres. Añade --yes para generarlas (ElevenLabs, de pago).`);process.exit(0);}
+const soloEnCuadro=!!opts['solo-en-cuadro'];const todo=pendingVoiceLines(seq.shots,projectChannels(p),{linea:opts.linea||null,force:!!opts.force,soloEnCuadro});
+if(!todo.length){console.log(`Todas las líneas${soloEnCuadro?' en cuadro':''} ya tienen audio (--force para regenerarlas).`);process.exit(0);}
+for(const {t,l,offscreen} of todo){const c=p.characters.find(c=>c.id===l.character);if(!c?.voice)throw Error(`${c?.name||l.character} no tiene voz asignada`);console.log(`${t.title}: ${c.name}${offscreen?' (off)':''} «${lineText(c,l)}» · voz ${c.voice} · estabilidad ${settingsFor(c).stability??.5}`);}
+if(!opts.yes){console.log(`Ensayo: ${todo.length} líneas (${todo.filter(x=>x.offscreen).length} fuera de campo), ${todo.reduce((n,{l})=>n+l.text.length,0)} caracteres. Añade --yes para generarlas (ElevenLabs, de pago).`);process.exit(0);}
 const client=await falClient();fs.mkdirSync(out,{recursive:true});
 for(const {l} of todo){const c=p.characters.find(c=>c.id===l.character);const s=settingsFor(c);
  const wav=toWav(writeMp3(await say(client,lineText(c,l),c.voice,s),path.join(out,l.id+'.mp3')));

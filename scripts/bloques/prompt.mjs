@@ -5,8 +5,10 @@
 // Si prompt.txt ya existe (rellenado a mano), escribe prompt.generated.txt para comparar, salvo --force.
 // Modo fotograma con assets/<lote>/direccion.json: rellena los huecos con la entrada del bloque («fin» pone endImage).
 // Un bloque sin entrada y con prompt.txt (dirigido a mano) no se toca salvo que se nombre. refs.json conserva endImage.
+// Modo fotograma: refs.json lleva en lineAudios todas las líneas en cuadro con audio (instantánea del lote), con su inicio en el bloque;
+// avisa de las que están en cuadro sin audio. Las fuera de campo no van: las mezcla montar.mjs.
 import fs from 'node:fs';import path from 'node:path';
-import {blockPrompt,framePrompt,applyDireccion,direccionErrors,direccionBlock,promptTargets,mergeRefs} from '../../app/workflow.mjs';
+import {blockPrompt,framePrompt,applyDireccion,direccionErrors,direccionBlock,promptTargets,mergeRefs,blockVoices,projectChannels} from '../../app/workflow.mjs';
 import {parseArgs,writeJSON,readJSON,cliProject,usageExit,loteProject} from './lib.mjs';import {loadLote,direccionFor} from '../../lib/lotes.mjs';
 const USAGE='Uso: prompt.mjs <lote> [bloque] [--project id] [--force]';
 const {args:[lote,only],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
@@ -25,10 +27,11 @@ for(const block of L.plan){if(only&&block.id!==only)continue;const dir=path.join
  // Modo fotograma: el reparto sale de la viñeta del storyboard de la que viene el plano.
  if(block.mode==='fotograma'){const t=L.shots[block.parts[0].shot];const sbShot=(L.project.storyboards||[]).flatMap(b=>b.sequences||[]).flatMap(s=>s.shots||[]).find(x=>x.id===t.storyboardShot);const cast=(sbShot?.cast||[]).filter(id=>L.project.characters.some(c=>c.id===id));
   const r=framePrompt({project:L.project,sequence:L.sequence,shots:L.shots,block,registry:L.registry,map:L.map,scene:L.scene,cast});const a=d?applyDireccion(r.prompt,d,{names:r.names,locks:D.locks,image:r.image}):{prompt:r.prompt,refsPatch:{},warnings:[]};
-  const audio=(block.parts||[]).flatMap(p=>p.lines||[]).map(l=>t.lines.find(x=>x.id===l.id)).find(l=>l?.audio);
-  const w=write(block,dir,{directed:!!d,prompt:a.prompt,patch:a.refsPatch,fresh:{mode:'fotograma',image:r.image,shot:t.title,cast,lineAudio:audio?{file:audio.audio,start:block.parts[0].lines.find(l=>l.id===audio.id).start}:null,images:[],audios:[],durationRequested:r.requested,duration:r.duration,budget:Math.round(r.budget*100)/100}});if(!w)continue;
+  const v=blockVoices(block,L.shots,projectChannels(L.project));
+  const w=write(block,dir,{directed:!!d,prompt:a.prompt,patch:a.refsPatch,fresh:{mode:'fotograma',image:r.image,shot:t.title,cast,lineAudios:v.lineAudios,images:[],audios:[],durationRequested:r.requested,duration:r.duration,budget:Math.round(r.budget*100)/100}});if(!w)continue;
   const holes=[...a.prompt.matchAll(/\[\[[A-Z ]+\]\]/g)].map(m=>m[0]);gaps+=holes.length;
-  console.log(`${block.id} ${t.title}: ${w.file}${w.exists&&!opts.force?' (prompt.txt ya existía)':''}${d?'  dirigido':''}  pide ${r.requested} s${holes.length?'  huecos '+[...new Set(holes)].join(' '):''}`);for(const x of [...r.warnings,...a.warnings])console.log('   aviso:',x);continue;}
+  console.log(`${block.id} ${t.title}: ${w.file}${w.exists&&!opts.force?' (prompt.txt ya existía)':''}${d?'  dirigido':''}  pide ${r.requested} s${holes.length?'  huecos '+[...new Set(holes)].join(' '):''}`);for(const x of [...r.warnings,...a.warnings])console.log('   aviso:',x);
+  for(const m of v.missing)console.log(`   aviso: ${block.id}: línea en cuadro sin audio: ${m.character} a ${m.start.toFixed(2)} s («${m.text}»)`);continue;}
  const r=blockPrompt({project:L.project,sequence:L.sequence,shots:L.shots,block,registry:L.registry,map:L.map,scene:L.scene,mode:block.mode});
  const w=write(block,dir,{directed:false,ignored:!!d,prompt:r.prompt,fresh:{images:r.refs.images.map(i=>({tag:i.tag,role:i.role,file:i.file})),audios:r.refs.audios.map(a=>({tag:a.tag,character:a.character,file:a.file})),video:'motion.mp4',durationRequested:r.requested,duration:r.duration,budget:Math.round(r.budget*100)/100}});
  if(d)console.log(`   aviso: ${block.id}: dirección ignorada: solo modo fotograma`);if(!w)continue;

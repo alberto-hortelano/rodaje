@@ -10,9 +10,9 @@
 - `scripts/bloques/prompt.mjs`: esqueleto del prompt de cada bloque en orden fijo; en modo fotograma aplica `assets/<lote>/direccion.json` (paso 7).
 - `scripts/bloques/enviar.mjs`: envía un bloque a H3 y registra el intento en `attempts.json` (de pago; R23, R26).
 - `scripts/bloques/estado.mjs`: consulta la cola, descarga los intentos y registra el veredicto con `--verdict accepted|rejected|none` (sin `--attempt`, el último intento; las reglas citadas se validan contra `docs/REGLAS.md` y el `REGLAS.md` del proyecto). Misma semántica que la vista Montaje (`reviewBlock` en `lib/lotes.mjs`): una sola toma aceptada por bloque, rango conservado si no se da `--range`, `none` quita la revisión.
-- `scripts/bloques/montar.mjs`: montaje incremental del lote (paso 8).
+- `scripts/bloques/montar.mjs`: montaje incremental del lote (paso 8); en las tomas generadas mezcla las voces fuera de campo con audio en su instante del montaje.
 - `scripts/bloques/informe.mjs`: informe del lote en `INFORME.md`: intentos, aceptación, reglas más violadas, segundos y coste.
-- `scripts/bloques/voces.mjs`: voces de ElevenLabs a través de fal (`lineas`, `prueba`, `cambiar`; de pago salvo el ensayo sin `--yes`).
+- `scripts/bloques/voces.mjs`: voces de ElevenLabs a través de fal (`lineas`, `prueba`, `cambiar`; de pago salvo el ensayo sin `--yes`). `lineas` genera también las fuera de campo, salvo `--solo-en-cuadro`.
 - `scripts/bloques/lib.mjs`: utilidades compartidas por los scripts de lote; no es una orden.
 
 ## Registro, perfiles y ensayo
