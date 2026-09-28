@@ -2,7 +2,7 @@
 // storyboardMediaFor: tomas y montajes de un storyboard para la vista Storyboards (solo lectura).
 import path from 'node:path';import {execFile} from 'node:child_process';
 import {ROOT} from '../lib/paths.mjs';import {loteDir,reviewBlock,listLotes,storyboardMediaFor,loteDetail as readLoteDetail} from '../lib/lotes.mjs';
-export {listLotes,storyboardMediaFor};
+export {listLotes,storyboardMediaFor};export {listAnimatics} from '../lib/animaticas.mjs';
 const running=new Map();
 const status=(project,lote)=>running.get(project+'/'+lote)||null;
 export function loteDetail(project,lote){return readLoteDetail(project,lote,status(project,lote));}

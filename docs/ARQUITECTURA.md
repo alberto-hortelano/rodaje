@@ -29,6 +29,7 @@ Un proyecto contiene:
 - `proyecto.json`: la fuente de verdad. Las carpetas `personajes/`, `ambientes/`, `capitulos/` y `storyboards/` tienen ficheros derivados que se regeneran desde ahí.
 - `registro.json`, `REGLAS.md` (solo las reglas propias del proyecto; las generales están en `docs/REGLAS.md`) y `fusiones.json`.
 - Texto propio: `biblia/`, `guion/`, `ideas/`, `MAPA.md`, `capitulos/*/escenas/*.json`.
+- Animáticas del storyboard: `storyboards/<id>/animaticas/` no es derivada (no se regenera desde `proyecto.json`): `index.json` es texto versionado en el repositorio del proyecto y sus mp4 se ignoran como los demás binarios. Solo la escribe `lib/animaticas.mjs` (`scripts/storyboard-animatica.mjs` y el trabajo `animatic` de la app); nunca sobrescribe una versión.
 - Lotes: `assets/<lote>/<bloque>/` con prompts, `refs.json` y `attempts.json`; `assets/<lote>/direccion.json` opcional por lote (modo fotograma, lo aplica `scripts/bloques/prompt.mjs`).
 - Binarios ignorados por git: imágenes, vídeo, audio y GLB.
 

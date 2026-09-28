@@ -26,6 +26,7 @@
 
 - `scripts/storyboard-a-secuencia.mjs`: rellena una secuencia con las viñetas de un storyboard, para el modo fotograma.
 - `scripts/storyboard-prompts.mjs`: exporta las viñetas de un storyboard a `.prompt.txt` para ChatGPT y, con `--enlazar`, enlaza los fotogramas generados.
+- `scripts/storyboard-animatica.mjs` (`[proyecto] <storyboard> [--paso 3d|fotogramas|voces] [--secuencia id] [--capitulo-secuencia id] [--plan] [--importar fichero --paso paso [--subtitulos es] [--nota texto]]`): animáticas del storyboard por paso (ensayo 3D, fotogramas y fotogramas con voces), por secuencia y entera, con rótulo de plano y subtítulos; ffmpeg local, sin coste. Deja `storyboards/<id>/animaticas/<paso>[.<secuencia>]-vNN.mp4` y su `index.json` sin sobrescribir nada; `--plan` imprime la línea de tiempo y lo que falta sin escribir; `--importar` incorpora una hecha a mano como la siguiente versión. Reglas en `docs/PROCESO.md`, «Animáticas». La vista Storyboards lo lanza con «Generar animáticas».
 - `scripts/prompts-pendientes.mjs`: lista los `.prompt.txt` de imagen cuya imagen aún no existe, con sus adjuntos.
 - `scripts/fusionar.mjs`: herramienta web en :4398 para fusionar una edición de ChatGPT con su original a pincel; guarda la edición cruda como `.chatgpt.png` y la máscara; registro en `<proyecto>/fusiones.json`, y `--migrar` reparte el antiguo `proyectos/fusiones.json`.
 

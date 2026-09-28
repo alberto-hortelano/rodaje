@@ -26,6 +26,7 @@ const TABLE={
  'prompts-pendientes.mjs':[[]],
  'storyboard-a-secuencia.mjs':[['sb1','s1']],
  'storyboard-prompts.mjs':[['sb1']],
+ 'storyboard-animatica.mjs':[['sb-a']],
  'stage-config.mjs':[['show'],['check'],['set','--desde','x.json'],['staging','--desde','x.json']],
  'entorno-glb.mjs':[['caja']],
  'entorno-coplanares.mjs':[['caja'],['caja','--todos']],
