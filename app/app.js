@@ -29393,7 +29393,7 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, navActive, sequenceRole, treeModel, treePath, treeOpenKeys, storyCrumbs, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, appearanceTree, appearanceEnvironments, relationLinks, relationLine, appearanceOpen, shotLabel, voiceStatusLabel, storyboardItems, storyboardResultSections, shotItems, filterShotGroups, filterView as filterView2, hasFilters, parseFilters, filtersParam } from "./workflow.mjs";
+import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, navActive, sequenceRole, treeModel, levelCrumbs, levelResolve, levelRoute, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, appearanceTree, appearanceEnvironments, relationLinks, relationLine, appearanceOpen, shotLabel, voiceStatusLabel, storyboardItems, storyboardResultSections, shotItems, filterShotGroups, filterView as filterView2, hasFilters, parseFilters, filtersParam } from "./workflow.mjs";
 
 // app/filtros.source.js
 import { filterView, toggleFilter } from "./workflow.mjs";
@@ -29512,7 +29512,6 @@ var treeNode = null;
 var shotsFocus = null;
 var pendingFocus = null;
 var treeData = null;
-var treeOpen = /* @__PURE__ */ new Set();
 var stage;
 var shotState;
 var dirty = false;
@@ -29543,7 +29542,7 @@ function applyRoute(r) {
   sceneId = view === "storyboard" && r.scene || null;
   treeNode = view === "tree" && r.node || null;
   shotsFocus = view === "shots" && r.sequence || null;
-  const f2 = sceneId ? ["sb-scene", sceneId] : treeNode ? ["tree", treeNode] : shotsFocus ? ["shots-seq", shotsFocus] : null;
+  const f2 = sceneId ? ["sb-scene", sceneId] : shotsFocus ? ["shots-seq", shotsFocus] : null;
   pendingFocus = f2 ? `[data-${f2[0]}="${CSS.escape(f2[1])}"]` : null;
   if (hasFilters(r.view)) {
     const mem = r.q == null && r.f == null && !(r.view === "shots" && r.sequence) ? loadFilters(r.project || p?.id, r.view) : null;
@@ -29585,12 +29584,17 @@ async function restorePosition(generation) {
     el.scrollIntoView({ block: "start" });
     el.classList.add("target");
   } else scrollTo(xy[0], xy[1]);
-  if (treeNode || shotsFocus) {
-    treeNode = null;
+  if (shotsFocus) {
     shotsFocus = null;
     syncRoute();
   }
 }
+var forgetTreeState = (id3) => {
+  try {
+    localStorage.removeItem("rodaje-tree-" + id3);
+  } catch {
+  }
+};
 history.scrollRestoration = "manual";
 window.addEventListener("pagehide", rememberPosition);
 document.addEventListener("toggle", (e) => {
@@ -29677,7 +29681,7 @@ imageViewer.addEventListener("click", (e) => {
 });
 imageViewer.addEventListener("close", () => imageViewer.querySelector("img").removeAttribute("src"));
 function enableImageViewer(root) {
-  root.querySelectorAll("img:not(summary img)").forEach((img) => {
+  root.querySelectorAll("img:not(summary img):not(.level-link img)").forEach((img) => {
     img.tabIndex = 0;
     img.setAttribute("role", "button");
     img.setAttribute("aria-label", "Ampliar imagen: " + (img.alt || "referencia"));
@@ -29719,33 +29723,6 @@ function bind(root) {
   });
   enableImageViewer(root);
 }
-var treeStore = { key: () => "rodaje-tree-" + p.id, get() {
-  try {
-    return JSON.parse(localStorage.getItem(treeStore.key()));
-  } catch {
-    return null;
-  }
-}, set(list) {
-  try {
-    localStorage.setItem(treeStore.key(), JSON.stringify(list));
-  } catch {
-  }
-} };
-document.addEventListener("toggle", (e) => {
-  const d2 = e.target;
-  if (view !== "tree" || !treeData || !(d2 instanceof HTMLDetailsElement) || !d2.classList.contains("tree-node")) return;
-  const key = d2.dataset.tree, kids = d2.querySelector(":scope>.tree-kids");
-  if (d2.open) {
-    treeOpen.add(key);
-    const x2 = treeData.index.get(key);
-    if (x2 && kids && !kids.hasAttribute("data-loaded")) {
-      kids.innerHTML = treeBody(x2.node);
-      kids.setAttribute("data-loaded", "");
-      bind(kids);
-    }
-  } else treeOpen.delete(key);
-  treeStore.set([...treeOpen]);
-}, true);
 var plural = (n, one, many) => n + " " + (n === 1 ? one : many);
 var treeThumb = (file, alt) => file ? `<img loading="lazy" class="tree-thumb" src="${media(file)}" alt="${esc2(alt)}">` : '<span class="tree-thumb blank" aria-hidden="true"></span>';
 var shotIds = (l3) => l3.episode.id + ":" + l3.sequence.id + ":" + l3.shot.id;
@@ -29767,37 +29744,42 @@ function relHTML(key, { max = 6, current: current2 = true, cls = "" } = {}) {
 }
 var treeLeaf = (l3) => `<div class="tree-shot" title="${esc2((l3.episode.title || l3.episode.id) + " / " + (l3.sequence.title || l3.sequence.id))}"><span>${esc2(shotLabel(l3.number, l3.shot.title).label + (l3.shot.duration ? ` \xB7 ${l3.shot.duration} s` : ""))}</span>${l3.role === "test" ? '<span class="pill">prueba</span>' : ""}<span class="tree-actions">${btn("Abrir estudio \u2192", "shot:" + shotIds(l3))}${btn("Animaci\xF3n", "anim:" + shotIds(l3))}</span>${relHTML("shot/" + l3.shot.id, { max: 4 })}</div>`;
 var treeLeaves = (list) => list.length ? list.map(treeLeaf).join("") : '<p class="tiny">Sin planos.</p>';
-function treeRow(n) {
-  const title = (x2) => esc2(x2?.title || x2?.id || "");
-  if (n.kind === "act") return `<span class="eyebrow">${p.type === "serie" ? "CAP\xCDTULO" : "ACTO"}</span><b>${title(n.episode)}</b><span class="pill">${n.minutes} min \xB7 ${plural(n.children.length, "secuencia", "secuencias")}</span>`;
-  if (n.kind === "ficha") {
-    const cur = n.children.find((c) => c.current);
-    return `${treeThumb(n.cover, n.code + " \xB7 " + (n.sequence.title || ""))}<span class="tree-code">${esc2(n.code)}</span><b>${title(n.sequence)}</b>${cur ? `<span class="pill ok">v${cur.version} vigente</span>` : ""}<span class="pill">${n.children.length ? plural(n.children.length, "story", "storys") : "sin story"}</span>${n.shots.length ? `<span class="pill">${plural(n.shots.length, "plano", "planos")}</span>` : ""}`;
-  }
-  if (n.kind === "story") return `<b>${n.version ? "v" + n.version + " \xB7 " : ""}${title(n.storyboard)}</b>${n.current ? '<span class="pill ok">vigente</span>' : ""}<span class="tiny">${plural(n.counts.scenes, "escena", "escenas")} \xB7 ${plural(n.counts.panels, "vi\xF1eta", "vi\xF1etas")}</span>`;
-  if (n.kind === "scene") return `<b>${title(n.scene)}</b><span class="tiny">${plural(n.panels.length, "vi\xF1eta", "vi\xF1etas")}</span>`;
-  if (n.kind === "orphans") return `<b>Planos sin vi\xF1eta</b><span class="tiny">${plural(n.shots.length, "plano", "planos")}</span>`;
-  if (n.kind === "test") return `<b>${title(n.sequence)}</b><span class="tiny">${title(n.episode)} \xB7 ${plural(n.shots.length, "plano", "planos")}</span>`;
-  return `<span class="eyebrow">${n.kind === "tests" ? "Pruebas" : "Sin secuencia"}</span><span class="tiny">${n.kind === "tests" ? plural(n.children.length, "secuencia", "secuencias") : plural(n.children.length, "story", "storys")}</span>`;
-}
-var treeHTML = (n) => {
-  const open = treeOpen.has(n.key);
-  return `<details class="tree-node tree-${n.kind}" data-tree="${esc2(n.key)}"${open ? " open" : ""}><summary>${treeRow(n)}</summary><div class="tree-kids"${open ? " data-loaded" : ""}>${open ? treeBody(n) : ""}</div></details>`;
-};
 var fichaCard = (n) => {
   const s = n.sequence;
   return `<div class="ficha-body"><div class="sb-frame">${s.cover ? `<img loading="lazy" src="${media(s.cover)}" alt="${esc2(n.code + " \xB7 " + s.title)}">` : '<div class="sb-empty">Sin car\xE1tula \xB7 genera o sube una imagen</div>'}<span class="sb-code">${esc2(n.code)}</span>${n.minutes ? `<span class="sb-dur">${esc2(n.minutes)} min</span>` : ""}</div><div><p>${esc2(s.text || "Sin texto de escaleta.")}</p><details style="margin-top:10px"><summary class="tiny">Prompt de car\xE1tula</summary><textarea data-cover-prompt="${esc2(s.id)}" style="margin-top:8px;font-size:12px;min-height:120px" aria-label="Prompt de car\xE1tula de ${esc2(s.title)}">${esc2(s.coverPrompt || "")}</textarea><p class="tiny">Vac\xEDo: se compone con el estilo del proyecto y el texto de la secuencia.</p></details><div class="actions">${btn("Generar car\xE1tula", "gen-cover:" + s.id, s.cover ? "" : "lime")}${btn("Subir car\xE1tula", "upload-cover:" + s.id)}${btn("Prompt", "cover-prompt:" + s.id)}${btn("Editar", "edit-outline:" + s.id)}${s.covers?.length > 1 ? `<select data-cover-version="${esc2(s.id)}" aria-label="Versi\xF3n de la car\xE1tula">${opts(s.covers.map((x2, i2) => [x2.file, "Car\xE1tula " + (i2 + 1)]), s.cover)}</select>` : ""}</div></div></div>`;
 };
-function treeBody(n) {
-  if (n.kind === "act") return (n.episode.synopsis ? `<p class="tree-note">${esc2(n.episode.synopsis)}</p>` : "") + relHTML(n.key, { max: 8 }) + (n.children.map(treeHTML).join("") || '<p class="tiny">Sin secuencias todav\xEDa.</p>');
-  if (n.kind === "ficha") return fichaCard(n) + relHTML(n.key) + n.children.map(treeHTML).join("") + (n.children.length ? n.shots.length ? '<div class="tree-group eyebrow">Planos propios</div>' + treeLeaves(n.shots) : "" : treeLeaves(n.shots));
-  if (n.kind === "story") {
-    const b2 = n.storyboard, c = n.container, own = c && sequenceRole(p, c.sequence) === "container";
-    return `<div class="tree-actions">${btn("Abrir story \u2192", "storyboard:" + b2.id, "primary")}${n.version && !n.current ? btn("Marcar como vigente", "sb-current:" + b2.id) : ""}${c ? own ? btn(`Planos en \xAB${esc2(c.sequence.title)}\xBB (${n.counts.shots}) \u2192`, "shots:" + c.sequence.id) : btn(`Planos en \xAB${esc2(c.sequence.title)}\xBB \u2192`, "tree:seq/" + c.sequence.id) : ""}</div>` + relHTML(n.key) + (n.children.map(treeHTML).join("") || '<p class="tiny">Sin escenas todav\xEDa.</p>');
-  }
-  if (n.kind === "scene") return `<div class="tree-actions">${btn("Abrir en el story \u2192", "storyboard:" + n.storyboard.id + ":" + n.scene.id)}</div>` + relHTML(n.key) + (n.panels.map(({ panel: t2, thumb, shots }) => `<div class="tree-panel"><div class="tree-panel-row">${treeThumb(thumb, (t2.code ? t2.code + " \xB7 " : "") + (t2.title || ""))}${t2.code ? `<span class="tree-code">${esc2(t2.code)}</span>` : ""}<span>${esc2(t2.title || "")}</span></div>${relHTML("panel/" + t2.id, { max: 4 })}${shots.length ? shots.map(treeLeaf).join("") : '<p class="tiny tree-shot">Sin plano</p>'}</div>`).join("") || '<p class="tiny">Sin vi\xF1etas todav\xEDa.</p>');
-  if (n.kind === "orphans" || n.kind === "test") return (n.kind === "test" ? relHTML(n.key) : "") + treeLeaves(n.shots);
-  return n.children.map(treeHTML).join("");
+var levelPill = (t2, cls = "") => `<span class="pill${cls ? " " + cls : ""}">${esc2(t2)}</span>`;
+var clip2 = (t2, n) => t2.length > n ? t2.slice(0, n - 1).trimEnd() + "\u2026" : t2;
+var levelItem = (n, cls, link, meta2 = "", extra = "") => `<article class="level-item ${cls}" data-level="${esc2(n.key)}"><a class="level-link" href="${esc2(routeQuery({ project: p.id, ...levelRoute(treeData, n.key) }))}" data-route>${link}</a>${meta2 ? `<span class="level-meta">${meta2}</span>` : ""}${extra}</article>`;
+var fichaItem = (f2) => {
+  const cur = f2.children.find((c) => c.current), t2 = f2.sequence.text;
+  return levelItem(
+    f2,
+    "level-ficha",
+    `${treeThumb(f2.cover, f2.code + " \xB7 " + (f2.sequence.title || ""))}<span class="tree-code">${esc2(f2.code)}</span><b>${esc2(f2.sequence.title || f2.sequence.id)}</b>`,
+    (cur ? levelPill(`v${cur.version} vigente`, "ok") : "") + levelPill(f2.children.length ? plural(f2.children.length, "story", "storys") : "sin story") + (f2.shots.length ? levelPill(plural(f2.shots.length, "plano", "planos")) : "") + (f2.minutes ? levelPill(f2.minutes + " min") : ""),
+    (t2 ? `<p class="level-text">${esc2(clip2(String(t2), 180))}</p>` : "") + relHTML(f2.key, { max: 4 })
+  );
+};
+var storyItem = (n) => {
+  const b2 = n.storyboard, c = n.container, own = c && sequenceRole(p, c.sequence) === "container", acts = (n.version && !n.current ? btn("Marcar como vigente", "sb-current:" + b2.id) : "") + (c ? own ? btn(`Planos en \xAB${esc2(c.sequence.title)}\xBB (${n.counts.shots}) \u2192`, "shots:" + c.sequence.id) : btn(`Planos en \xAB${esc2(c.sequence.title)}\xBB \u2192`, "tree:seq/" + c.sequence.id) : "");
+  return levelItem(n, "level-story", `<b>${n.version ? "v" + n.version + " \xB7 " : ""}${esc2(b2.title || b2.id)}</b>`, (n.current ? levelPill("vigente", "ok") : "") + `<span class="tiny">${plural(n.counts.scenes, "escena", "escenas")} \xB7 ${plural(n.counts.panels, "vi\xF1eta", "vi\xF1etas")}</span>`, (acts ? `<span class="tree-actions">${acts}</span>` : "") + relHTML(n.key, { max: 4 }));
+};
+var levels = (list) => `<div class="levels">${list.join("")}</div>`;
+function levelRootPage(heading2) {
+  const serie = p.type === "serie", storys = (a) => a.children.reduce((k, f2) => k + f2.children.length, 0);
+  return heading2("Escaleta.", (serie ? "Cap\xEDtulos" : "Actos") + ", secuencias y storys en orden. Entra en cada nivel; las migas te devuelven.", `<div class="row">${btn("Generar car\xE1tulas que faltan", "gen-covers")}</div>`) + levels([
+    ...treeData.acts.map((a) => levelItem(a, "level-act", `<span class="eyebrow">${serie ? "CAP\xCDTULO" : "ACTO"}</span><b>${esc2(a.episode.title || a.episode.id)}</b>`, levelPill(a.minutes + " min") + levelPill(plural(a.children.length, "secuencia", "secuencias")) + levelPill(plural(storys(a), "story", "storys")))),
+    ...treeData.groups.map((g) => levelItem(g, "level-group level-" + g.kind, `<span class="eyebrow">${g.kind === "tests" ? "Pruebas" : "Sin secuencia"}</span>`, levelPill(g.kind === "tests" ? plural(g.children.length, "secuencia", "secuencias") : plural(g.children.length, "story", "storys"))))
+  ]) + (p.episodes.length ? "" : `<div class="empty"><h2>La escaleta se llena desde ${serie ? "los cap\xEDtulos" : "los actos"}.</h2><p>Crea el primero en Planos y sus secuencias aparecer\xE1n aqu\xED en orden, cada una con su car\xE1tula.</p></div>`);
+}
+function levelPage(n, heading2) {
+  const head = (title2, desc, actions = "") => crumbsNav(levelCrumbs(p, { view: "tree", node: n.key }, treeData)) + heading2(title2, desc, actions), title = (x2) => esc2(x2?.title || x2?.id || "");
+  if (n.kind === "act") return head(title(n.episode), esc2(n.episode.synopsis || plural(n.children.length, "secuencia", "secuencias") + " \xB7 " + n.minutes + " min")) + relHTML(n.key, { max: 8, cls: "rel-head" }) + (n.children.length ? levels(n.children.map(fichaItem)) : '<p class="tiny">Sin secuencias todav\xEDa.</p>');
+  if (n.kind === "ficha") return head(esc2(n.code + " \xB7 " + (n.sequence.title || n.sequence.id)), esc2(n.minutes ? n.minutes + " min" : "")) + fichaCard(n) + relHTML(n.key, { cls: "rel-head" }) + (n.children.length ? `<section class="level-section"><h2>Storys</h2>${levels(n.children.map(storyItem))}</section>` : "") + (n.shots.length ? `<section class="level-section"><h2>Planos propios</h2>${treeLeaves(n.shots)}</section>` : "") + (n.children.length || n.shots.length ? "" : '<p class="tiny">Sin storys ni planos todav\xEDa.</p>');
+  if (n.kind === "test") return head(title(n.sequence), title(n.episode) + " \xB7 " + plural(n.shots.length, "plano", "planos"), `<div class="row">${btn("Ver en Planos \u2192", "shots:" + n.sequence.id)}</div>`) + relHTML(n.key, { cls: "rel-head" }) + `<section class="level-section"><h2>Planos</h2>${treeLeaves(n.shots)}</section>`;
+  if (n.kind === "tests") return head("Pruebas", "Secuencias de prueba, fuera de la escaleta.") + levels(n.children.map((t2) => levelItem(t2, "level-test", `<b>${title(t2.sequence)}</b>`, `<span class="tiny">${title(t2.episode)} \xB7 ${plural(t2.shots.length, "plano", "planos")}</span>`)));
+  return head("Sin secuencia", "Storys que a\xFAn no cuelgan de una ficha de la escaleta.") + levels(n.children.map(storyItem));
 }
 var entityRoute = (kind, id3) => esc2(routeQuery({ project: p.id, view: kind, [kind]: id3 }));
 var entityActions = (item, kind) => `<div class="actions">${btn("Editar", kind + ":" + item.id)}${btn("Subir imagen", "upload-" + kind + ":" + item.id)}${btn("Generar hoja", "gen-" + kind + ":" + item.id)}</div>`;
@@ -29812,7 +29794,7 @@ var modelSpaceBlock = (l3) => {
 var versionSelect = (item, kind) => item.images?.length > 1 ? `<label>Versi\xF3n visual<select data-version="${esc2(item.id)}" data-kind="${kind}">${opts(item.images.map((f2, i2) => [f2, "Versi\xF3n " + (i2 + 1)]), item.image)}</select></label>` : "";
 var characterCard = (c) => `<article class="card">${image(c.image)}<div class="inner"><div class="row between"><h2><a href="${entityRoute("character", c.id)}" data-route>${esc2(c.name)}</a></h2><span class="pill">PERSONAJE</span></div><p>${esc2((c.description || "").slice(0, 160))}</p>${voiceLine(c)}${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}${entityActions(c, "character")}${voiceActions(c)}${variantsBlock(c)}${versionSelect(c, "character")}</div></article>`;
 var locationCard = (l3) => `<article class="card">${image(l3.image)}<div class="inner"><div class="row between"><h2><a href="${entityRoute("location", l3.id)}" data-route>${esc2(l3.name)}</a></h2><span class="pill">${esc2(l3.kind)}</span></div><p>${esc2((l3.description || "").slice(0, 160))}</p>${entityActions(l3, "location")}${modelSpaceBlock(l3)}${versionSelect(l3, "location")}</div></article>`;
-var crumbsNav = (list) => `<nav class="crumbs" aria-label="Ruta"><ol>${list.map((c) => `<li>${c.route ? `<a href="${esc2(routeQuery({ project: p.id, ...c.route }))}" data-route>${esc2(c.label)}</a>` : `<span aria-current="page">${esc2(c.label)}</span>`}</li>`).join("")}</ol></nav>`;
+var crumbsNav = (list) => list.length < 2 ? "" : `<nav class="crumbs" aria-label="Ruta"><ol>${list.map((c) => `<li>${c.route ? `<a href="${esc2(routeQuery({ project: p.id, ...c.route }))}" title="${esc2(c.label)}" data-route>${esc2(c.label)}</a>` : `<span aria-current="page" title="${esc2(c.label)}">${esc2(c.label)}</span>`}</li>`).join("")}</ol></nav>`;
 var appearStore = { key: () => "rodaje-appear-all-" + p.id, get() {
   try {
     return localStorage.getItem(appearStore.key()) === "1";
@@ -29875,10 +29857,10 @@ async function entityData(kind, id3) {
 }
 function characterPage(c, { ent, err }, heading2) {
   const voiceAssets = err ? `<p class="error">No se pudo leer el registro: ${esc2(err)}</p>` : (ent?.assets || []).filter((a) => a.kind === "voice").map(assetNote).join("");
-  return crumbsNav([{ label: "Personajes y voces", route: { view: "characters" } }, { label: c.name }]) + heading2(esc2(c.name), c.kind === "voice" ? "Solo voz" : "Personaje", entityActions(c, "character")) + entityTop(c) + entitySection("Voz", `${voiceLine(c)}${voiceStatusLabel(c.voiceStatus) ? ` <span class="pill" title="${esc2(c.voiceStatus)}">${esc2(voiceStatusLabel(c.voiceStatus))}</span>` : ""}${c.voicePrompt ? `<p class="entity-text"><b>Voice prompt:</b> ${esc2(c.voicePrompt)}</p>` : ""}${c.voiceBrief ? `<p class="entity-text"><b>Resumen:</b> ${esc2(c.voiceBrief)}</p>` : ""}${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}${voiceActions(c)}${voiceAssets ? `<div class="entity-assets">${voiceAssets}</div>` : ""}`) + entitySection("Hojas y referencias", entityDocs(ent) + entityAssets(ent, err, ["character", "group"], "Sin assets de personaje en el registro.")) + (c.kind !== "voice" ? entitySection("Variantes", variantsBlock(c) || '<p class="tiny">Sin variantes.</p>') : "") + entitySection("Entornos 3D", envLinks(appearanceEnvironments(relationIndexFor(p), "character/" + c.id, { current: !appearStore.get() }))) + appearancesHTML("character/" + c.id);
+  return crumbsNav(levelCrumbs(p, { view: "character", character: c.id })) + heading2(esc2(c.name), c.kind === "voice" ? "Solo voz" : "Personaje", entityActions(c, "character")) + entityTop(c) + entitySection("Voz", `${voiceLine(c)}${voiceStatusLabel(c.voiceStatus) ? ` <span class="pill" title="${esc2(c.voiceStatus)}">${esc2(voiceStatusLabel(c.voiceStatus))}</span>` : ""}${c.voicePrompt ? `<p class="entity-text"><b>Voice prompt:</b> ${esc2(c.voicePrompt)}</p>` : ""}${c.voiceBrief ? `<p class="entity-text"><b>Resumen:</b> ${esc2(c.voiceBrief)}</p>` : ""}${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}${voiceActions(c)}${voiceAssets ? `<div class="entity-assets">${voiceAssets}</div>` : ""}`) + entitySection("Hojas y referencias", entityDocs(ent) + entityAssets(ent, err, ["character", "group"], "Sin assets de personaje en el registro.")) + (c.kind !== "voice" ? entitySection("Variantes", variantsBlock(c) || '<p class="tiny">Sin variantes.</p>') : "") + entitySection("Entornos 3D", envLinks(appearanceEnvironments(relationIndexFor(p), "character/" + c.id, { current: !appearStore.get() }))) + appearancesHTML("character/" + c.id);
 }
 function locationPage(l3, { ent, err }, heading2) {
-  return crumbsNav([{ label: "Ambientes", route: { view: "locations" } }, { label: l3.name }]) + heading2(esc2(l3.name), esc2(l3.kind || "Ambiente"), entityActions(l3, "location")) + entityTop(l3) + entitySection("Referencias", entityDocs(ent) + entityAssets(ent, err, ["location"], "Sin referencias en el registro.")) + entitySection("Encuadre 3D", modelSpaceBlock(l3) || '<p class="tiny">Sin encuadre 3D.</p>') + entitySection("Entorno 3D", envLinks(appearanceEnvironments(relationIndexFor(p), "location/" + l3.id, { current: !appearStore.get() }))) + appearancesHTML("location/" + l3.id, { inherited: false, note: "Solo secuencias, escenas y planos con este ambiente propio: las vi\xF1etas y los planos heredan el de su escena o su secuencia." });
+  return crumbsNav(levelCrumbs(p, { view: "location", location: l3.id })) + heading2(esc2(l3.name), esc2(l3.kind || "Ambiente"), entityActions(l3, "location")) + entityTop(l3) + entitySection("Referencias", entityDocs(ent) + entityAssets(ent, err, ["location"], "Sin referencias en el registro.")) + entitySection("Encuadre 3D", modelSpaceBlock(l3) || '<p class="tiny">Sin encuadre 3D.</p>') + entitySection("Entorno 3D", envLinks(appearanceEnvironments(relationIndexFor(p), "location/" + l3.id, { current: !appearStore.get() }))) + appearancesHTML("location/" + l3.id, { inherited: false, note: "Solo secuencias, escenas y planos con este ambiente propio: las vi\xF1etas y los planos heredan el de su escena o su secuencia." });
 }
 function modal(title, body, handler, submitLabel = "Guardar") {
   const m2 = $2("#modal");
@@ -30106,22 +30088,22 @@ y ${list.length - 20} m\xE1s` : "");
       sbMedia = { key: sbKey, data: data2, anim, a3d };
     }
     const M2 = sbMedia.data, A2 = sbMedia.anim;
-    const shots = sbShots(b2), CH = projectChannels2(p), crumbs = storyCrumbs(p, b2.id, sceneId), vo = storyVersionOptions(p, b2.id), shown = vo.find((o) => o.selected);
-    html3 = (crumbs.length ? `<nav class="crumbs" aria-label="Ruta"><ol>${crumbs.map((c) => `<li>${c.route ? `<a href="${esc2(routeQuery({ project: p.id, ...c.route }))}" data-route>${esc2(c.label)}</a>` : `<span aria-current="page">${esc2(c.label)}</span>`}</li>`).join("")}</ol></nav>` : "") + heading2(esc2(b2.title), esc2(b2.subtitle || ""), `<div class="heading-actions">${vo.length > 1 ? `<select data-sb-version="${esc2(b2.id)}" aria-label="Versi\xF3n del story">${vo.map((o) => `<option value="${esc2(o.id)}"${o.selected ? " selected" : ""}>${esc2(o.label)}</option>`).join("")}</select>` : ""}${shown ? shown.current ? '<span class="pill ok">vigente</span>' : btn("Marcar como vigente", "sb-current:" + b2.id) : ""}${btn(storyPlansLabel(p, b2), "sb-to-episode:" + b2.id, "primary")}${sbAnimBtn(b2)}${btn("Editar", "edit-storyboard:" + b2.id)}${btn("+ Escena", "new-sb-sequence:" + b2.id)}<details class="menu down"><summary>M\xE1s</summary><div>${btn("Exportar JSON", "sb-export:" + b2.id)}${btn("Eliminar", "delete-storyboard:" + b2.id)}</div></details></div>`, "stack") + `<div class="two"><section class="panel"><div class="eyebrow">Planteamiento</div><p style="white-space:pre-wrap">${esc2(b2.description || "Sin descripci\xF3n todav\xEDa.")}</p>${relHTML("sb/" + b2.id, { max: 12 })}${b2.notes ? `<div class="note" style="margin-top:16px;white-space:pre-wrap">${esc2(b2.notes)}</div>` : ""}</section><section class="panel"><div class="sb-stats"><div><span class="stat">${b2.sequences.length}</span>Escenas</div><div><span class="stat">${shots.length}</span>Vi\xF1etas</div><div><span class="stat">${shots.filter((t2) => t2.render).length}</span>Fotogramas</div><div><span class="stat">${sbDur(shots.reduce((n, t2) => n + (Number(t2.duration) || 0), 0))}</span>Duraci\xF3n</div></div>${sbPlayer("storyboard", storyboardPlayer(A2?.storyboard, M2?.cuts), { cutLabel: (c) => `${c.name} \xB7 ${sbWhen(c.at)} \xB7 ${sbTime(c.duration)}${c.partial ? ` \xB7 parcial (${c.covered}/${c.total} vi\xF1etas)` : ""}`, go: true })}<details class="sb-help"><summary>C\xF3mo funciona</summary><p>Cada vi\xF1eta guarda su boceto, el fotograma generado, las referencias y el prompt. \xABGenerar fotograma\xBB env\xEDa el boceto y las referencias al modelo de imagen; \xABCrear cap\xEDtulo\xBB convierte las vi\xF1etas en planos editables con su di\xE1logo. Arrastra una vi\xF1eta sobre otra (o sobre el hueco final de una escena) para reordenarla; \xABMover antes\xBB y \xABMover despu\xE9s\xBB, en el men\xFA \u22EF de la vi\xF1eta, hacen lo mismo con el teclado.</p></details></section></div>` + b2.sequences.map((s) => {
+    const shots = sbShots(b2), CH = projectChannels2(p), vo = storyVersionOptions(p, b2.id), shown = vo.find((o) => o.selected);
+    html3 = crumbsNav(levelCrumbs(p, { view: "storyboard", storyboard: b2.id, scene: sceneId })) + heading2(esc2(b2.title), esc2(b2.subtitle || ""), `<div class="heading-actions">${vo.length > 1 ? `<select data-sb-version="${esc2(b2.id)}" aria-label="Versi\xF3n del story">${vo.map((o) => `<option value="${esc2(o.id)}"${o.selected ? " selected" : ""}>${esc2(o.label)}</option>`).join("")}</select>` : ""}${shown ? shown.current ? '<span class="pill ok">vigente</span>' : btn("Marcar como vigente", "sb-current:" + b2.id) : ""}${btn(storyPlansLabel(p, b2), "sb-to-episode:" + b2.id, "primary")}${sbAnimBtn(b2)}${btn("Editar", "edit-storyboard:" + b2.id)}${btn("+ Escena", "new-sb-sequence:" + b2.id)}<details class="menu down"><summary>M\xE1s</summary><div>${btn("Exportar JSON", "sb-export:" + b2.id)}${btn("Eliminar", "delete-storyboard:" + b2.id)}</div></details></div>`, "stack") + `<div class="two"><section class="panel"><div class="eyebrow">Planteamiento</div><p style="white-space:pre-wrap">${esc2(b2.description || "Sin descripci\xF3n todav\xEDa.")}</p>${relHTML("sb/" + b2.id, { max: 12 })}${b2.notes ? `<div class="note" style="margin-top:16px;white-space:pre-wrap">${esc2(b2.notes)}</div>` : ""}</section><section class="panel"><div class="sb-stats"><div><span class="stat">${b2.sequences.length}</span>Escenas</div><div><span class="stat">${shots.length}</span>Vi\xF1etas</div><div><span class="stat">${shots.filter((t2) => t2.render).length}</span>Fotogramas</div><div><span class="stat">${sbDur(shots.reduce((n, t2) => n + (Number(t2.duration) || 0), 0))}</span>Duraci\xF3n</div></div>${sbPlayer("storyboard", storyboardPlayer(A2?.storyboard, M2?.cuts), { cutLabel: (c) => `${c.name} \xB7 ${sbWhen(c.at)} \xB7 ${sbTime(c.duration)}${c.partial ? ` \xB7 parcial (${c.covered}/${c.total} vi\xF1etas)` : ""}`, go: true })}<details class="sb-help"><summary>C\xF3mo funciona</summary><p>Cada vi\xF1eta guarda su boceto, el fotograma generado, las referencias y el prompt. \xABGenerar fotograma\xBB env\xEDa el boceto y las referencias al modelo de imagen; \xABCrear cap\xEDtulo\xBB convierte las vi\xF1etas en planos editables con su di\xE1logo. Arrastra una vi\xF1eta sobre otra (o sobre el hueco final de una escena) para reordenarla; \xABMover antes\xBB y \xABMover despu\xE9s\xBB, en el men\xFA \u22EF de la vi\xF1eta, hacen lo mismo con el teclado.</p></details></section></div>` + b2.sequences.map((s) => {
       const H2 = storyboardSequenceHeader(s, p.locations, sbDur), P2 = storyboardPlayer(A2?.sequences?.[s.id], M2?.sequences?.[s.id]);
       return `<div class="panel sb-seq${s.id === sceneId ? " target" : ""}" data-sb-scene="${esc2(s.id)}"><div class="sb-seq-head"><div><div class="eyebrow">${esc2(H2.eyebrow)}</div><h2>${esc2(s.title)}</h2>${H2.meta ? `<p class="sb-seq-meta">${esc2(H2.meta)}</p>` : ""}${relHTML("scene/" + b2.id + "/" + s.id, { max: 10 })}</div><div class="row">${btn("Editar", "sb-sequence:" + b2.id + ":" + s.id)}${btn("+ Vi\xF1eta", "new-sb-shot:" + b2.id + ":" + s.id)}${btn("Eliminar", "delete-sb-sequence:" + b2.id + ":" + s.id)}</div></div><div class="sb-grid" data-sb-grid="${s.id}">${s.shots.map((t2) => `<article class="sb-card" draggable="true" data-sb-drag="${t2.id}">${sbFrame(t2, M2?.shots?.[t2.id])}<div class="inner"><div class="sb-card-head"><h3>${esc2(t2.title)}</h3>${t2.zone ? ((z) => `<span class="pill zone" style="${catalogStyle(z, "zone")}">${esc2(z.unknown ? t2.zone : z.label)}</span>`)(zoneOf(p, t2.zone)) : ""}</div>${t2.camera ? `<p class="tiny" style="margin:6px 0 0">${esc2(t2.camera)}</p>` : ""}${t2.action ? `<p style="margin:8px 0 0">${esc2(t2.action)}</p>` : ""}${t2.dialogue?.length ? `<ul class="sb-dial">${t2.dialogue.map((l3) => `<li style="${catalogStyle(channelOf(CH, l3.channel), "ch")}"><b>${esc2(l3.who || p.characters.find((c) => c.id === l3.character)?.name || "")}</b>${l3.channel ? `<span class="tiny">(${esc2(channelShort(channelOf(CH, l3.channel)))})</span> ` : ""}${esc2(l3.text)}</li>`).join("")}</ul>` : ""}${t2.sound ? `<p class="tiny" style="margin-top:8px;font-style:italic">${esc2(t2.sound)}</p>` : ""}${relHTML("panel/" + t2.id, { max: 5 })}<div class="sb-actions">${btn("Editar", "sb-shot:" + b2.id + ":" + s.id + ":" + t2.id)}${btn("Generar fotograma", "gen-sb:" + t2.id, t2.render ? "" : "lime")}${sbAnim(t2)}${btn("Prompt", "sb-prompt:" + t2.id)}<details class="menu down end sb-more"><summary aria-label="M\xE1s acciones de la vi\xF1eta">\u22EF</summary><div>${btn("Subir boceto", "upload-sb-sketch:" + t2.id)}${btn("Subir fotograma", "upload-sb-render:" + t2.id)}${btn("\u25C0 Mover antes", "sb-move:" + t2.id + ":-1")}${btn("\u25B6 Mover despu\xE9s", "sb-move:" + t2.id + ":1")}${btn("\u2715 Eliminar vi\xF1eta", "delete-sb-shot:" + t2.id)}</div></details></div>${sbCardVersions(t2, M2?.shots?.[t2.id], sbMedia.a3d?.shots?.[t2.id])}</div></article>`).join("") || '<p class="tiny">Sin vi\xF1etas todav\xEDa.</p>'}</div>${P2.steps.length ? `<details class="sb-cuts"><summary>V\xEDdeos de la escena</summary>${sbPlayer("seq-" + s.id, P2, { cutLabel: (x2) => `${x2.cut} \xB7 ${sbTime(x2.duration)} \xB7 ${x2.blocks.length} bloques`, go: false })}</details>` : ""}</div>`;
     }).join("") + (b2.sequences.length ? "" : '<div class="empty"><h2>Empieza por una escena.</h2><p>Cada escena agrupa vi\xF1etas con su encuadre, acci\xF3n y di\xE1logo.</p></div>');
   }
   if (view === "tree") {
     treeData = treeModel(p);
-    treeOpen = new Set(treeOpenKeys(treeData, treeStore.get()));
-    if (treeNode) {
-      const path = treePath(treeData, treeNode);
-      for (const k of path) treeOpen.add(k);
-      if (path.length) treeStore.set([...treeOpen]);
+    const r = levelResolve(treeData, treeNode);
+    if (r.missing) toast("No existe en la escaleta: " + treeNode);
+    if (r.route.view !== "tree") {
+      applyRoute({ project: p.id, ...r.route });
+      return render();
     }
-    html3 = heading2("Escaleta.", (p.type === "serie" ? "Cap\xEDtulos" : "Actos") + ", secuencias, storys, escenas, vi\xF1etas y planos en orden. Despliega cada nivel; el prompt de la car\xE1tula se edita en su secuencia y se guarda con el proyecto.", `<div class="row">${btn("Generar car\xE1tulas que faltan", "gen-covers")}${btn("Plegar todo", "tree-fold")}</div>`) + `<div class="tree">${[...treeData.acts, ...treeData.groups].map(treeHTML).join("")}</div>`;
-    if (!p.episodes.length) html3 += `<div class="empty"><h2>La escaleta se llena desde ${p.type === "serie" ? "los cap\xEDtulos" : "los actos"}.</h2><p>Crea el primero en Planos y sus secuencias aparecer\xE1n aqu\xED en orden, cada una con su car\xE1tula.</p></div>`;
+    treeNode = r.key;
+    html3 = treeNode ? levelPage(treeData.index.get(treeNode).node, heading2) : levelRootPage(heading2);
   }
   if (view === "shots") {
     const GT = { container: "Planos de storys", outline: "Planos propios", test: "Pruebas" }, shotCard = (e, s, t2, i2) => `<article class="card"><div class="inner"><div class="row between"><span class="pill">${shotLabel(i2 + 1, t2.title).code}</span><span class="tiny">${t2.duration}s \xB7 ${t2.lines.length} di\xE1logos</span></div><h3 style="margin-top:14px">${esc2(shotLabel(i2 + 1, t2.title).title || t2.title)}</h3><p>${esc2(t2.description.slice(0, 90) || "Define encuadre, acci\xF3n y conversaci\xF3n.")}</p>${relHTML("shot/" + t2.id, { max: 5 })}<div class="row">${btn("Abrir estudio \u2192", "shot:" + e.id + ":" + s.id + ":" + t2.id)}${btn("Animaci\xF3n", "anim:" + e.id + ":" + s.id + ":" + t2.id)}</div></div></article>`, seqHTML = (e, x2) => {
@@ -30159,6 +30141,10 @@ y ${list.length - 20} m\xE1s` : "");
     html3 = heading2(esc2(t2.title), esc2(e.title) + " / " + esc2(s.title), `<div class="row">${btn("\u2190 Planos", "nav:shots")}${btn("Editar secuencia", "sequence:" + s.id)}</div>`) + relHTML("shot/" + t2.id, { max: 12, cls: "rel-head" }) + `<div class="stepper"><div class="step active"><b>01 \xB7 PREPARAR</b>Escenario y c\xE1mara</div><div class="step"><b>02 \xB7 INTERPRETAR</b>Voces y ambiente</div><div class="step"><b>03 \xB7 REVISAR</b>Previsualizaci\xF3n</div><div class="step"><b>04 \xB7 APROBAR</b>${shotState.approved ? "\u2713 Aprobada" : "Pendiente"}</div><div class="step"><b>05 \xB7 DISE\xD1AR</b>Fotograma visual</div><div class="step"><b>06 \xB7 PRODUCIR</b>V\xEDdeo H3 Max</div></div><div class="wide"><div><div class="stagebox"><div id="viewport" style="aspect-ratio:16/9"></div><div class="stagefoot">${btn("\u25B6 Ensayar con audio", "play")}${btn("\u25A0 Parar", "stop")}${btn("Inicio de c\xE1mara", "camera-start")}${btn("Final de c\xE1mara", "camera-end")}</div></div><div class="shot-strip"><span>Tiempo</span><input id="scrub" aria-label="Tiempo del plano" type="range" min="0" max="${t2.duration}" step="0.041667" value="0"><output id="scrub-time">0.0 s</output></div><p class="tiny" style="margin:10px 0 20px">Arrastra para orbitar; rueda para acercar. Guarda el inicio y el final para definir el movimiento. Figuras corporales sin rig facial.</p><div class="panel"><div class="row between"><h2>Conversaci\xF3n</h2>${btn("+ Intervenci\xF3n", "new-line")}</div><div class="lines">${t2.lines.map((l3) => `<div class="line"><div class="fields">${select("Personaje", "character", p.characters.map((c) => [c.id, c.name + (c.kind === "voice" ? " \xB7 voz sin cuerpo" : "")]), l3.character).replace("<select ", '<select data-line="' + l3.id + '" ')}${input("Inicio \xB7 s", "start", l3.start, "number").replace("<input ", '<input min="0" step="0.05" data-line="' + l3.id + '" ')}</div>${area("Texto", "text", l3.text).replace("<textarea ", '<textarea data-line="' + l3.id + '" ')}${select("Canal", "channel", catalogOptions(projectChannels2(p), l3.channel, { channel: true }), l3.channel || "direct").replace("<select ", '<select data-line="' + l3.id + '" ')}<label><input style="width:auto" type="checkbox" name="offscreen" data-line="${l3.id}" ${l3.offscreen ? "checked" : ""}> Voz fuera de campo</label>${l3.audio ? `<audio controls src="${media(l3.audio)}"></audio><span class="tiny">${(l3.audioDuration || 0).toFixed(2)} s</span>` : ""}<div class="row">${btn("Generar voz", "line:" + l3.id)}${btn("Subir audio", "upload-line:" + l3.id)}${btn("Quitar", "remove-line:" + l3.id)}</div></div>`).join("") || '<p style="margin-top:15px">Un plano puede ser silencioso. A\xF1ade las intervenciones de quienes hablan.</p>'}</div></div><div class="panel"><h2>Continuidad del reparto</h2><p>Estas posiciones pertenecen a toda la secuencia.</p><table><thead><tr><th>Personaje</th><th>X</th><th>Z</th><th>Giro \xB0</th><th>Postura</th><th></th></tr></thead><tbody>${s.cast.map((a) => `<tr><td>${esc2(p.characters.find((c) => c.id === a.character)?.name)}</td>${["x", "z", "yaw"].map((k) => `<td><input type="number" step="${k === "yaw" ? 5 : 0.1}" value="${k === "yaw" ? Math.round(a[k] * 180 / Math.PI) : a[k]}" data-actor="${a.character}" data-field="${k}" aria-label="${k}"></td>`).join("")}<td><select data-actor="${a.character}" data-field="pose">${opts([["seated", "Sentado"], ["standing", "De pie"]], a.pose)}</select></td><td>${btn("\xD7", "remove-cast:" + a.character)}</td></tr>`).join("")}</tbody></table><div class="actions">${btn("+ A\xF1adir al reparto", "add-cast")}${btn("+ Elemento 3D", "add-prop")}${btn("Aplicar posiciones", "apply-stage")}</div></div></div><aside><section class="panel"><h3>El plano</h3>${input("T\xEDtulo", "title", t2.title).replace("<input ", '<input data-shot-field="title" ')}${area("Acci\xF3n e intenci\xF3n", "description", t2.description).replace("<textarea ", '<textarea data-shot-field="description" ')}${input("Duraci\xF3n \xB7 segundos (1\u201315)", "duration", t2.duration, "number").replace("<input ", '<input min="1" max="15" step="0.125" data-shot-field="duration" ')}<label><input style="width:auto" type="checkbox" data-shot-field="allowOverlap" ${t2.allowOverlap ? "checked" : ""}> Permitir solapamiento intencional</label>${btn("C\xE1mara fija (usar inicio)", "camera-fixed")}<hr style="border:0;border-top:1px solid #dfe4db;margin:20px 0"><h3>Ambiente de la secuencia</h3>${area("Descripci\xF3n del sonido", "ambiencePrompt", s.ambiencePrompt).replace("<textarea ", '<textarea data-sequence-field="ambiencePrompt" ')}<label>Volumen<input type="range" min="0" max="1" step="0.01" value="${s.ambienceGain ?? 0.18}" data-sequence-field="ambienceGain"></label><label><input style="width:auto" type="checkbox" data-sequence-field="silent" ${s.silent ? "checked" : ""}> Sin sonido ambiente</label>${s.ambience ? `<audio controls src="${media(s.ambience)}"></audio>` : ""}<div class="actions">${btn("Generar ambiente", "ambience")}${btn("Subir sonido", "upload-ambience")}</div></section><section class="panel"><h3>Revisi\xF3n y producci\xF3n</h3><p style="margin:12px 0">${shotState.issues.map(esc2).join("<br>") || "Fuentes listas para previsualizar."}</p>${t2.preview && t2.preview.hash !== shotState.hash ? '<p class="error">La previsualizaci\xF3n anterior est\xE1 desactualizada.</p>' : ""}<div class="actions">${btn("1. Renderizar 3D + sonido", "preview", "primary")}${btn("2. Aprobar previsualizaci\xF3n", "approve", shotState.approved ? "lime" : "")}${btn("3. Generar fotograma visual", "keyframe")}${btn("4. Convertir con H3 Max", "video")}</div><p class="tiny" style="margin-top:15px">Revisa el v\xEDdeo 3D antes de aprobar y el fotograma antes de convertir. Generar im\xE1genes, voces o v\xEDdeo usa tu cuenta de fal.ai.</p></section></aside></div><div class="two">${t2.preview ? `<div class="panel"><h2>Previsualizaci\xF3n ${t2.preview.hash === shotState.hash ? "actual" : "anterior"}</h2><video controls src="${media(t2.preview.file)}"></video><a href="${media(t2.preview.scene)}" target="_blank">Escena 3D y tiempos \xB7 JSON</a></div>` : ""}${t2.keyframe ? `<div class="panel"><h2>Fotograma visual</h2>${image(t2.keyframe.file)}</div>` : ""}${t2.final ? `<div class="panel"><h2>Conversi\xF3n final \xB7 revisar</h2><video controls src="${media(t2.final.file)}"></video></div>` : ""}</div><section class="panel"><h2>Versiones del plano</h2>${(t2.history || []).map((h, i2) => `<div class="job"><span>v${i2 + 1} \xB7 ${esc2(h.type)} \xB7 ${new Date(h.at).toLocaleString()}</span><a target="_blank" href="${media(h.file)}">Abrir \u2197</a></div>`).join("") || "<p>Aqu\xED se conservar\xE1n tus previsualizaciones, fotogramas y v\xEDdeos.</p>"}</section>`;
   }
   $2("#workspace").innerHTML = html3;
+  {
+    const ol = $2("#workspace .crumbs ol");
+    if (ol) ol.scrollLeft = ol.scrollWidth;
+  }
   {
     const bar = fctx && $2("[data-filter-bar]");
     if (bar) filterMount = mountFilters({ bar, results: $2("[data-filter-results]"), ctx: fctx, state: filt, bind, onChange: (st2) => {
@@ -30496,11 +30482,6 @@ async function act(action) {
     document.querySelectorAll("details.ap-node").forEach((d3) => d3.open = a === "ap-open");
     return;
   }
-  if (a === "tree-fold") {
-    treeOpen = /* @__PURE__ */ new Set();
-    treeStore.set([]);
-    return render();
-  }
   if (a === "sb-current") {
     const b0 = p.storyboards.find((x2) => x2.id === b2);
     if (!confirm(`\xBFMarcar \xAB${b0.title}\xBB como el story vigente de su secuencia?`)) return;
@@ -30510,6 +30491,7 @@ async function act(action) {
   }
   if (a === "open") {
     p = await api("/api/project?id=" + b2);
+    forgetTreeState(b2);
     api("/api/active", { project: b2 }).catch(() => {
     });
     applyRoute({ view: "tree" });
@@ -30990,7 +30972,10 @@ async function act(action) {
 try {
   state = await api("/api/state");
   const r = parseRoute(location.search);
-  if (r.project) p = await api("/api/project?id=" + encodeURIComponent(r.project));
+  if (r.project) {
+    p = await api("/api/project?id=" + encodeURIComponent(r.project));
+    forgetTreeState(r.project);
+  }
   applyRoute(r);
   if (view === "shot") current();
   await render();

@@ -1,4 +1,4 @@
-// Enlaces de relaciones en el navegador (#61): el árbol plegado no calcula relaciones y el abierto pinta la línea en su cuerpo; story, escena,
+// Enlaces de relaciones en el navegador (#61, #67): la raíz de la Escaleta no calcula relaciones y cada página pinta las de su nivel; story, escena,
 // viñeta, Planos, estudio y Animación con su línea; «Pnn ·» sin repetir; página de entidad sin id y con id inexistente; plegado de Apariciones
 // por tamaño de página; sin desbordamiento a 390 px. Servidor con RODAJE_DATA temporal y el fixture de #58 (textos inventados).
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import {spawnServer} from './fixtures/hijos.mjs';
@@ -17,19 +17,17 @@ const URL0=`http://127.0.0.1:${port}/`;
 const session=(fn,viewport=VIEWPORTS.lineaBase)=>withChrome(async browser=>{const page=await (await newRenderContext(browser,viewport)).newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await fn(page);assert.deepEqual(errors,[]);});
 const load=async(page,q='',pid=id)=>{await page.goto(URL0+'?project='+pid+q);await page.waitForSelector('#workspace .heading');await page.waitForTimeout(150);};
 const counter=page=>page.evaluate(async()=>(await import('/workflow.mjs')).relationCounters.relatedTo);
-const openNode=async(page,key)=>{await page.click(`[data-tree="${key}"]>summary`);await page.waitForSelector(`[data-tree="${key}"]>.tree-kids[data-loaded]`);};
 const texts=(page,sel)=>page.$$eval(sel,l=>l.map(e=>e.textContent.replace(/\s+/g,' ').trim()));
 const card=a=>`article.card:has([data-action="shot:${a}"])`;
 
-test('árbol: plegado no calcula relaciones; al abrir, la línea va en el cuerpo y nunca en la fila',{skip:SIN_CHROME},()=>session(async page=>{
- await page.addInitScript(k=>localStorage.setItem(k,'[]'),'rodaje-tree-'+id);await load(page,'&view=tree');
- assert.equal(await counter(page),0);assert.equal(await page.$$eval('.rel-links',l=>l.length),0);
- await openNode(page,'act/e1');assert.ok(await counter(page)>0);
- assert.equal(await page.$$eval('[data-tree="act/e1"]>.tree-kids>.rel-links',l=>l.length),1);assert.equal(await page.$$eval('summary .rel-links',l=>l.length),0);
- await openNode(page,'seq/f1');await openNode(page,'sb/sb2');await openNode(page,'scene/sb2/sc2');
- const panel=await texts(page,'[data-tree="scene/sb2/sc2"] .tree-panel>.rel-links');assert.equal(panel.length,1);assert.match(panel[0],/Personajes Ana Ruiz, Beto/);assert.match(panel[0],/Ambiente Nave heredado/);
- const leaves=await texts(page,'[data-tree="scene/sb2/sc2"] .tree-shot .rel-links');assert.equal(leaves.length,2);assert.match(leaves[0],/Public Address fuera de campo · pa/);
- assert.equal(await page.$$eval('summary .rel-links',l=>l.length),0);}));
+test('páginas: la raíz no calcula relaciones; el acto, una por nivel y ficha; la línea nunca dentro del enlace',{skip:SIN_CHROME},()=>session(async page=>{
+ await load(page,'&view=tree');assert.equal(await counter(page),0);assert.equal(await page.$$eval('.rel-links',l=>l.length),0);
+ await load(page,'&view=tree&node=act/e1');const fichas=await page.$$eval('.level-ficha',l=>l.length);assert.equal(fichas,1);
+ assert.equal(await page.$$eval('.rel-head',l=>l.length),1);assert.equal(await page.$$eval('.level-ficha>.rel-links',l=>l.length),fichas);
+ assert.ok(await counter(page)<=1+fichas);assert.equal(await page.$$eval('.level-link .rel-links',l=>l.length),0);
+ for(const q of ['seq/k1','seq/f2']){await load(page,'&view=tree&node='+q);const shots=await page.$$eval('.tree-shot',l=>l.map(e=>!!e.querySelector('.rel-links')));assert.ok(shots.length&&shots.every(Boolean),q);}
+ assert.match((await texts(page,'.tree-shot .rel-links'))[0],/Ambiente Bosque heredado/);
+ await load(page,'&view=tree&node=seq/f1');assert.match((await texts(page,'.rel-head'))[0],/Ana Ruiz/);assert.equal(await page.$$eval('.level-story>.rel-links',l=>l.length),2);}));
 
 test('story, escena y viñeta: líneas con enlaces a sus páginas, sin «Reparto:»',{skip:SIN_CHROME},()=>session(async page=>{
  await load(page,'&view=storyboard&storyboard=sb2');
@@ -58,5 +56,5 @@ test('Apariciones: con más de 40 viñetas y planos en la página, las secuencia
 
 test('móvil a 390 px: sin desbordamiento horizontal ni errores',{skip:SIN_CHROME},()=>session(async page=>{
  const wide=()=>page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
- await load(page,'&view=tree');await openNode(page,'seq/f1');assert.ok(await wide()<=0,'tree');
+ await load(page,'&view=tree&node=seq/f1');assert.ok(await wide()<=0,'tree');
  for(const q of ['&view=storyboard&storyboard=sb2','&view=shots','&view=character&character=ana']){await load(page,q);assert.ok(await wide()<=0,q);}},{width:390,height:844}));

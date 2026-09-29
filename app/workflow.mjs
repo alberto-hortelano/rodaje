@@ -268,11 +268,11 @@ export function environmentList(p){return (p?.environments||[]).map(e=>{const v=
 // Entorno con constructor cuyos datos son los de un location.modelSpace (modelSpace.model === environment.data), o null.
 export function modelSpaceEnvironment(p,modelSpace){const m=modelSpace?.model;return m?(p?.environments||[]).find(e=>e.builder&&e.data&&e.data===m)||null:null;}
 // Rutas de la app (#57): ?project=…&view=…&<parámetros de la vista>. Los alias (outline, episodes, ship) llevan a la vista que los sustituye;
-// con proyecto, una vista desconocida, library o ninguna llevan al árbol. scene, node y sequence de shots enfocan y no cuentan para el scroll.
+// con proyecto, una vista desconocida, library o ninguna llevan al árbol. scene y sequence de shots enfocan y no cuentan para el scroll; node es la página de la Escaleta.
 export const VIEWS=['tree','overview','ideas','characters','locations','environments','environment','character','location','storyboards','storyboard','shots','shot','rehearsal','anim','montaje','issues','jobs'];
 export const VIEW_ALIASES={outline:'tree',episodes:'shots',ship:'environments'};
 export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene'],environment:['environment'],character:['character'],location:['location'],tree:['node'],shots:['sequence','q','f'],storyboards:['q','f']};
-export const FOCUS_PARAMS={storyboard:['scene'],tree:['node'],shots:['sequence']};
+export const FOCUS_PARAMS={storyboard:['scene'],shots:['sequence']};
 export const ROUTE_KEYS=['episode','sequence','shot','storyboard','environment','character','location','scene','node','q','f'];
 // Buscador y facetas (#59): q y f no cuentan para el scroll; en la URL, f conserva ':' y ',' legibles (f=act:e1,cast:ana).
 export const FILTER_PARAMS=['q','f'];
@@ -973,8 +973,8 @@ export function storyMigrationPlan(p,spec){const q=structuredClone(p),ops=[],err
  for(const {sequence:s} of seqList(q)){if(s.currentStoryboard!==undefined||notFicha(s))continue;const list=storyList(q).filter(b=>linkOf(b)===s.id);if(list.length===1){s.currentStoryboard=list[0].id;op('vigente',`${s.id}: vigente ${list[0].id} (su único story)`);}}
  for(const id of pruebas){const s=find(id).sequence;if(s.test!==true){s.test=true;op('prueba',`${id}: prueba, fuera de la escaleta`);}}
  const r=storyModelIssues(q);return {ops,next:q,errors:r.errors,warnings:[...warnings,...r.warnings],suggested};}
-// ---- Árbol de la escaleta (#57): outlineTree bajado hasta escenas, viñetas y planos (por storyboardShot). Estado de la interfaz (nodos abiertos,
-// versión mostrada) fuera de proyecto.json. Puras: no mutan; los nodos llevan los objetos del proyecto (episode, sequence, storyboard, shot).
+// ---- Árbol de la escaleta (#57): outlineTree bajado hasta escenas, viñetas y planos (por storyboardShot). Estado de la interfaz (versión
+// mostrada, scroll) fuera de proyecto.json. Puras: no mutan; los nodos llevan los objetos del proyecto (episode, sequence, storyboard, shot).
 const ROLE_ORDER={container:0,test:1,outline:2};
 // Etiquetas (#61). Plano: «Pnn · título», sin repetir el prefijo si el título ya lo trae (conserva su número aunque no coincida).
 export function shotLabel(number,title){const code='P'+String(number).padStart(2,'0');if(typeof title!=='string'||!title.trim())return {code,title:'',label:code};
@@ -1002,14 +1002,41 @@ export function treeModel(p){const index=new Map(),add=(node,parent)=>{index.set
  return {acts,groups,index};}
 // Claves desde la raíz hasta key (incluida); [] si no existe.
 export function treePath(model,key){const out=[];let k=key;while(k!==null&&k!==undefined&&model?.index?.has(k)){out.unshift(k);k=model.index.get(k).parent;}return out;}
-// Nodos abiertos: los guardados que existen; sin datos guardados (no array), los actos.
-export function treeOpenKeys(model,saved){return Array.isArray(saved)?saved.filter(k=>model.index.has(k)):model.acts.map(a=>a.key);}
-// Migas de la página del story: Acto › NN · ficha › Story vN › escena (el último sin ruta); sin ficha, Sin secuencia › título › escena.
-export function storyCrumbs(p,sbId,sceneId){const b=storyOf(p,sbId);if(!b)return [];const out=[],fid=linkOf(b),t=fid?outlineTree(p):null;
- const act=t?.acts.find(a=>a.sequences.some(r=>r.sequence.id===fid)),row=act?.sequences.find(r=>r.sequence.id===fid);
- if(row){out.push({label:act.episode.title||act.episode.id,route:{view:'tree',node:'act/'+act.episode.id}},{label:row.code+' · '+(row.sequence.title||row.sequence.id),route:{view:'tree',node:'seq/'+fid}},{label:'Story v'+storyVersions(p,fid).get(b.id),route:{view:'storyboard',storyboard:b.id}});}
- else out.push({label:'Sin secuencia',route:{view:'tree',node:'unlinked'}},{label:b.title||b.id,route:{view:'storyboard',storyboard:b.id}});
- const s=sceneId?(Array.isArray(b.sequences)?b.sequences:[]).find(x=>x?.id===sceneId):null;if(s)out.push({label:s.title||s.id,route:null});
+// ---- Escaleta por niveles (#67): cada nodo de treeModel es una página (acto, ficha, prueba y grupos) o redirige a su vista (story, escena,
+// planos sin viñeta). LEVELS da la etiqueta y la ruta de cada tipo; #68 añade panel (y shot); #69 usa el prefijo de entidad.
+const LEVELS={
+ act:{label:n=>n.episode.title||n.episode.id,route:n=>({view:'tree',node:n.key})},
+ ficha:{label:n=>n.code+' · '+(n.sequence.title||n.sequence.id),route:n=>({view:'tree',node:n.key})},
+ test:{label:n=>n.sequence.title||n.sequence.id,route:n=>({view:'tree',node:n.key})},
+ tests:{label:()=>'Pruebas',route:n=>({view:'tree',node:n.key})},
+ unlinked:{label:()=>'Sin secuencia',route:n=>({view:'tree',node:n.key})},
+ story:{label:n=>n.version?'Story v'+n.version:(n.storyboard.title||n.storyboard.id),route:n=>({view:'storyboard',storyboard:n.storyboard.id})},
+ scene:{label:n=>n.scene.title||n.scene.id,route:n=>({view:'storyboard',storyboard:n.storyboard.id,scene:n.scene.id})},
+ orphans:{label:()=>'Planos sin viñeta',route:n=>({view:'shots',sequence:n.shots[0].sequence.id})}};
+export const LEVEL_ROOT={key:null,kind:'root',label:'Escaleta',route:{view:'tree'}};
+const levelNode=(model,key)=>(typeof key==='string'||typeof key==='number')&&model?.index instanceof Map?model.index.get(key)?.node||null:null;
+// Ruta canónica de la página de un nodo; null si la clave no existe.
+export function levelRoute(model,key){const n=levelNode(model,key);return n&&LEVELS[n.kind]?LEVELS[n.kind].route(n):null;}
+// Página que corresponde a node: la raíz sin clave; la del nodo si existe (story, escena y huérfanos llevan a otra vista); si no, el nivel
+// existente más cercano (el story de una escena o de sus huérfanos, o la raíz) con missing.
+export function levelResolve(model,key){if(key===null||key===undefined||key==='')return {key:null,route:{view:'tree'},missing:false};
+ const route=levelRoute(model,key);if(route)return {key,route,missing:false};
+ const m=typeof key==='string'&&/^(?:scene\/([^/]+)\/.*|orphans\/(.+))$/.exec(key),sb=m&&'sb/'+(m[1]??m[2]);
+ if(sb&&levelRoute(model,sb))return {key:sb,route:levelRoute(model,sb),missing:true};
+ return {key:null,route:{view:'tree'},missing:true};}
+// Nodo del árbol que representa una ruta: tree → node; storyboard → su escena o el story; resto → null.
+export function levelKey(p,route,model){const has=k=>!!levelNode(model,k);
+ if(route?.view==='tree')return has(route.node)?route.node:null;
+ if(route?.view==='storyboard'){const sc=`scene/${route.storyboard}/${route.scene}`,sb='sb/'+route.storyboard;return route.scene&&has(sc)?sc:has(sb)?sb:null;}
+ return null;}
+// Migas de una página: Escaleta › camino de treePath (la última sin ruta); personaje y ambiente, su lista › nombre. [] si no hay migas.
+export function levelCrumbs(p,route,model){const v=route?.view;
+ if(v==='character'||v==='location'){const list=v==='character'?p?.characters:p?.locations,x=Array.isArray(list)?list.find(e=>e?.id===route[v]):null;if(!x)return [];
+  const key=v+'/'+x.id;return [{key,kind:'list',label:v==='character'?'Personajes y voces':'Ambientes',route:{view:v+'s'}},{key,kind:v,label:x.name||x.id,route:null}];}
+ if(v!=='tree'&&v!=='storyboard')return [];
+ model??=treeModel(p);const key=levelKey(p,route,model);
+ if(!key)return v==='tree'?[{...LEVEL_ROOT,route:null}]:[];
+ const out=[{...LEVEL_ROOT},...treePath(model,key).map(k=>{const n=model.index.get(k).node;return {key:k,kind:n.kind,label:LEVELS[n.kind].label(n),route:levelRoute(model,k)};})];
  out[out.length-1]={...out.at(-1),route:null};return out;}
 // Selector de versión del story: las de su ficha por número; [] sin ficha.
 export function storyVersionOptions(p,sbId){const b=storyOf(p,sbId),fid=linkOf(b);if(!fid)return [];const f=seqList(p).find(x=>x.sequence.id===fid)?.sequence,cur=f?.currentStoryboard;

@@ -1,7 +1,7 @@
-// Navegación (#57): rutas con alias, árbol de la escaleta hasta los planos, migas y versión del story, vista Planos y cifras del proyecto.
+// Navegación (#57, #67): rutas con alias, árbol de la escaleta hasta los planos, versión del story, vista Planos y cifras del proyecto.
 // Puro sobre el fixture de #56, más comprobaciones de fuente (menú, vistas, renombrados) y estilo.
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
-import {VIEWS,VIEW_ALIASES,ROUTE_PARAMS,ROUTE_KEYS,FILTER_PARAMS,hasFilters,routeView,parseRoute,routeQuery,routeKey,navActive,treeModel,treePath,treeOpenKeys,storyCrumbs,storyVersionOptions,setCurrentStory,shotGroups,projectStats,storyMigrationPlan} from '../app/workflow.mjs';
+import {VIEWS,VIEW_ALIASES,ROUTE_PARAMS,ROUTE_KEYS,FILTER_PARAMS,hasFilters,routeView,parseRoute,routeQuery,routeKey,navActive,treeModel,treePath,storyVersionOptions,setCurrentStory,shotGroups,projectStats,storyMigrationPlan} from '../app/workflow.mjs';
 import {validate} from '../app/store.mjs';
 import {storysProject,storysSpec,planShot} from './fixtures/escaleta-storys.mjs';
 
@@ -44,13 +44,13 @@ test('rutas: routeQuery ida y vuelta y la forma de linea-base',()=>{
   assert.equal(routeQuery(parseRoute(q)),q);
  assert.deepEqual(Object.keys(ROUTE_PARAMS).filter(v=>!VIEWS.includes(v)),[]);});
 
-test('rutas: routeKey ignora scene, node y la secuencia de Planos',()=>{
+test('rutas: routeKey ignora scene y la secuencia de Planos',()=>{
  const k=q=>routeKey(parseRoute(q));
  assert.equal(k('?project=x&view=storyboard&storyboard=b&scene=c'),k('?project=x&view=storyboard&storyboard=b'));
  assert.notEqual(k('?project=x&view=storyboard&storyboard=b'),k('?project=x&view=storyboard&storyboard=b2'));
- assert.equal(k('?project=x&view=tree&node=seq/a'),k('?project=x&view=tree'));assert.equal(k('?project=x&view=shots&sequence=s'),k('?project=x&view=shots'));
+ assert.notEqual(k('?project=x&view=tree&node=seq/a'),k('?project=x&view=tree'));assert.equal(k('?project=x&view=shots&sequence=s'),k('?project=x&view=shots'));
  assert.notEqual(k('?project=x&view=shot&episode=e&sequence=s&shot=t'),k('?project=x&view=shot&episode=e&sequence=s2&shot=t'));
- assert.equal(k('?project=x&view=tree'),JSON.stringify(['x','tree']));assert.equal(routeKey({view:'library'}),JSON.stringify(['','library']));});
+ assert.equal(k('?project=x&view=tree'),JSON.stringify(['x','tree','']));assert.equal(routeKey({view:'library'}),JSON.stringify(['','library']));});
 
 test('navActive: vistas de detalle marcan su lista',()=>{
  assert.deepEqual(['environment','storyboard','shot','anim','rehearsal','tree','overview','shots','jobs','library'].map(navActive),['environments','storyboards','shots','shots','shots','tree','overview','shots','jobs','library']);
@@ -127,22 +127,11 @@ test('treeModel: claves únicas e índice completo con su padre',()=>{
   for(const n of [...m.acts,...m.groups])walk(n,null);
   assert.equal(new Set(seen).size,seen.length);assert.equal(m.index.size,seen.length);}});
 
-test('treePath y treeOpenKeys',()=>{
+test('treePath',()=>{
  const m=treeModel(withShots());
  assert.deepEqual(treePath(m,'scene/sb-v2/sb-v2-e1'),['act/e1','seq/x-colgado','sb/sb-v2','scene/sb-v2/sb-v2-e1']);
  assert.deepEqual(treePath(m,'seq/x-cruce'),['tests','seq/x-cruce']);assert.deepEqual(treePath(m,'act/e2'),['act/e2']);
- assert.deepEqual(treePath(m,'nada'),[]);assert.deepEqual(treePath(m,null),[]);
- assert.deepEqual(treeOpenKeys(m,null),['act/e1','act/e2']);assert.deepEqual(treeOpenKeys(m,'x'),['act/e1','act/e2']);
- assert.deepEqual(treeOpenKeys(m,[]),[]);assert.deepEqual(treeOpenKeys(m,['seq/x-colgado','borrado','tests']),['seq/x-colgado','tests']);});
-
-test('storyCrumbs: con ficha, sin ficha, escena inexistente y story inexistente',()=>{
- const m=migrated(),r=c=>c.map(x=>[x.label,x.route]);
- assert.deepEqual(r(storyCrumbs(m,'sb-v2','sb-v2-e1')),[['Acto I',{view:'tree',node:'act/e1'}],['01 · Prólogo · El Colgado',{view:'tree',node:'seq/x-colgado'}],['Story v2',{view:'storyboard',storyboard:'sb-v2'}],['Camino',null]]);
- assert.deepEqual(r(storyCrumbs(m,'sb-v1','nada')),[['Acto I',{view:'tree',node:'act/e1'}],['01 · Prólogo · El Colgado',{view:'tree',node:'seq/x-colgado'}],['Story v1',null]]);
- assert.deepEqual(r(storyCrumbs(m,'sb-carga')).map(x=>x[0]),['Acto I','02 · Prólogo · La carga','Story v1']);
- const p=storysProject();assert.deepEqual(r(storyCrumbs(p,'sb-v1','sb-v1-e1')),[['Sin secuencia',{view:'tree',node:'unlinked'}],['Prólogo · El Colgado',{view:'storyboard',storyboard:'sb-v1'}],['Cruce',null]]);
- assert.deepEqual(r(storyCrumbs(p,'sb-v1')),[['Sin secuencia',{view:'tree',node:'unlinked'}],['Prólogo · El Colgado',null]]);
- assert.deepEqual(storyCrumbs(m,'nada','x'),[]);});
+ assert.deepEqual(treePath(m,'nada'),[]);assert.deepEqual(treePath(m,null),[]);});
 
 test('storyVersionOptions: versiones de la ficha con la vigente marcada; sin ficha, ninguna',()=>{
  const m=migrated();
@@ -183,19 +172,21 @@ test('fuente: menú, vistas nuevas, sin las antiguas y renombrados',()=>{
  for(const x of ["'Sin escenario'","'+ Escenario'","'Escenarios'",'Sin escenario','Escenario al crear'])assert.ok(!src.includes(x),'queda '+x);
  for(const x of ['Escena 3D y tiempos · JSON','Escenario y cámara','Elemento del escenario','la viñeta del storyboard y la secuencia'])assert.ok(src.includes(x),'falta '+x);});
 
-test('fuente: árbol perezoso, migas, versión, escena y posición sin esperar a las imágenes perezosas',()=>{
+test('fuente: Escaleta por niveles, migas únicas, versión, escena y posición sin esperar a las imágenes perezosas',()=>{
  assert.match(src,/#workspace img:not\(\[loading="lazy"\]\)/);
- for(const d of ['data-tree=','data-route','data-sb-version','data-sb-scene=','data-shots-seq=','data-loaded','class="tree-kids"','loading="lazy" class="tree-thumb"','aria-current="page"','aria-label="Ruta"'])assert.ok(src.includes(d),'falta '+d);
- for(const a of ["'tree-fold'","'sb-current:'","'shots:'","'tree:seq/'"])assert.ok(src.includes(a),'falta '+a);
- assert.match(src,/'rodaje-tree-'\+p\.id/);assert.match(src,/function bind\(root\)/);assert.match(src,/bind\(kids\)/);});
+ for(const d of ['data-level=','class="level-link"','data-route','data-sb-version','data-sb-scene=','data-shots-seq=','loading="lazy" class="tree-thumb"','aria-current="page"','aria-label="Ruta"'])assert.ok(src.includes(d),'falta '+d);
+ for(const a of ["'sb-current:'","'shots:'","'tree:seq/'"])assert.ok(src.includes(a),'falta '+a);
+ for(const x of ['levelCrumbs(','levelResolve(','crumbsNav(levelCrumbs(',"'No existe en la escaleta: '","localStorage.removeItem('rodaje-tree-'"])assert.ok(src.includes(x),'falta '+x);
+ for(const x of ['treeStore','tree-node','storyCrumbs','treeOpen',"'tree-fold'",'data-tree=','data-loaded','class="tree-kids"','bind(kids)','<nav class="crumbs" aria-label="Ruta"><ol>${crumbs.map'])assert.ok(!src.includes(x),'queda '+x);
+ assert.equal(src.split('<nav class="crumbs"').length,2,'un solo sitio pinta migas');assert.match(src,/function bind\(root\)/);});
 
-test('estilos: árbol, miniaturas, migas y foco',()=>{
+test('estilos: niveles, miniaturas, migas sin desbordar y foco',()=>{
  const rule=sel=>new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\{([^}]*)\\}').exec(css)?.[1]||'';
  assert.match(rule('.tree-thumb'),/aspect-ratio:16\/9/);assert.match(rule('.tree-thumb'),/width:96px/);assert.match(rule('.tree-thumb'),/object-fit:cover/);
- assert.match(rule('.tree-kids'),/margin-left:18px/);assert.match(rule('.tree-kids'),/border-left:1px solid var\(--line\)/);
- assert.match(rule('.crumbs ol'),/display:flex/);assert.match(rule('.crumbs li+li::before'),/content:'›'/);
- assert.match(rule('.tree-node>summary'),/list-style:none/);assert.match(rule('.tree-node>summary:focus-visible'),/outline/);
- assert.match(rule('.sb-seq.target'),/outline/);assert.match(css,/\.tree-node\[open\]>summary::before\{transform:rotate\(90deg\)\}/);});
+ assert.match(rule('.level-item'),/display:flex/);assert.match(rule('.level-link'),/min-width:0/);
+ assert.match(rule('.crumbs ol'),/display:flex/);assert.match(rule('.crumbs li+li::before'),/content:'›'/);assert.match(rule('.crumbs li>a,.crumbs li>span'),/text-overflow:ellipsis/);
+ const movil=/@media\(max-width:750px\)\{\.crumbs ol\{([^}]*)\}/.exec(css)?.[1]||'';assert.match(movil,/overflow-x:auto/);assert.match(movil,/flex-wrap:nowrap/);
+ assert.match(rule('.sb-seq.target'),/outline/);for(const x of ['.tree-kids','.tree-node','.tree-panel'])assert.ok(!css.includes(x),'queda '+x);});
 
 test('fuente: rutas y tarjetas de personaje y ambiente (#60)',()=>{
  assert.match(src,/\['project','view',\.\.\.ROUTE_KEYS\]/);assert.ok(!src.includes('data-kind="${view}"'),'el selector de versión no usa la vista');
