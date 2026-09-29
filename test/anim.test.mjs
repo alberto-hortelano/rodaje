@@ -1,7 +1,7 @@
 // Vista Animación (#50): voz del navegador por personaje, reloj y líneas, grabación y recorte de la pista, edición del rig, enlaces y fuentes.
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {spawnSync} from 'node:child_process';
 import {episodeSpeakers,ttsDefaultVoiceURI,ttsVoiceURI,ttsParams,TIMELINE_FPS,TRACK_SMOOTHING_DEFAULT,snapTime,clockTick,lineSchedule,lineToLaunch,activeLineAt,timelineMarks,roundCamera,recordSamples,trimTrack,recordedRig,rigFromShot,rigWithCamera,rigWithType,rigControls,applyShotCamera,storyboardAnimTargets,cameraAt,cameraRigIssues,patchShotField,projectChannels} from '../app/workflow.mjs';
-import {validate,save,load,DATA} from '../app/store.mjs';
+import {validate,save,load,DATA} from '../app/store.mjs';import {parseRoute} from '../app/workflow.mjs';
 const ROOT=path.resolve(import.meta.dirname,'..'),src=f=>fs.readFileSync(path.join(ROOT,f),'utf8');
 const A={position:[0,1.6,5],target:[0,1.4,0],fov:40},B={position:[2,2.6,3],target:[1,1.4,0],fov:60};
 const near=(a,b,eps=1e-9)=>{assert.equal(a.length,b.length);a.forEach((v,i)=>assert.ok(Math.abs(v-b[i])<=eps,`${a} ≠ ${b}`));};
@@ -93,4 +93,4 @@ test('anim.source.js usa cameraAt, cameraContext, pose sin cámara y orbit; Ensa
  for(const x of ['cameraAt(','cameraContext(','.orbit(','recordSamples(','shotRigIssues(','stageSequence(','anim3dButton('])assert.ok(anim.includes(x),x);assert.match(anim,/stage\.pose\(time,false\)/);assert.doesNotMatch(anim,/stage\.pose\([^)]*,true\)|stage\.pose\(time\)/);
  for(const f of [anim,reh]){assert.match(f,/import \{[^}]*\bttsVoiceURI\b[^}]*\} from '\.\/workflow\.mjs'/);assert.match(f,/import \{[^}]*\bttsParams\b[^}]*\} from '\.\/workflow\.mjs'/);assert.match(f,/from '\.\/tts\.source\.js'/);}
  assert.doesNotMatch(reh,/localStorage|english\[/,'el Ensayo ya no calcula voces ni preferencias por su cuenta');assert.match(stage,/orbit\(on\)\{controls\.enabled=!!on;\}/);
- const app=src('app/app.source.js');assert.match(app,/import \{mountAnim\} from '\.\/anim\.source\.js'/);assert.match(app,/applyShotCamera\(t,/);assert.match(app,/'montaje','anim'\]\.includes\(routeView/);});
+ const app=src('app/app.source.js');assert.match(app,/import \{mountAnim\} from '\.\/anim\.source\.js'/);assert.match(app,/applyShotCamera\(t,/);assert.match(app,/applyRoute\(parseRoute\(location\.search\)\)|applyRoute\(r\)/);assert.equal(parseRoute('?project=x&view=anim&episode=e&sequence=s&shot=t').view,'anim');});

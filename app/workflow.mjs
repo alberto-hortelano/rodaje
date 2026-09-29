@@ -266,8 +266,23 @@ const VIEWER_KINDS={invalido:'no válido',mount:'constructor',glb:'glb',none:'va
 export function environmentList(p){return (p?.environments||[]).map(e=>{const v=environmentViewer(e);return {id:e.id,name:e.name||e.id,description:e.description||'',image:e.image||'',glb:e.glb||'',kind:VIEWER_KINDS[v.kind],invalid:v.message||'',action:'env-open:'+e.id};});}
 // Entorno con constructor cuyos datos son los de un location.modelSpace (modelSpace.model === environment.data), o null.
 export function modelSpaceEnvironment(p,modelSpace){const m=modelSpace?.model;return m?(p?.environments||[]).find(e=>e.builder&&e.data&&e.data===m)||null:null;}
-// Vista pedida en la URL: la antigua vista de la nave (?view=ship) lleva a la lista de entornos.
-export const routeView=v=>v==='ship'?'environments':v;
+// Rutas de la app (#57): ?project=…&view=…&<parámetros de la vista>. Los alias (outline, episodes, ship) llevan a la vista que los sustituye;
+// con proyecto, una vista desconocida, library o ninguna llevan al árbol. scene, node y sequence de shots enfocan y no cuentan para el scroll.
+export const VIEWS=['tree','overview','ideas','characters','locations','environments','environment','storyboards','storyboard','shots','shot','rehearsal','anim','montaje','issues','jobs'];
+export const VIEW_ALIASES={outline:'tree',episodes:'shots',ship:'environments'};
+export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene'],environment:['environment'],tree:['node'],shots:['sequence']};
+export const FOCUS_PARAMS={storyboard:['scene'],tree:['node'],shots:['sequence']};
+const ROUTE_KEYS=['episode','sequence','shot','storyboard','environment','scene','node'];
+export const routeView=v=>typeof v==='string'&&Object.hasOwn(VIEW_ALIASES,v)?VIEW_ALIASES[v]:v;
+export function parseRoute(search){const q=search instanceof URLSearchParams?search:new URLSearchParams(search||''),project=q.get('project')||null,v=routeView(q.get('view'));
+ const view=project?(VIEWS.includes(v)?v:'tree'):(v==='jobs'?'jobs':'library'),own=ROUTE_PARAMS[view]||[];
+ return {project,view,...Object.fromEntries(ROUTE_KEYS.map(k=>[k,own.includes(k)?q.get(k)||null:null]))};}
+export function routeQuery(r){const parts=[];if(r?.project)parts.push(['project',r.project]);parts.push(['view',r?.view||'library']);
+ for(const k of ROUTE_PARAMS[r?.view]||[])if(r[k]!==null&&r[k]!==undefined&&r[k]!=='')parts.push([k,r[k]]);
+ return '?'+parts.map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');}
+export function routeKey(r){const focus=FOCUS_PARAMS[r?.view]||[];return JSON.stringify([r?.project||'',r?.view,...(ROUTE_PARAMS[r?.view]||[]).filter(k=>!focus.includes(k)).map(k=>r[k])].map(x=>x??''));}
+// Botón del menú que se marca en cada vista.
+export function navActive(view){return view==='environment'?'environments':view==='storyboard'?'storyboards':['shot','anim','rehearsal'].includes(view)?'shots':view;}
 // Entorno 3D enlazado a un ambiente (location.environment), o null.
 export function locationEnvironment(p,locationId){const l=(p?.locations||[]).find(l=>l.id===locationId);return l?.environment?(p.environments||[]).find(e=>e.id===l.environment)||null:null;}
 // Elección de entorno de una secuencia a partir del formulario: lugar, estado por secuencia y giro en grados. Vacío → sin elección.
@@ -954,3 +969,49 @@ export function storyMigrationPlan(p,spec){const q=structuredClone(p),ops=[],err
  for(const {sequence:s} of seqList(q)){if(s.currentStoryboard!==undefined||notFicha(s))continue;const list=storyList(q).filter(b=>linkOf(b)===s.id);if(list.length===1){s.currentStoryboard=list[0].id;op('vigente',`${s.id}: vigente ${list[0].id} (su único story)`);}}
  for(const id of pruebas){const s=find(id).sequence;if(s.test!==true){s.test=true;op('prueba',`${id}: prueba, fuera de la escaleta`);}}
  const r=storyModelIssues(q);return {ops,next:q,errors:r.errors,warnings:[...warnings,...r.warnings],suggested};}
+// ---- Árbol de la escaleta (#57): outlineTree bajado hasta escenas, viñetas y planos (por storyboardShot). Estado de la interfaz (nodos abiertos,
+// versión mostrada) fuera de proyecto.json. Puras: no mutan; los nodos llevan los objetos del proyecto (episode, sequence, storyboard, shot).
+const ROLE_ORDER={container:0,test:1,outline:2};
+const shotLeaves=(p,e,s)=>(Array.isArray(s?.shots)?s.shots:[]).map((t,i)=>({episode:e,sequence:s,shot:t,number:i+1,role:sequenceRole(p,s)}));
+export function treeModel(p){const index=new Map(),add=(node,parent)=>{index.set(node.key,{node,parent});return node;};
+ const bySb=new Map();for(const {episode,sequence} of seqList(p))for(const l of shotLeaves(p,episode,sequence)){const k=l.shot?.storyboardShot;if(!k)continue;if(!bySb.has(k))bySb.set(k,[]);bySb.get(k).push(l);}
+ for(const list of bySb.values())list.sort((a,b)=>ROLE_ORDER[a.role]-ROLE_ORDER[b.role]);
+ const storyNode=({storyboard:b,version=null,current=false,container=null},parent)=>{const key='sb/'+b.id,scenes=Array.isArray(b.sequences)?b.sequences.filter(isObj):[],panelIds=new Set(storyShotIds(b));
+  const node=add({key,kind:'story',storyboard:b,version,current,container,counts:{scenes:scenes.length,panels:panelIds.size,shots:(container?.sequence?.shots||[]).length},children:[]},parent);
+  for(const s of scenes)node.children.push(add({key:`scene/${b.id}/${s.id}`,kind:'scene',storyboard:b,scene:s,panels:(Array.isArray(s.shots)?s.shots:[]).filter(isObj).map(t=>({panel:t,thumb:t.render||t.sketch||null,shots:bySb.get(t.id)||[]}))},key));
+  const orphans=container?shotLeaves(p,container.episode,container.sequence).filter(l=>!panelIds.has(l.shot?.storyboardShot)):[];
+  if(orphans.length)node.children.push(add({key:'orphans/'+b.id,kind:'orphans',shots:orphans},key));
+  return node;};
+ const t=outlineTree(p);
+ const acts=t.acts.map(a=>{const key='act/'+a.episode.id,act=add({key,kind:'act',episode:a.episode,minutes:a.sequences.reduce((n,r)=>n+r.minutes,0),children:[]},null);
+  act.children=a.sequences.map(r=>{const k='seq/'+r.sequence.id,f=add({key:k,kind:'ficha',episode:a.episode,sequence:r.sequence,number:r.number,code:r.code,minutes:r.minutes,current:r.current,cover:r.sequence.cover||null,children:[],shots:shotLeaves(p,a.episode,r.sequence)},key);
+   f.children=r.storys.filter(x=>x.storyboard).map(x=>storyNode(x,k));return f;});return act;});
+ const groups=[];
+ if(t.tests.length){const g=add({key:'tests',kind:'tests',children:[]},null);g.children=t.tests.map(({episode,sequence})=>add({key:'seq/'+sequence.id,kind:'test',episode,sequence,shots:shotLeaves(p,episode,sequence)},'tests'));groups.push(g);}
+ if(t.unlinked.length){const g=add({key:'unlinked',kind:'unlinked',children:[]},null);g.children=t.unlinked.map(({storyboard,container})=>storyNode({storyboard,container},'unlinked'));groups.push(g);}
+ return {acts,groups,index};}
+// Claves desde la raíz hasta key (incluida); [] si no existe.
+export function treePath(model,key){const out=[];let k=key;while(k!==null&&k!==undefined&&model?.index?.has(k)){out.unshift(k);k=model.index.get(k).parent;}return out;}
+// Nodos abiertos: los guardados que existen; sin datos guardados (no array), los actos.
+export function treeOpenKeys(model,saved){return Array.isArray(saved)?saved.filter(k=>model.index.has(k)):model.acts.map(a=>a.key);}
+// Migas de la página del story: Acto › NN · ficha › Story vN › escena (el último sin ruta); sin ficha, Sin secuencia › título › escena.
+export function storyCrumbs(p,sbId,sceneId){const b=storyOf(p,sbId);if(!b)return [];const out=[],fid=linkOf(b),t=fid?outlineTree(p):null;
+ const act=t?.acts.find(a=>a.sequences.some(r=>r.sequence.id===fid)),row=act?.sequences.find(r=>r.sequence.id===fid);
+ if(row){out.push({label:act.episode.title||act.episode.id,route:{view:'tree',node:'act/'+act.episode.id}},{label:row.code+' · '+(row.sequence.title||row.sequence.id),route:{view:'tree',node:'seq/'+fid}},{label:'Story v'+storyVersions(p,fid).get(b.id),route:{view:'storyboard',storyboard:b.id}});}
+ else out.push({label:'Sin secuencia',route:{view:'tree',node:'unlinked'}},{label:b.title||b.id,route:{view:'storyboard',storyboard:b.id}});
+ const s=sceneId?(Array.isArray(b.sequences)?b.sequences:[]).find(x=>x?.id===sceneId):null;if(s)out.push({label:s.title||s.id,route:null});
+ out[out.length-1]={...out.at(-1),route:null};return out;}
+// Selector de versión del story: las de su ficha por número; [] sin ficha.
+export function storyVersionOptions(p,sbId){const b=storyOf(p,sbId),fid=linkOf(b);if(!fid)return [];const f=seqList(p).find(x=>x.sequence.id===fid)?.sequence,cur=f?.currentStoryboard;
+ return [...storyVersions(p,fid)].sort((a,b)=>a[1]-b[1]).map(([id,version])=>({id,version,label:'v'+version+(id===cur?' · vigente':''),current:id===cur,selected:id===sbId}));}
+// Marca un story como el vigente de su ficha (copia).
+export function setCurrentStory(p,sbId){const q=structuredClone(p),fid=linkOf(storyOf(q,sbId)),f=fid&&seqList(q).find(x=>x.sequence.id===fid);if(!f)throw Error('El story no tiene secuencia');f.sequence.currentStoryboard=sbId;return q;}
+// Vista Planos: por acto, las secuencias con planos agrupadas por papel (storys, propios, pruebas) y las fichas sin planos aparte.
+export function shotGroups(p){return (Array.isArray(p?.episodes)?p.episodes:[]).map(e=>{const by={container:[],outline:[],test:[]},empty=[];
+ for(const s of Array.isArray(e?.sequences)?e.sequences:[]){const role=sequenceRole(p,s);if(role==='outline'&&!(s.shots||[]).length){empty.push(s);continue;}
+  if(role!=='container'){by[role].push({sequence:s});continue;}const b=storyOf(p,s.storyboard),fid=linkOf(b);
+  by.container.push({sequence:s,storyboard:b,version:storyVersions(p,fid).get(b.id),ficha:seqList(p).find(x=>x.sequence.id===fid)?.sequence||null});}
+ return {episode:e,groups:['container','outline','test'].filter(r=>by[r].length).map(role=>({role,sequences:by[role]})),empty};});}
+// Cifras de la vista Proyecto. shots: planos fuera de las pruebas; tests: secuencias de prueba.
+export function projectStats(p){const rows=outline(p),all=seqList(p),len=k=>Array.isArray(p?.[k])?p[k].length:0;
+ return {acts:len('episodes'),sequences:rows.length,minutes:rows.reduce((n,r)=>n+r.minutes,0),storys:storyList(p).length,shots:all.filter(x=>x.sequence.test!==true).reduce((n,x)=>n+(x.sequence.shots||[]).length,0),tests:all.filter(x=>x.sequence.test===true).length,characters:len('characters'),locations:len('locations'),environments:len('environments')};}

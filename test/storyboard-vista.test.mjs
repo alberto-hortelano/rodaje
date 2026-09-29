@@ -48,9 +48,9 @@ test('storyboardSequenceHeader: eyebrow y meta sin separadores sueltos',()=>{
 const src=fs.readFileSync(new URL('../app/app.source.js',import.meta.url),'utf8'),css=fs.readFileSync(new URL('../app/style.css',import.meta.url),'utf8');
 
 test('vista Storyboard: conserva acciones y data-sb-*, menús y «Montaje →» de la toma sin nextElementSibling',()=>{
- for(const a of ['sb-to-episode:','sb-animaticas:','edit-storyboard:','new-sb-sequence:','nav:storyboards','sb-export:','delete-storyboard:','sb-sequence:','new-sb-shot:','delete-sb-sequence:','sb-shot:','upload-sb-sketch:','upload-sb-render:','gen-sb:','sb-prompt:','sb-move:','delete-sb-shot:','sb-montaje:','anim:'])
+ for(const a of ['sb-to-episode:','sb-animaticas:','edit-storyboard:','new-sb-sequence:','sb-current:','sb-export:','delete-storyboard:','sb-sequence:','new-sb-shot:','delete-sb-sequence:','sb-shot:','upload-sb-sketch:','upload-sb-render:','gen-sb:','sb-prompt:','sb-move:','delete-sb-shot:','sb-montaje:','anim:'])
   assert.ok(src.includes(`'${a}`)||src.includes(`"${a}`),'falta la acción '+a);
- for(const d of ['data-sb-grid','data-sb-drag','data-sb-toggle','data-sb-pill','data-sb-take','data-sb-take-go','data-sb-src','data-sb-vid','data-sb-render','data-sb-step','data-sb-player','data-sb-pills','data-sb-go'])
+ for(const d of ['data-sb-grid','data-sb-drag','data-sb-toggle','data-sb-pill','data-sb-take','data-sb-take-go','data-sb-src','data-sb-vid','data-sb-render','data-sb-step','data-sb-player','data-sb-pills','data-sb-go','data-sb-version','data-sb-scene'])
   assert.match(src,new RegExp(d+'[=>\s]'),'falta '+d);
  const i=src.indexOf("querySelectorAll('[data-sb-take]')"),block=src.slice(i,src.indexOf("querySelectorAll('[data-sb-src]')",i));
  assert.ok(i>0&&block.length>0);assert.doesNotMatch(block,/nextElementSibling/);

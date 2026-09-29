@@ -176,3 +176,28 @@ details.menu{position:relative;display:inline-block}details.menu>summary{list-st
 details.menu.down>div{top:calc(100% + 4px);bottom:auto}details.menu.end>div,details.menu>div.flip{left:auto;right:0}details.menu>div{max-width:calc(100vw - 16px)}details.menu>div button{width:100%;text-align:left}details.menu>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #toast button{margin-left:10px;padding:6px 10px;min-height:0}
 @media(max-width:900px){.anim{grid-template-columns:1fr}}
+/* Árbol de la escaleta (#57): nodos plegables con flecha, hijos sangrados con una línea; filas de viñeta y de plano sin plegar. */
+.tree{display:grid;gap:6px}
+.tree-node>summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap;list-style:none;cursor:pointer;padding:8px 10px;border-radius:8px}.tree-node>summary::-webkit-details-marker{display:none}
+.tree-node>summary::before{content:'▸';flex:none;width:12px;color:var(--muted);transition:transform .15s}.tree-node[open]>summary::before{transform:rotate(90deg)}
+.tree-node>summary:hover{background:#1c2624}.tree-node>summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.tree-node>summary .eyebrow{margin:0}.tree-node>summary b{font-weight:650;color:var(--ink)}.tree-node>summary .pill{font-size:11px;padding:2px 8px}
+.tree-act>summary{padding:12px 10px;border:1px solid var(--line);background:#171f1d}.tree-act>summary b{font-size:17px}
+.tree-kids{margin-left:18px;border-left:1px solid var(--line);padding-left:12px;display:grid;gap:4px}.tree-kids:not(:empty){padding-top:6px;padding-bottom:6px}
+.tree-thumb{width:96px;height:54px;aspect-ratio:16/9;object-fit:cover;border-radius:4px;background:#0f1413;flex:none;display:block}.tree-thumb.blank{border:1px dashed var(--line)}
+.tree-code{font-weight:800;font-size:12px;letter-spacing:.5px;color:var(--accent)}
+.tree-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.tree-actions button{padding:5px 9px;font-size:12px}.tree-kids>.tree-actions{margin:2px 0 6px}
+.tree-panel{display:grid;gap:4px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#141b19}.tree-panel-row{display:flex;align-items:center;gap:10px}
+.tree-shot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;padding:4px 0 4px 12px}.tree-shot .tree-actions{margin-left:auto}.tree-panel .tree-shot{border-left:2px solid var(--line);margin-left:4px}
+.tree-group{margin:10px 0 2px;color:var(--muted)}.tree-note{font-size:12px;margin:2px 0 6px}
+.tree-tests>summary,.tree-unlinked>summary{margin-top:10px;border:1px dashed var(--line)}
+.ficha-body{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:10px;background:#171f1d;margin-bottom:4px}.ficha-body .sb-frame{border-radius:8px;border:0}.ficha-body p{font-size:13px}
+@media(max-width:900px){.ficha-body{grid-template-columns:1fr}}
+.tree-node.target>summary{outline:2px solid var(--accent);outline-offset:1px}.sb-seq.target{outline:2px solid var(--accent);outline-offset:2px}
+/* Migas de la página del story. */
+.crumbs{margin-bottom:10px}.crumbs ol{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px 0;font-size:12px}.crumbs li+li::before{content:'›';margin:0 8px;color:var(--muted)}.crumbs [aria-current]{color:var(--ink);font-weight:600}
+/* Vista Planos: grupos por papel dentro de cada acto. */
+.shots-group{margin-top:22px}.shots-group>.eyebrow{margin-bottom:0;padding-top:12px;border-top:1px solid var(--line)}.shots-seq{margin-top:20px}.shots-seq.target{outline:2px solid var(--accent);outline-offset:6px;border-radius:6px}
+.shots-empty{margin-top:22px}.shots-empty>summary{cursor:pointer;font-weight:600;font-size:13px}.shots-empty .row{padding:6px 0;border-bottom:1px solid var(--line)}
+.heading-actions select{width:auto;max-width:100%}
+@media(max-width:750px){.tree-kids{margin-left:6px;padding-left:8px}.tree-thumb{width:72px;height:40.5px}}

@@ -46,7 +46,7 @@ export async function mountMontaje(root,{project:p,api,toast,focus=null}){
     <dt>Acción</dt><dd>${esc(sb?.action||t?.description||'')}</dd>
     ${sb?.sound?`<dt>Sonido</dt><dd>${esc(sb.sound)}</dd>`:''}
     ${(sb?.dialogue||[]).length?`<dt>Diálogo</dt><dd>${sb.dialogue.map(d=>`<b>${esc(p.characters.find(c=>c.id===d.character)?.name||d.character||'')}</b> ${esc(d.text||d)}`).join('<br>')}</dd>`:''}
-    <dt>Escena</dt><dd>${esc(e?.title||'')} / ${esc(s?.title||lote.meta.sequence)}</dd>
+    <dt>Secuencia</dt><dd>${esc(e?.title||'')} / ${esc(s?.title||lote.meta.sequence)}</dd>
    </dl><button data-mt="edit-current">Editar este plano ↓</button></div>`;
   el.querySelector('[data-mt="edit-current"]').onclick=()=>{select(current.block);$('editor').scrollIntoView({behavior:'smooth'});};}
  function tick(){const c=blockAt(timeline,video.currentTime);moveHead();if(c!==current){current=c;renderSide();if(video.paused&&c)select(c.block,false);}else if(current)root.querySelector('.mt-now .tiny').textContent=`Bloque ${current.block} · ${fmt(video.currentTime-current.start)} de ${fmt(current.end-current.start)} · montaje ${fmt(video.currentTime)}`;}
