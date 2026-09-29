@@ -29393,7 +29393,7 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, navActive, sequenceRole, treeModel, treePath, treeOpenKeys, storyCrumbs, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings } from "./workflow.mjs";
+import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, navActive, sequenceRole, treeModel, treePath, treeOpenKeys, storyCrumbs, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, appearanceTree, appearanceEnvironments } from "./workflow.mjs";
 import { createStage as createStage3 } from "./stage.js";
 var state;
 var p = null;
@@ -29403,6 +29403,8 @@ var sequenceId;
 var shotId;
 var storyboardId;
 var environmentId;
+var characterId = null;
+var locationId = null;
 var sceneId = null;
 var treeNode = null;
 var shotsFocus = null;
@@ -29420,7 +29422,7 @@ var renderGeneration = 0;
 var sbMedia = null;
 var montajeFocus = null;
 var sbPlayers = /* @__PURE__ */ new Map();
-var currentRoute = () => ({ project: p?.id || null, view, episode: episodeId, sequence: view === "shots" ? shotsFocus : sequenceId, shot: shotId, storyboard: storyboardId, environment: environmentId, scene: sceneId, node: treeNode });
+var currentRoute = () => ({ project: p?.id || null, view, episode: episodeId, sequence: view === "shots" ? shotsFocus : sequenceId, shot: shotId, storyboard: storyboardId, environment: environmentId, character: characterId, location: locationId, scene: sceneId, node: treeNode });
 function applyRoute(r) {
   view = r.view;
   if (view === "shot" || view === "anim") {
@@ -29431,6 +29433,8 @@ function applyRoute(r) {
   if (view === "rehearsal") episodeId = r.episode;
   if (view === "storyboard") storyboardId = r.storyboard;
   if (view === "environment") environmentId = r.environment;
+  if (view === "character") characterId = r.character;
+  if (view === "location") locationId = r.location;
   sceneId = view === "storyboard" && r.scene || null;
   treeNode = view === "tree" && r.node || null;
   shotsFocus = view === "shots" && r.sequence || null;
@@ -29449,7 +29453,7 @@ function rememberPosition() {
   }
 }
 function syncRoute() {
-  const u = new URL(location.href), keep = [...u.searchParams].filter(([k]) => !["project", "view", "episode", "sequence", "shot", "storyboard", "environment", "scene", "node"].includes(k));
+  const u = new URL(location.href), keep = [...u.searchParams].filter(([k]) => !["project", "view", ...ROUTE_KEYS].includes(k));
   u.search = routeQuery(currentRoute());
   for (const [k, v2] of keep) u.searchParams.append(k, v2);
   history.replaceState(null, "", u);
@@ -29671,6 +29675,87 @@ function treeBody(n) {
   if (n.kind === "orphans" || n.kind === "test") return treeLeaves(n.shots);
   return n.children.map(treeHTML).join("");
 }
+var entityRoute = (kind, id3) => esc(routeQuery({ project: p.id, view: kind, [kind]: id3 }));
+var entityActions = (item, kind) => `<div class="actions">${btn("Editar", kind + ":" + item.id)}${btn("Subir imagen", "upload-" + kind + ":" + item.id)}${btn("Generar hoja", "gen-" + kind + ":" + item.id)}</div>`;
+var voiceLine = (c) => `<small>Voz: ${esc(c.voice || "Sin asignar")}${/^[A-Za-z0-9]{20}$/.test(c.voice || "") ? ` \xB7 <a href="https://elevenlabs.io/app/voice-library?voiceId=${esc(c.voice)}" target="_blank" rel="noopener">escuchar en ElevenLabs \u2197</a>` : ""}</small>`;
+var voiceActions = (c) => `<div class="actions">${btn("Probar voz", "voice:" + c.id)}${btn("Subir muestra", "upload-voice:" + c.id)}${c.kind !== "voice" && projectVariants(p).length > 1 ? btn("Variantes por zona", "variants:" + c.id) : ""}</div>`;
+var variantsBlock = (c) => c.variants ? `<div class="actions">${Object.entries(c.variants).map(([v2, x2]) => `<div class="note"><b>${esc(projectVariants(p).find((x3) => x3.id === v2)?.label || v2)}</b><p>${esc((x2.description || "").slice(0, 85))}</p>${x2.image ? `<img style="height:90px;width:120px;object-fit:cover" src="${media(x2.image)}" alt="${esc(v2)}">` : ""}<div class="row">${btn("Generar", "gen-variant:" + c.id + ":" + v2)}${btn("Subir", "upload-variant:" + c.id + ":" + v2)}</div></div>`).join("")}</div>` : "";
+var modelSpaceBlock = (l3) => {
+  if (!l3.modelSpace?.snapshot) return "";
+  const e = modelSpaceEnvironment(p, l3.modelSpace);
+  return `<div class="note"><b>Encuadre 3D</b><p class="tiny">La imagen principal define el aspecto; esta vista fija la distribuci\xF3n y la c\xE1mara.</p><img src="${media(l3.modelSpace.snapshot)}" alt="Encuadre 3D de ${esc(l3.name)}" style="width:100%;height:auto;object-fit:contain">${l3.modelSpace.room !== "exterior" && e ? btn("Visitar estancia en 3D", "visit-room:" + e.id + ":" + l3.modelSpace.room) : ""}</div>`;
+};
+var versionSelect = (item, kind) => item.images?.length > 1 ? `<label>Versi\xF3n visual<select data-version="${esc(item.id)}" data-kind="${kind}">${opts(item.images.map((f2, i2) => [f2, "Versi\xF3n " + (i2 + 1)]), item.image)}</select></label>` : "";
+var characterCard = (c) => `<article class="card">${image(c.image)}<div class="inner"><div class="row between"><h2><a href="${entityRoute("character", c.id)}" data-route>${esc(c.name)}</a></h2><span class="pill">PERSONAJE</span></div><p>${esc((c.description || "").slice(0, 160))}</p>${voiceLine(c)}${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}${entityActions(c, "character")}${voiceActions(c)}${variantsBlock(c)}${versionSelect(c, "character")}</div></article>`;
+var locationCard = (l3) => `<article class="card">${image(l3.image)}<div class="inner"><div class="row between"><h2><a href="${entityRoute("location", l3.id)}" data-route>${esc(l3.name)}</a></h2><span class="pill">${esc(l3.kind)}</span></div><p>${esc((l3.description || "").slice(0, 160))}</p>${entityActions(l3, "location")}${modelSpaceBlock(l3)}${versionSelect(l3, "location")}</div></article>`;
+var crumbsNav = (list) => `<nav class="crumbs" aria-label="Ruta"><ol>${list.map((c) => `<li>${c.route ? `<a href="${esc(routeQuery({ project: p.id, ...c.route }))}" data-route>${esc(c.label)}</a>` : `<span aria-current="page">${esc(c.label)}</span>`}</li>`).join("")}</ol></nav>`;
+var appearStore = { key: () => "rodaje-appear-all-" + p.id, get() {
+  try {
+    return localStorage.getItem(appearStore.key()) === "1";
+  } catch {
+    return false;
+  }
+}, set(on) {
+  try {
+    if (on) localStorage.setItem(appearStore.key(), "1");
+    else localStorage.removeItem(appearStore.key());
+  } catch {
+  }
+} };
+var entityTop = (item) => `<div class="entity-top"><figure class="entity-image">${image(item.image)}${versionSelect(item, view)}${item.images?.length > 1 ? `<div class="entity-thumbs">${item.images.map((f2, i2) => `<img loading="lazy" src="${media(f2)}" alt="Versi\xF3n ${i2 + 1} de ${esc(item.name)}">`).join("")}</div>` : ""}</figure><div class="entity-info"><details open><summary>Descripci\xF3n</summary><div class="entity-text">${esc(item.description || "Sin descripci\xF3n todav\xEDa.")}</div></details></div></div>`;
+var entitySection = (title, body) => `<section class="panel entity-section"><h2>${title}</h2>${body}</section>`;
+var assetNote = (a) => `<div class="note">${a.exists && /\.(png|jpe?g|webp)$/i.test(a.file) ? `<img loading="lazy" src="${media(a.file)}" alt="${esc(a.tag)}">` : ""}<div class="row"><b>${esc(a.tag)}</b><span class="pill${a.status === "approved" ? " ok" : ""}">${esc(a.status || "sin estado")}</span>${a.variant ? `<span class="pill">${esc(a.variant)}</span>` : ""}${a.proxy ? `<span class="pill">proxy ${esc(a.proxy)}</span>` : ""}${a.provider ? `<span class="pill">${esc(a.provider === "elevenlabs" ? "ElevenLabs" : "MiniMax")}</span>` : ""}</div>${a.voiceId ? `<p class="tiny">${esc(a.voiceId)}</p>` : ""}${a.members ? `<p class="tiny">Grupo: ${esc(a.members.join(", "))}</p>` : ""}${a.states?.length ? `<p class="tiny">Estados: ${esc(a.states.join(", "))}</p>` : ""}${a.file && !a.exists ? `<p class="tiny">Falta ${esc(a.file)}</p>` : ""}${a.descriptor ? `<details><summary class="tiny">Descriptor</summary><p class="entity-text">${esc(a.descriptor)}</p></details>` : ""}</div>`;
+var entityAssets = (ent, err, kinds, none4) => {
+  if (err) return `<p class="error">No se pudo leer el registro: ${esc(err)}</p>`;
+  const list = (ent?.assets || []).filter((a) => kinds.includes(a.kind));
+  if (!ent?.registry) return '<p class="tiny">El proyecto no tiene registro.json.</p>';
+  return list.length ? `<div class="entity-assets">${list.map(assetNote).join("")}</div>` : `<p class="tiny">${none4}</p>`;
+};
+var entityDocs = (ent) => (ent?.docs || []).length ? `<div class="entity-assets">${ent.docs.map((d2) => d2.image ? `<div class="note"><img loading="lazy" src="${media(d2.file)}" alt="${esc(d2.label)}"><b>${esc(d2.label)}</b></div>` : `<div class="note"><a href="${media(d2.file)}" target="_blank" rel="noopener">${esc(d2.label)} \u2197</a><p class="tiny">${esc(d2.file)}</p></div>`).join("")}</div>` : "";
+var AP_EYEBROW = { sequence: "SECUENCIA", story: "STORY", scene: "ESCENA", panel: "VI\xD1ETA", shot: "PLANO" };
+var AP_VIA = { "scene.location": "ambiente de la escena", "sequence.location": "ambiente de la secuencia", "shot.location": "ambiente del plano" };
+var apMarks = (a) => {
+  const pills = [];
+  for (const m2 of a.marks) {
+    const x2 = m2.rel === "appears" ? '<span class="pill">aparece</span>' : m2.rel === "speaks" ? m2.offscreen ? `<span class="pill warn">fuera de campo \xB7 ${esc(m2.channel)}</span>` : '<span class="pill ok">habla</span>' : `<span class="pill">${esc(AP_VIA[m2.via] || m2.rel)}</span>`;
+    const y2 = x2 + (m2.inherited ? '<span class="tiny">heredado</span>' : "");
+    if (!pills.includes(y2)) pills.push(y2);
+  }
+  return pills.join("") + (a.stale ? '<span class="pill warn">no vigente</span>' : "") + (a.role === "test" ? '<span class="pill">prueba</span>' : "");
+};
+var apLines = (a) => a.marks.filter((m2) => m2.text).map((m2) => `<q class="ap-line">${esc(m2.text)}</q>`).join("");
+var apLink = (a) => `<a href="${esc(routeQuery({ project: p.id, ...a.route }))}" data-route>${esc(a.label)}</a>`;
+var apCount = (a) => {
+  const t2 = [a.counts.panels ? plural(a.counts.panels, "vi\xF1eta", "vi\xF1etas") : "", a.counts.shots ? plural(a.counts.shots, "plano", "planos") : ""].filter(Boolean).join(" \xB7 ");
+  return t2 ? `<span class="pill">${t2}</span>` : "";
+};
+function apHTML(a) {
+  const eyebrow = a.kind === "act" ? p.type === "serie" ? "CAP\xCDTULO" : "ACTO" : AP_EYEBROW[a.kind];
+  if (a.kind === "shot" || a.kind === "panel" && !a.children.length) return `<div class="ap-leaf" data-ap="${esc(a.key)}"><span class="eyebrow">${eyebrow}</span>${apLink(a)}${apMarks(a)}${apLines(a)}</div>`;
+  const open = a.kind === "act" || !((a.kind === "sequence" || a.kind === "story") && a.counts.panels + a.counts.shots > 30);
+  return `<details class="ap-node ap-${a.kind}" data-ap="${esc(a.key)}"${open ? " open" : ""}><summary><span class="eyebrow">${eyebrow}</span>${apLink(a)}${apCount(a)}${apMarks(a)}</summary><div class="ap-kids">${apLines(a)}${a.children.map(apHTML).join("")}</div></details>`;
+}
+function appearancesHTML(key, { inherited = true, note = "" } = {}) {
+  const all = appearStore.get(), index = relationIndexFor(p), T2 = appearanceTree(index, key, { current: !all, inherited }), t2 = T2.total;
+  const sum = [[t2.acts, p.type === "serie" ? "cap\xEDtulo" : "acto", p.type === "serie" ? "cap\xEDtulos" : "actos"], [t2.sequences, "secuencia", "secuencias"], [t2.storys, "story", "storys"], [t2.scenes, "escena", "escenas"], [t2.panels, "vi\xF1eta", "vi\xF1etas"], [t2.shots, "plano", "planos"], [t2.lines, "l\xEDnea", "l\xEDneas"]].filter(([n]) => n).map(([n, a, b2]) => plural(n, a, b2)).join(" \xB7 ");
+  const empty = !T2.roots.length ? `<div class="empty"><h2>Sin apariciones todav\xEDa.</h2>${!all && appearanceTree(index, key, { current: false, inherited }).roots.length ? "<p>Hay apariciones en versiones no vigentes: marca \xABTodas las versiones\xBB.</p>" : ""}</div>` : "";
+  return entitySection("Apariciones", `<div class="row between"><p class="tiny">${esc(sum || "Ninguna.")}</p><div class="row"><label class="ap-all"><input type="checkbox" data-appear-all${all ? " checked" : ""}> Todas las versiones</label>${btn("Desplegar todo", "ap-open")}${btn("Plegar todo", "ap-fold")}</div></div>${note ? `<p class="tiny">${note}</p>` : ""}${empty || `<div class="ap-tree">${T2.roots.map(apHTML).join("")}</div>`}`);
+}
+var envLinks = (list) => list.length ? `<div class="entity-envs">${list.map((e) => `<div class="note"><a href="${esc(routeQuery({ project: p.id, ...e.route }))}" data-route>${esc(e.name)}</a> <span class="tiny">${esc(e.via.map((v2) => v2 === "environment" ? "entorno del ambiente" : "modelSpace").join(" \xB7 "))}${e.nodes ? " \xB7 " + plural(e.nodes, "nodo", "nodos") : ""}</span></div>`).join("")}</div>` : '<p class="tiny">Ninguno.</p>';
+async function entityData(kind, id3) {
+  try {
+    return { ent: await api("/api/entity?project=" + encodeURIComponent(p.id) + "&kind=" + kind + "&id=" + encodeURIComponent(id3)), err: null };
+  } catch (e) {
+    return { ent: null, err: e.message };
+  }
+}
+function characterPage(c, { ent, err }, heading2) {
+  const voiceAssets = err ? `<p class="error">No se pudo leer el registro: ${esc(err)}</p>` : (ent?.assets || []).filter((a) => a.kind === "voice").map(assetNote).join("");
+  return crumbsNav([{ label: "Personajes y voces", route: { view: "characters" } }, { label: c.name }]) + heading2(esc(c.name), c.kind === "voice" ? "Solo voz" : "Personaje", entityActions(c, "character")) + entityTop(c) + entitySection("Voz", `${voiceLine(c)}${c.voiceStatus ? ` <span class="pill">${esc(c.voiceStatus)}</span>` : ""}${c.voicePrompt ? `<p class="entity-text"><b>Voice prompt:</b> ${esc(c.voicePrompt)}</p>` : ""}${c.voiceBrief ? `<p class="entity-text"><b>Resumen:</b> ${esc(c.voiceBrief)}</p>` : ""}${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}${voiceActions(c)}${voiceAssets ? `<div class="entity-assets">${voiceAssets}</div>` : ""}`) + entitySection("Hojas y referencias", entityDocs(ent) + entityAssets(ent, err, ["character", "group"], "Sin assets de personaje en el registro.")) + (c.kind !== "voice" ? entitySection("Variantes", variantsBlock(c) || '<p class="tiny">Sin variantes.</p>') : "") + entitySection("Entornos 3D", envLinks(appearanceEnvironments(relationIndexFor(p), "character/" + c.id, { current: !appearStore.get() }))) + appearancesHTML("character/" + c.id);
+}
+function locationPage(l3, { ent, err }, heading2) {
+  return crumbsNav([{ label: "Ambientes", route: { view: "locations" } }, { label: l3.name }]) + heading2(esc(l3.name), esc(l3.kind || "Ambiente"), entityActions(l3, "location")) + entityTop(l3) + entitySection("Referencias", entityDocs(ent) + entityAssets(ent, err, ["location"], "Sin referencias en el registro.")) + entitySection("Encuadre 3D", modelSpaceBlock(l3) || '<p class="tiny">Sin encuadre 3D.</p>') + entitySection("Entorno 3D", envLinks(appearanceEnvironments(relationIndexFor(p), "location/" + l3.id, { current: !appearStore.get() }))) + appearancesHTML("location/" + l3.id, { inherited: false, note: "Solo secuencias, escenas y planos con este ambiente propio: las vi\xF1etas y los planos heredan el de su escena o su secuencia." });
+}
 function modal(title, body, handler, submitLabel = "Guardar") {
   const m2 = $2("#modal");
   m2.innerHTML = `<form><h2>${esc(title)}</h2>${body}<div class="actions"><button type="submit" class="primary">${esc(submitLabel)}</button><button type="button" id="cancel">Cancelar</button></div><p class="error" id="form-error"></p></form>`;
@@ -29751,7 +29836,7 @@ async function render() {
   stage?.dispose();
   stage = null;
   const nav2 = p ? [["tree", "Escaleta"], ["overview", "Proyecto"], ["ideas", "Historia e ideas"], ["characters", "Personajes y voces"], ["locations", "Ambientes"], ["environments", "Entornos 3D"], ["storyboards", "Storyboards"], ["shots", "Planos"], ["montaje", "Montaje"], ["issues", "Pendientes"], ["jobs", "Generaciones"]] : [["library", "Mis proyectos"], ["jobs", "Generaciones"]];
-  $2("#app").innerHTML = `<div class="shell"><aside class="sidebar"><div class="brand"><i class="logo"></i> rodaje<span style="font-size:10px;align-self:end">LOCAL</span></div><div class="eyebrow">Estudio de historias</div>${p ? `<div class="projectname">${esc(p.name)}</div>` : ""}${nav2.map(([v2, l3]) => btn(l3, "nav:" + v2, navActive(view) === v2 ? "active" : "")).join("")}<div class="bottom">${p ? btn("\u2190 Todos los proyectos", "library") : ""}${btn("\u2699 Ajustes", "settings")}<small>De la primera idea<br>a la \xFAltima toma.</small></div></aside><main class="main"><header class="topbar"><span>${p ? esc(p.name) + " / " + esc(nav2.find((n) => n[0] === view)?.[1] || { storyboard: "Storyboard", environment: "Entornos 3D", anim: "Animaci\xF3n", rehearsal: "Ensayo 3D" }[view] || "Estudio de plano") : "TU ESPACIO DE PRODUCCI\xD3N"}</span><div class="row"><span class="pill">${state.settings.configured ? "\u25CF Generaci\xF3n conectada" : "\u25CB Generaci\xF3n sin configurar"}</span>${p ? btn("Actualizar", "refresh") + btn("Guardar cambios", "save") : ""}</div></header><div class="workspace" id="workspace"></div></main></div>`;
+  $2("#app").innerHTML = `<div class="shell"><aside class="sidebar"><div class="brand"><i class="logo"></i> rodaje<span style="font-size:10px;align-self:end">LOCAL</span></div><div class="eyebrow">Estudio de historias</div>${p ? `<div class="projectname">${esc(p.name)}</div>` : ""}${nav2.map(([v2, l3]) => btn(l3, "nav:" + v2, navActive(view) === v2 ? "active" : "")).join("")}<div class="bottom">${p ? btn("\u2190 Todos los proyectos", "library") : ""}${btn("\u2699 Ajustes", "settings")}<small>De la primera idea<br>a la \xFAltima toma.</small></div></aside><main class="main"><header class="topbar"><span>${p ? esc(p.name) + " / " + esc(nav2.find((n) => n[0] === view)?.[1] || { storyboard: "Storyboard", environment: "Entornos 3D", character: "Personaje", location: "Ambiente", anim: "Animaci\xF3n", rehearsal: "Ensayo 3D" }[view] || "Estudio de plano") : "TU ESPACIO DE PRODUCCI\xD3N"}</span><div class="row"><span class="pill">${state.settings.configured ? "\u25CF Generaci\xF3n conectada" : "\u25CB Generaci\xF3n sin configurar"}</span>${p ? btn("Actualizar", "refresh") + btn("Guardar cambios", "save") : ""}</div></header><div class="workspace" id="workspace"></div></main></div>`;
   {
     const a = $2(".sidebar button.active"), s = a?.parentElement;
     if (s && s.scrollWidth > s.clientWidth) s.scrollLeft += a.getBoundingClientRect().left - s.getBoundingClientRect().left - (s.clientWidth - a.offsetWidth) / 2;
@@ -29790,7 +29875,20 @@ async function render() {
   }
   if (view === "characters" || view === "locations") {
     const chars = view === "characters", list = chars ? p.characters : p.locations;
-    html3 = heading2(chars ? "El reparto." : "Los lugares de la historia.", chars ? "Identidad visual, vestuario y voz de cada personaje." : "Referencias de luz, color y geograf\xEDa para cada ambiente.", btn(chars ? "+ Personaje" : "+ Ambiente", chars ? "new-character" : "new-location", "primary")) + `<div class="grid${chars ? " cast" : ""}">${list.map((c) => `<article class="card">${image(c.image)}<div class="inner"><div class="row between"><h2>${esc(c.name)}</h2><span class="pill">${chars ? "PERSONAJE" : esc(c.kind)}</span></div><p>${esc(c.description.slice(0, 160))}</p>${chars ? `<small>Voz: ${esc(c.voice || "Sin asignar")}${/^[A-Za-z0-9]{20}$/.test(c.voice || "") ? ` \xB7 <a href="https://elevenlabs.io/app/voice-library?voiceId=${esc(c.voice)}" target="_blank" rel="noopener">escuchar en ElevenLabs \u2197</a>` : ""}</small>${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}` : ""}<div class="actions">${btn("Editar", (chars ? "character:" : "location:") + c.id)}${btn("Subir imagen", (chars ? "upload-character:" : "upload-location:") + c.id)}${btn("Generar hoja", (chars ? "gen-character:" : "gen-location:") + c.id)}</div>${chars ? `<div class="actions">${btn("Probar voz", "voice:" + c.id)}${btn("Subir muestra", "upload-voice:" + c.id)}${c.kind !== "voice" && projectVariants(p).length > 1 ? btn("Variantes por zona", "variants:" + c.id) : ""}</div>` : ""}${chars && c.variants ? `<div class="actions">${Object.entries(c.variants).map(([v2, x2]) => `<div class="note"><b>${esc(projectVariants(p).find((x3) => x3.id === v2)?.label || v2)}</b><p>${esc((x2.description || "").slice(0, 85))}</p>${x2.image ? `<img style="height:90px;width:120px;object-fit:cover" src="${media(x2.image)}" alt="${esc(v2)}">` : ""}<div class="row">${btn("Generar", "gen-variant:" + c.id + ":" + v2)}${btn("Subir", "upload-variant:" + c.id + ":" + v2)}</div></div>`).join("")}</div>` : ""}${!chars && c.modelSpace?.snapshot ? `<div class="note"><b>Encuadre 3D</b><p class="tiny">La imagen principal define el aspecto; esta vista fija la distribuci\xF3n y la c\xE1mara.</p><img src="${media(c.modelSpace.snapshot)}" alt="Encuadre 3D de ${esc(c.name)}" style="width:100%;height:auto;object-fit:contain">${c.modelSpace.room !== "exterior" && modelSpaceEnvironment(p, c.modelSpace) ? btn("Visitar estancia en 3D", "visit-room:" + modelSpaceEnvironment(p, c.modelSpace).id + ":" + c.modelSpace.room) : ""}</div>` : ""}${c.images?.length > 1 ? `<label>Versi\xF3n visual<select data-version="${c.id}" data-kind="${view}">${opts(c.images.map((f2, i2) => [f2, "Versi\xF3n " + (i2 + 1)]), c.image)}</select></label>` : ""}</div></article>`).join("") || `<div class="empty"><h2>${chars ? "Presenta a tu protagonista." : "Define el primer ambiente."}</h2><p>Puedes generar im\xE1genes o importar las que ya tienes.</p></div>`}</div>`;
+    html3 = heading2(chars ? "El reparto." : "Los lugares de la historia.", chars ? "Identidad visual, vestuario y voz de cada personaje." : "Referencias de luz, color y geograf\xEDa para cada ambiente.", btn(chars ? "+ Personaje" : "+ Ambiente", chars ? "new-character" : "new-location", "primary")) + `<div class="grid${chars ? " cast" : ""}">${list.map(chars ? characterCard : locationCard).join("") || `<div class="empty"><h2>${chars ? "Presenta a tu protagonista." : "Define el primer ambiente."}</h2><p>Puedes generar im\xE1genes o importar las que ya tienes.</p></div>`}</div>`;
+  }
+  if (view === "character" || view === "location") {
+    const chars = view === "character", eid = chars ? characterId : locationId, item = (chars ? p.characters : p.locations).find((x2) => x2.id === eid);
+    if (!item) {
+      toast((chars ? "No existe el personaje " : "No existe el ambiente ") + (eid ?? ""));
+      view = chars ? "characters" : "locations";
+      characterId = null;
+      locationId = null;
+      return render();
+    }
+    const data2 = await entityData(view, item.id);
+    if (generation !== renderGeneration) return;
+    html3 = chars ? characterPage(item, data2, heading2) : locationPage(item, data2, heading2);
   }
   const sbVerdict = (x2) => x2.verdict === "accepted" ? "Aceptada" : x2.verdict === "rejected" ? "Rechazada" + (x2.rules?.length ? ": " + x2.rules.join(", ") : "") : "Sin revisar", sbPillClass = (x2) => x2.verdict === "accepted" ? "ok" : x2.verdict === "rejected" ? "bad" : "warn", sbShown = (m2) => m2 ? m2.current || m2.groups[0].takes.at(-1) : null, sbWhen = (d2) => d2 ? new Date(d2).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" }) : "", sbTime = (n) => Number.isFinite(n) ? `${Math.floor(n / 60)}:${String(Math.round(n % 60)).padStart(2, "0")}` : "\u2013", sbByLote = (list) => {
     const g = (x2) => x2.lote ?? "Versiones";
@@ -30112,9 +30210,13 @@ y ${list.length - 20} m\xE1s` : "");
     await render();
   });
   document.querySelectorAll("[data-version]").forEach((el) => el.onchange = async () => {
-    (el.dataset.kind === "characters" ? p.characters : p.locations).find((c) => c.id === el.dataset.version).image = el.value;
+    (el.dataset.kind === "character" ? p.characters : p.locations).find((c) => c.id === el.dataset.version).image = el.value;
     await save();
     await render();
+  });
+  document.querySelectorAll("[data-appear-all]").forEach((el) => el.onchange = () => {
+    appearStore.set(el.checked);
+    render().catch((e) => toast(e.message));
   });
   if (view === "shot") {
     const { s, t: t2 } = current();
@@ -30242,6 +30344,10 @@ async function act(action) {
   if (a === "nav") return goRoute({ view: routeView(b2) });
   if (a === "tree") return goRoute({ view: "tree", node: action.slice(5) || null });
   if (a === "shots") return goRoute({ view: "shots", sequence: b2 || null });
+  if (a === "ap-open" || a === "ap-fold") {
+    document.querySelectorAll("details.ap-node").forEach((d3) => d3.open = a === "ap-open");
+    return;
+  }
   if (a === "tree-fold") {
     treeOpen = /* @__PURE__ */ new Set();
     treeStore.set([]);

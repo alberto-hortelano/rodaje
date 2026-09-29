@@ -269,11 +269,11 @@ export function environmentList(p){return (p?.environments||[]).map(e=>{const v=
 export function modelSpaceEnvironment(p,modelSpace){const m=modelSpace?.model;return m?(p?.environments||[]).find(e=>e.builder&&e.data&&e.data===m)||null:null;}
 // Rutas de la app (#57): ?project=…&view=…&<parámetros de la vista>. Los alias (outline, episodes, ship) llevan a la vista que los sustituye;
 // con proyecto, una vista desconocida, library o ninguna llevan al árbol. scene, node y sequence de shots enfocan y no cuentan para el scroll.
-export const VIEWS=['tree','overview','ideas','characters','locations','environments','environment','storyboards','storyboard','shots','shot','rehearsal','anim','montaje','issues','jobs'];
+export const VIEWS=['tree','overview','ideas','characters','locations','environments','environment','character','location','storyboards','storyboard','shots','shot','rehearsal','anim','montaje','issues','jobs'];
 export const VIEW_ALIASES={outline:'tree',episodes:'shots',ship:'environments'};
-export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene'],environment:['environment'],tree:['node'],shots:['sequence']};
+export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene'],environment:['environment'],character:['character'],location:['location'],tree:['node'],shots:['sequence']};
 export const FOCUS_PARAMS={storyboard:['scene'],tree:['node'],shots:['sequence']};
-const ROUTE_KEYS=['episode','sequence','shot','storyboard','environment','scene','node'];
+export const ROUTE_KEYS=['episode','sequence','shot','storyboard','environment','character','location','scene','node'];
 export const routeView=v=>typeof v==='string'&&Object.hasOwn(VIEW_ALIASES,v)?VIEW_ALIASES[v]:v;
 export function parseRoute(search){const q=search instanceof URLSearchParams?search:new URLSearchParams(search||''),project=q.get('project')||null,v=routeView(q.get('view'));
  const view=project?(VIEWS.includes(v)?v:'tree'):(v==='jobs'?'jobs':'library'),own=ROUTE_PARAMS[view]||[];
@@ -283,7 +283,7 @@ export function routeQuery(r){const parts=[];if(r?.project)parts.push(['project'
  return '?'+parts.map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');}
 export function routeKey(r){const focus=FOCUS_PARAMS[r?.view]||[];return JSON.stringify([r?.project||'',r?.view,...(ROUTE_PARAMS[r?.view]||[]).filter(k=>!focus.includes(k)).map(k=>r[k])].map(x=>x??''));}
 // Botón del menú que se marca en cada vista.
-export function navActive(view){return view==='environment'?'environments':view==='storyboard'?'storyboards':['shot','anim','rehearsal'].includes(view)?'shots':view;}
+export function navActive(view){return view==='environment'?'environments':view==='character'?'characters':view==='location'?'locations':view==='storyboard'?'storyboards':['shot','anim','rehearsal'].includes(view)?'shots':view;}
 // Entorno 3D enlazado a un ambiente (location.environment), o null.
 export function locationEnvironment(p,locationId){const l=(p?.locations||[]).find(l=>l.id===locationId);return l?.environment?(p.environments||[]).find(e=>e.id===l.environment)||null:null;}
 // Elección de entorno de una secuencia a partir del formulario: lugar, estado por secuencia y giro en grados. Vacío → sin elección.
@@ -1114,6 +1114,37 @@ export function relatedTo(index,key,q={}){const out=new Map(),n=index?.nodes?.ge
 export function holders(index,targetKey,kind,q={}){const out=new Set(),ok=relMatch(q);
  for(const l of index?.to?.get(targetKey)||[]){if(!ok(l))continue;let blocked=false;for(const n of trail(index,l.from).reverse()){if(n.kind===kind&&!blocked)out.add(n.key);if(kind==='sequence'&&n.sequence)out.add(n.sequence);if(q.current&&offCurrent(index,n))blocked=true;}}
  return [...out].sort((a,b)=>index.nodes.get(a).order-index.nodes.get(b).order);}
+// Apariciones (#60) de un personaje, ambiente o entorno: los nodos que lo enlazan (linksTo) colgados de su trail y fusionados por clave.
+// Marcas en el nodo que enlaza; los intermedios van sin marcas. counts: viñetas y planos con marca en el subárbol. Con current, sin los storys no vigentes.
+const AP_RELS={character:['appears','speaks'],location:['location'],environment:['environment']};
+const apSceneRoute=(index,sceneKey)=>{const sc=index.nodes.get(sceneKey);return {view:'storyboard',storyboard:index.nodes.get(sc.parent).id,scene:sc.id};};
+function apNode(index,n){const d=n.data||{},title=d.title||n.id;let label=title,route;
+ if(n.kind==='act')route={view:'tree',node:n.key};
+ else if(n.kind==='sequence')route=n.role==='container'?{view:'shots',sequence:n.id}:{view:'tree',node:n.key};
+ else if(n.kind==='story'){label=n.version?'v'+n.version+' · '+title:title;route={view:'storyboard',storyboard:n.id};}
+ else if(n.kind==='scene')route=apSceneRoute(index,n.key);
+ else if(n.kind==='panel'){label=d.code?d.code+' · '+(d.title||''):title;route=apSceneRoute(index,n.parent);}
+ else if(n.kind==='shot'){const seq=index.nodes.get(n.sequence),pos=(index.sequenceShots.get(n.sequence)||[]).indexOf(n.key)+1;label='P'+String(pos).padStart(2,'0')+' · '+(d.title||'');route={view:'shot',episode:n.episode,sequence:seq?.id??null,shot:n.id};}
+ return {key:n.key,kind:n.kind,id:n.id,label,order:n.order,route,...(n.role?{role:n.role}:{}),...(n.version!==undefined?{version:n.version}:{}),...(n.current!==undefined?{current:n.current}:{}),...(offCurrent(index,n)?{stale:true}:{}),marks:[],counts:{panels:0,shots:0},children:[]};}
+function apMark(index,l){const d=index.nodes.get(l.from)?.data||{},m={rel:l.rel,via:l.via};if(l.inherited)m.inherited=true;
+ if(l.rel==='speaks'){Object.assign(m,{channel:l.channel,offscreen:l.offscreen,line:l.line});const text=l.via==='dialogue'?d.dialogue?.[l.line]?.text:(Array.isArray(d.lines)?d.lines:[]).find(x=>x?.id===l.line)?.text;if(typeof text==='string')m.text=text;}
+ return m;}
+export function appearanceTree(index,key,{current=true,rel,inherited=true}={}){const kind=String(key).split('/')[0],rels=rel===undefined?AP_RELS[kind]||[]:rel;
+ const byKey=new Map(),roots=[],total={acts:0,sequences:0,storys:0,scenes:0,panels:0,shots:0,lines:0};
+ for(const l of linksTo(index,key,{rel:rels,current,...(inherited?{}:{where:x=>!x.inherited})})){let parent=null;
+  for(const n of trail(index,l.from)){let a=byKey.get(n.key);if(!a){a=apNode(index,n);byKey.set(n.key,a);(parent?parent.children:roots).push(a);}parent=a;}
+  parent.marks.push(apMark(index,l));if(l.rel==='speaks')total.lines++;}
+ const sort=list=>{list.sort((a,b)=>a.order-b.order);for(const a of list){sort(a.children);if(a.marks.length&&(a.kind==='panel'||a.kind==='shot'))a.counts[a.kind+'s']++;for(const c of a.children){a.counts.panels+=c.counts.panels;a.counts.shots+=c.counts.shots;}}};sort(roots);
+ const KT={act:'acts',sequence:'sequences',story:'storys',scene:'scenes'};for(const a of byKey.values())if(KT[a.kind])total[KT[a.kind]]++;
+ for(const a of roots){total.panels+=a.counts.panels;total.shots+=a.counts.shots;}
+ return {target:key,total,roots};}
+// Entornos 3D donde aparece un personaje (los enlaces environment, heredados incluidos, de los nodos donde aparece o habla) o los de un ambiente.
+// nodes: nodos distintos que llegan a cada entorno; en orden del proyecto.
+export function appearanceEnvironments(index,key,{current=true}={}){const n=index?.nodes?.get(key);if(!n)return [];const out=new Map();
+ const add=(ek,via,from)=>{const e=index.nodes.get(ek);if(!e)return;if(!out.has(ek))out.set(ek,{key:ek,id:e.id,name:e.data?.name||e.id,via:[],from:new Set(),route:{view:'environment',environment:e.id}});const x=out.get(ek);if(via&&!x.via.includes(via))x.via.push(via);if(from)x.from.add(from);};
+ if(n.kind==='character'){for(const from of new Set(linksTo(index,key,{rel:['appears','speaks'],current}).map(l=>l.from)))for(const l of index.from.get(from)||[])if(l.rel==='environment')add(l.to,l.envVia,from);}
+ else if(n.kind==='location')for(const ek of index.locationEnvironments.get(key)||[]){add(ek,n.data?.environment===index.nodes.get(ek).id?'environment':'modelSpace');for(const l of linksTo(index,ek,{current,where:l=>l.through===key}))add(ek,null,l.from);}
+ return [...out.values()].sort((a,b)=>index.nodes.get(a.key).order-index.nodes.get(b.key).order).map(({from,...x})=>({...x,nodes:from.size}));}
 // Ambiente de las secuencias sin planos a partir de environments[].sequences (scripts/ambientes-secuencias.mjs). choose: {entorno: ambiente} cuando el
 // entorno es de varios ambientes. Solo propone location en secuencias sin planos (ningún digest cambia); lo demás, con aviso.
 export function sequenceLocationPlan(p,{choose={}}={}){const warnings=[],errors=[],ops=[],envs=(Array.isArray(p?.environments)?p.environments:[]).filter(isObj),locs=(Array.isArray(p?.locations)?p.locations:[]).filter(isObj);

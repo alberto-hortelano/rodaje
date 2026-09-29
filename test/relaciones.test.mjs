@@ -1,7 +1,7 @@
 // #58: resolveSpeaker, líneas sin personaje, relationIndex y sus consultas, sequenceLocationPlan, characterDraft y sus scripts.
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {spawnSync} from 'node:child_process';
 import {speakerResolver,resolveSpeaker,unresolvedDialogue,storyboardDialogueWarnings,storyboardShotDraft,storyboardSequenceMerge,applyStoryPlans,relKey,shotAppearance,shotCast,
- relationIndex,relationIndexFor,trail,descendants,relatedTo,holders,linksTo,sequenceLocationPlan,characterDraft} from '../app/workflow.mjs';
+ relationIndex,relationIndexFor,trail,descendants,relatedTo,holders,linksTo,sequenceLocationPlan,characterDraft,appearanceTree,appearanceEnvironments,parseRoute,routeQuery} from '../app/workflow.mjs';
 import {validate,digest} from '../app/store.mjs';
 import {relProject,relShot} from './fixtures/relaciones.mjs';
 
@@ -194,3 +194,62 @@ test('perfil.mjs add: crea el personaje con su hoja; id repetido, 1',()=>{
  assert.ok(fs.existsSync(path.join(dir,'personajes','nadie','hoja.md')));assert.ok(fs.existsSync(path.join(dir,'personajes','nadie','personaje.json')));
  assert.deepEqual(relationIndex(p).unresolved.map(u=>u.who),[''],'la línea de «Nadie» ya tiene personaje');
  const before=fs.readFileSync(file,'utf8');r=run('perfil.mjs',['add','--project','rel','ana','--name','Otra'],data);assert.equal(r.status,1);assert.match(r.stderr,/El id ya existe en el proyecto: ana/);assert.equal(fs.readFileSync(file,'utf8'),before);});
+
+// Apariciones (#60): árbol de apariciones y entornos de un personaje o ambiente.
+const flat=(roots,out=[])=>{for(const a of roots){out.push(a);flat(a.children,out);}return out;};
+const shape=roots=>roots.map(a=>a.children.length?[a.key,shape(a.children)]:a.key);
+test('appearanceTree: vigente por defecto, orden, contenedor sin viñeta bajo su secuencia y prueba bajo la viñeta',()=>{
+ const p=relProject();p.episodes[0].sequences[2].shots.push(relShot('t7'));const I=relationIndex(p);
+ assert.deepEqual(shape(appearanceTree(I,'character/ana').roots),[['act/e1',[['seq/f1',[['sb/sb2',[['scene/sb2/sc2',['panel/P3']],['seq/c2',['shot/t7']]]]]]]],['act/e2',[['seq/f2',['shot/t6']]]]]);
+ const T=appearanceTree(I,'character/beto');const keys=flat(T.roots).map(a=>a.key);
+ assert.ok(!keys.includes('sb/sb1')&&!keys.includes('panel/P1'),'sin el story no vigente');
+ assert.deepEqual(shape(T.roots)[0],['act/e1',[['seq/f1',[['sb/sb2',[['scene/sb2/sc2',[['panel/P3',['shot/t3','shot/t4']]]],['seq/c2',['shot/t7']]]]]]]]);
+ const P3=flat(T.roots).find(a=>a.key==='panel/P3');assert.deepEqual(P3.counts,{panels:1,shots:2});assert.deepEqual(P3.marks.map(m=>m.rel),['appears','speaks']);
+ const t4=flat(T.roots).find(a=>a.key==='shot/t4');assert.equal(t4.role,'test');assert.deepEqual(t4.route,{view:'shot',episode:'e1',sequence:'k1',shot:'t4'});assert.equal(t4.label,'P01 · t4');
+ assert.deepEqual(T.total,{acts:2,sequences:3,storys:1,scenes:1,panels:1,shots:4,lines:1});
+ assert.deepEqual(flat(T.roots).find(a=>a.key==='act/e1').counts,{panels:1,shots:3});
+ for(const a of flat(T.roots))assert.ok(a.children.every((c,i,l)=>!i||l[i-1].order<c.order),a.key);});
+
+test('appearanceTree: todas las versiones marcan el story no vigente; marcas de voz, fuera de campo y texto',()=>{
+ const I=relationIndex(relProject()),T=appearanceTree(I,'character/ana',{current:false}),by=k=>flat(T.roots).find(a=>a.key===k);
+ assert.deepEqual([by('sb/sb1').stale,by('sb/sb2').stale,by('sb/sb1').label,by('sb/sb2').current],[true,undefined,'v1 · Uno',true]);
+ assert.deepEqual(by('panel/P1').marks,[{rel:'appears',via:'panel.cast'},{rel:'speaks',via:'dialogue',channel:'direct',offscreen:false,line:0,text:'Hola.'}]);
+ assert.ok(by('shot/t1'));assert.equal(by('shot/t1').label,'P01 · t1');assert.equal(by('panel/P1').label,'A1 · Llegada');
+ const pa=appearanceTree(I,'character/pa',{current:false});
+ assert.deepEqual(flat(pa.roots).flatMap(a=>a.marks),[{rel:'speaks',via:'dialogue',channel:'pa',offscreen:true,line:3,text:'Aviso.'},{rel:'speaks',via:'lines',channel:'pa',offscreen:true,line:'l3',text:'Texto l3'}]);
+ assert.equal(pa.total.lines,2);assert.equal(appearanceTree(I,'character/pa').total.lines,1);
+ const beto=flat(appearanceTree(I,'character/beto',{current:false}).roots).find(a=>a.key==='panel/P1');
+ assert.deepEqual(beto.marks,[{rel:'speaks',via:'dialogue',channel:'direct',offscreen:true,line:1,text:'Aquí.'}],'fuera del reparto de la viñeta');});
+
+test('appearanceTree: ambientes sin heredados (secuencias, escenas y shot.location) y con heredados',()=>{
+ const I=relationIndex(relProject());
+ const own=appearanceTree(I,'location/plaza',{current:false,inherited:false}),marked=T=>flat(T.roots).filter(a=>a.marks.length).map(a=>a.key);
+ assert.deepEqual(marked(own),['scene/sb1/sc1','seq/c1','seq/k1']);assert.ok(flat(own.roots).every(a=>a.marks.every(m=>!m.inherited)));
+ assert.deepEqual(marked(appearanceTree(I,'location/plaza',{inherited:false})),['seq/k1']);
+ const all=appearanceTree(I,'location/plaza',{current:false});assert.deepEqual(marked(all),['scene/sb1/sc1','panel/P1','shot/t1','panel/P2','seq/c1','shot/t2','shot/t4','seq/k1'],'t4 cuelga de P3, antes que la prueba en el orden');
+ assert.ok(flat(all.roots).find(a=>a.key==='shot/t4').marks[0].inherited);
+ assert.deepEqual(marked(appearanceTree(I,'location/bosque',{inherited:false})),['shot/t3','seq/f2']);
+ assert.deepEqual(flat(appearanceTree(I,'location/bosque',{inherited:false}).roots).find(a=>a.key==='shot/t3').marks,[{rel:'location',via:'shot.location'}]);
+ assert.deepEqual(marked(appearanceTree(I,'environment/env-b')),['scene/sb2/sc2','panel/P3','seq/c2']);});
+
+test('appearanceTree: cada ruta es una ruta de la app hacia su vista',()=>{
+ const I=relationIndex(relProject()),want={act:'tree',sequence:null,story:'storyboard',scene:'storyboard',panel:'storyboard',shot:'shot'};
+ const nodes=['character/ana','character/beto','location/plaza'].flatMap(k=>flat(appearanceTree(I,k,{current:false}).roots));assert.ok(nodes.length>10);
+ for(const a of nodes){const r=parseRoute(routeQuery({project:'rel',...a.route}));const {project,view,...rest}=r;
+  assert.equal(view,want[a.kind]??(a.role==='container'?'shots':'tree'),a.key);
+  for(const [k,v] of Object.entries(a.route))if(k!=='view')assert.equal(rest[k],v,a.key+' '+k);}
+ assert.deepEqual(flat(appearanceTree(I,'character/ana',{current:false}).roots).find(a=>a.key==='seq/c1').route,{view:'shots',sequence:'c1'});
+ assert.deepEqual(flat(appearanceTree(I,'location/plaza',{current:false}).roots).find(a=>a.key==='panel/P1').route,{view:'storyboard',storyboard:'sb1',scene:'sc1'});});
+
+test('appearanceTree y appearanceEnvironments: vacío, entornos por las dos vías y sin mutar',()=>{
+ const p=relProject();p.characters.push({id:'solo',name:'Solo',kind:'person'});const before=structuredClone(p),digests=shotIds(p).map(id=>digest(p,id)),I=relationIndex(p);
+ assert.deepEqual(appearanceTree(I,'character/solo'),{target:'character/solo',total:{acts:0,sequences:0,storys:0,scenes:0,panels:0,shots:0,lines:0},roots:[]});
+ assert.deepEqual(appearanceTree(I,'character/nadie').roots,[]);assert.deepEqual(appearanceEnvironments(I,'character/nadie'),[]);
+ assert.deepEqual(appearanceEnvironments(I,'character/ana'),[{key:'environment/env-b',id:'env-b',name:'env-b',via:['modelSpace'],route:{view:'environment',environment:'env-b'},nodes:1}]);
+ assert.deepEqual(appearanceEnvironments(I,'character/ana',{current:false}).map(e=>[e.id,e.via,e.nodes]),[['env-a',['environment'],3],['env-b',['modelSpace'],1]]);
+ assert.deepEqual(appearanceEnvironments(I,'location/plaza').map(e=>[e.id,e.via,e.nodes]),[['env-a',['environment'],2]]);
+ assert.deepEqual(appearanceEnvironments(I,'location/nave').map(e=>[e.id,e.via]),[['env-b',['modelSpace']]]);
+ assert.deepEqual(appearanceEnvironments(I,'location/bosque'),[]);
+ for(const k of ['character/ana','character/pa','location/plaza','environment/env-a'])for(const current of [true,false])appearanceTree(I,k,{current});
+ assert.deepEqual(p,before);assert.deepEqual(shotIds(p).map(id=>digest(p,id)),digests);});
+
