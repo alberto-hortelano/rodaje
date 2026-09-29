@@ -12,10 +12,11 @@ El rig de Mixamo está en centímetros y la escena en metros: el modelo se escal
 
 ## Qué entra de cada clip
 
-- `talk`, y cualquier clip en pose sentada: solo hombros, brazos, manos y dedos (pistas Shoulder, Arm, Hand, Thumb, Index, Middle, Ring y Pinky). Se descartan raíz, piernas y tronco: hay clips de «hablar de pie» con la cadera a unos 70 cm que, enteros, sientan a la figura.
+- `talk`, y cualquier clip en pose sentada o montada: solo hombros, brazos, manos y dedos (pistas Shoulder, Arm, Hand, Thumb, Index, Middle, Ring y Pinky). Se descartan raíz, piernas y tronco: hay clips de «hablar de pie» con la cadera a unos 70 cm que, enteros, sientan a la figura.
 - Raíz (`mixamorigHips.position`): se anulan X y Z (el recorrido lo manda el plano, no el clip) y la Y se reescala a una cadera de 100 cm (factor 100 ÷ altura de cadera del clip). Tras quitar X/Z hay que comprobar que los pies no flotan ni se hunden.
 - Los tres clips corren a la vez y se mezclan por peso; al empezar solo pesa `idle`.
 - Pose sentada: cadera a 60 cm, piernas y brazos orientados con un apuntado simple y un asiento de caja.
+- Pose montada: cadera a la altura de la silla, muslos abiertos y piernas colgando. El jinete no usa `walk` (pesa `idle` aunque el plano lo desplace): el paso lo da la montura (`docs/ensayo-3d.md`).
 
 ## Elegir clips
 

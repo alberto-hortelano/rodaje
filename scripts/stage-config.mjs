@@ -5,27 +5,30 @@
 //   node scripts/stage-config.mjs set [proyecto] --desde <fichero.json>
 //   node scripts/stage-config.mjs staging [proyecto] --desde <parches.json> [--lote <lote>] [--simular]
 //   node scripts/stage-config.mjs catalogo [proyecto] [--desde <fichero.json>] [--simular]
+//   node scripts/stage-config.mjs fondo [proyecto] --location <id> --background none|people|null
 // Proyecto: [proyecto] o --project id, RODAJE_PROJECT o el activo en la app.
 // set valida y guarda con store.save (sube la revisión y regenera los derivados).
 // staging aplica {"shots":{"<idPlano>":{campo:valor|null}}} (null borra) y renombra la clave heredada potatoes a swarm en todos los planos;
+// Admite también {"cast":{"<idPlano>":[ids]|null}}: reparto del plano en el prompt (t.cast, #48); null lo borra.
 // sin --lote guarda con store.save; con --lote reescribe assets/<lote>/project-snapshot.json en su mismo formato; --simular solo lista los planos que cambiarían.
 // No escribe nada si hay ids desconocidos o errores de staging.
 // catalogo sin --desde imprime {variants, zones, channels, defaultVariant} (null si faltan); con --desde valida y guarda con store.save:
 // clave presente reemplaza, null borra, ausente no se toca; --simular solo lista los cambios. Avisa de los datos que quedan fuera del catálogo.
+// fondo fija location.background (gente de fondo en el prompt, #48): none (por defecto) o people; null lo borra. Guarda con store.save.
 import fs from 'node:fs';
 import path from 'node:path';
 import {load,save,dir} from '../app/store.mjs';
-import {rehearsalStageErrors,rehearsalConfig,stagingIssues,patchProjectStaging,stageFallback,stageCatalogErrors,catalogIssues,STAGE_CATALOG_KEYS} from '../app/workflow.mjs';
+import {rehearsalStageErrors,rehearsalConfig,stagingIssues,castIssues,patchProjectStaging,stageFallback,stageCatalogErrors,catalogIssues,STAGE_CATALOG_KEYS,shotCastIssues,locationIssues,LOCATION_BACKGROUNDS} from '../app/workflow.mjs';
 import {readJSON,writeJSON,writeFileAtomic} from '../lib/json.mjs';
 import {parseArgs} from '../lib/args.mjs';
 import {cliProject, usageExit} from '../lib/cli.mjs';
 
-const USAGE = 'Uso: node scripts/stage-config.mjs show|check [proyecto] · set [proyecto] --desde <fichero.json> · staging [proyecto] --desde <parches.json> [--lote <lote>] [--simular] · catalogo [proyecto] [--desde <fichero.json>] [--simular]  [--project id]';
+const USAGE = 'Uso: node scripts/stage-config.mjs show|check [proyecto] · set [proyecto] --desde <fichero.json> · staging [proyecto] --desde <parches.json> [--lote <lote>] [--simular] · catalogo [proyecto] [--desde <fichero.json>] [--simular] · fondo [proyecto] --location <id> --background none|people|null  [--project id]';
 const {args: [cmd, ...rest], opts} = parseArgs(process.argv.slice(2));
-if (!['show', 'check', 'set', 'staging', 'catalogo'].includes(cmd) || (opts.desde !== undefined && typeof opts.desde !== 'string') || (['set', 'staging'].includes(cmd) && typeof opts.desde !== 'string') || (opts.lote !== undefined && typeof opts.lote !== 'string')) usageExit(USAGE);
+if (!['show', 'check', 'set', 'staging', 'catalogo', 'fondo'].includes(cmd) || (cmd === 'fondo' && (typeof opts.location !== 'string' || typeof opts.background !== 'string')) || (opts.desde !== undefined && typeof opts.desde !== 'string') || (['set', 'staging'].includes(cmd) && typeof opts.desde !== 'string') || (opts.lote !== undefined && typeof opts.lote !== 'string')) usageExit(USAGE);
 const p = load(cliProject({usage: USAGE, opts, args: rest, positional: 0}).project);
 const shotsOf = project => (project.episodes || []).flatMap(e => (e.sequences || []).flatMap(s => (s.shots || []).map(t => ({s, t}))));
-const issuesOf = (project, R) => { const errors = [], warnings = []; for (const {s, t} of shotsOf(project)) { const r = stagingIssues(t, s, R); errors.push(...r.errors); warnings.push(...r.warnings); } return {errors, warnings}; };
+const issuesOf = (project, R) => { const errors = [], warnings = []; for (const e of project.episodes || []) for (const s of e.sequences || []) { const c = castIssues(s, R); errors.push(...c.errors); warnings.push(...c.warnings); } const characters = (project.characters || []).map(c => c.id); for (const {s, t} of shotsOf(project)) for (const r of [shotCastIssues(t, s, {characters}), stagingIssues(t, s, R, {characters})]) { errors.push(...r.errors); warnings.push(...r.warnings); } errors.push(...locationIssues(project)); return {errors, warnings}; };
 
 if (cmd === 'show') console.log(JSON.stringify(p.stage?.rehearsal ?? null, null, 2));
 if (cmd === 'check') {
@@ -49,13 +52,18 @@ if (cmd === 'set') {
   console.log(`${p.id}: stage.rehearsal guardado (revisión ${saved.revision})`);
 }
 if (cmd === 'staging') {
-  const patches = readJSON(opts.desde)?.shots;
-  if (!patches || typeof patches !== 'object' || Array.isArray(patches)) { console.error('El fichero de parches necesita {"shots":{"<idPlano>":{...}}}.'); process.exit(1); }
+  const input = readJSON(opts.desde), isMap = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  if (!isMap(input) || (input.shots !== undefined && !isMap(input.shots)) || (input.cast !== undefined && !isMap(input.cast)) || (input.shots === undefined && input.cast === undefined)) { console.error('El fichero de parches necesita {"shots":{"<idPlano>":{...}}} y/o {"cast":{"<idPlano>":[ids]|null}}.'); process.exit(1); }
+  const patches = input.shots || {}, casts = input.cast || {};
   const file = opts.lote ? path.join(dir(p.id), 'assets', opts.lote, 'project-snapshot.json') : null;
   const raw = file ? fs.readFileSync(file, 'utf8') : null, target = file ? JSON.parse(raw) : p, where = file ? `${opts.lote}/project-snapshot.json` : 'proyecto.json';
   const {project: next, changed, unknown} = patchProjectStaging(target, patches);
+  // Reparto del plano: en cualquier plano, tenga o no staging.
+  const castUnknown = Object.keys(casts).filter(id => !shotsOf(next).some(({t}) => t.id === id));
+  for (const {t} of shotsOf(next)) if (Object.hasOwn(casts, t.id)) { const before = JSON.stringify(t.cast); if (casts[t.id] === null) delete t.cast; else t.cast = structuredClone(casts[t.id]); if (JSON.stringify(t.cast) !== before && !changed.includes(t.id)) changed.push(t.id); }
   const {errors, warnings} = issuesOf(next, rehearsalConfig(file ? stageFallback(next, p) : next));
   if (unknown.length) errors.unshift(...unknown.map(id => `${id}: no hay plano con staging con ese id en ${where}`));
+  if (castUnknown.length) errors.unshift(...castUnknown.map(id => `${id}: no hay plano con ese id en ${where}`));
   for (const e of errors) console.error('  ' + e);
   for (const w of warnings) console.error('  aviso: ' + w);
   if (errors.length) { console.error(`No se guarda: ${errors.length} errores.`); process.exit(1); }
@@ -85,4 +93,15 @@ if (cmd === 'catalogo') {
   p.stage = stage;
   const saved = save(p, p.revision);
   console.log(`${p.id}: catálogo guardado (revisión ${saved.revision})`);
+}
+if (cmd === 'fondo') {
+  const loc = p.locations.find(l => l.id === opts.location), value = opts.background === 'null' ? null : opts.background;
+  if (!loc) { console.error(`Ambiente desconocido: ${opts.location}`); process.exit(1); }
+  if (value !== null && !LOCATION_BACKGROUNDS.includes(value)) { console.error(`background debe ser ${LOCATION_BACKGROUNDS.join(', ')} o null`); process.exit(1); }
+  if ((loc.background ?? null) === value) { console.log(`${p.id}: ${loc.id} sin cambios`); process.exit(0); }
+  if (value === null) delete loc.background; else loc.background = value;
+  const errors = locationIssues(p);
+  if (errors.length) { for (const e of errors) console.error('  ' + e); console.error('No se guarda: hay errores en los ambientes.'); process.exit(1); }
+  const saved = save(p, p.revision);
+  console.log(`${p.id}: ${loc.id} background ${value ?? '(sin declarar: none)'} (revisión ${saved.revision}); los lotes ya planificados conservan el suyo: replanifica para que cuente`);
 }

@@ -71,3 +71,34 @@ test('framePrompt neutro con datos neutros: nada de barro, animales, armas ni so
  const sound=w.framePrompt({project,sequence:{title:'Patio',variant:'day'},shots,block,registry:{...registry,sound:{day:'Birds.',default:'Room tone.'},lighting:{day:'Sun.',default:'Soft light.'}},map:null,scene:null,cast:['ana']}).prompt;assert.match(sound,/overall_soundscape:\nBirds\.\n/);assert.match(sound,/LIGHTING: Sun\./);});
 test('guardián: el cuerpo de framePrompt no lleva textos del mundo de un proyecto (#43)',()=>{const src=fs.readFileSync(path.join(import.meta.dirname,'../app/workflow.mjs'),'utf8');const i=src.indexOf('export function framePrompt(');assert.ok(i>0);const body=src.slice(i,src.indexOf('export function',i+10));
  for(const s of ['soft mud','frozen ruts','beard','animal','weapons','Natural exterior sound','breath steams'])assert.ok(!body.includes(s),s);});
+
+// #48: reparto por plano, recuento de visibles y fondo por location. Los ref-41/42/43 de arriba no cambian: sus fixtures tienen a todos visibles y background none.
+const six=()=>({...structuredClone(sequence),cast:[...structuredClone(sequence.cast),{character:'toledo',x:3,z:-2},{character:'brady',x:3.5,z:0},{character:'vasquez',x:2.5,z:1}]});
+const castOf=(ids)=>Object.fromEntries(Object.entries(shots).map(([k,t])=>[k,{...t,cast:ids}]));
+test('bloque con cast de 3 entre 6: 3 hojas, 3 sujetos y solo las voces de quien habla; aviso si habla uno de fuera (#48)',()=>{const s=six(),sh=castOf(['roz','earl','nnamdi']);
+ const cast=w.planBlockCast(block.parts,sh,s);assert.deepEqual(cast,['roz','earl','nnamdi']);assert.deepEqual(w.blockCastIds({sequence:s,block,shots:sh}),['roz','earl','nnamdi']);
+ const r=w.blockPrompt({project,sequence:s,shots:sh,block:{...block,cast},registry,map,scene});assert.deepEqual(r.refs.images.filter(i=>i.role==='character').map(i=>i.character),['roz','earl','nnamdi']);
+ assert.equal((r.prompt.match(/^<Subject \d+> [A-Z]+ is Image/gm)||[]).length,3);assert.deepEqual(r.refs.audios.map(a=>a.character),['nnamdi','roz','earl']);assert.deepEqual(r.warnings,[]);assert.doesNotMatch(r.prompt,/TOLEDO|BRADY|VASQUEZ/);
+ const out=w.blockPrompt({project,sequence:s,shots:sh,block:{...block,cast:['roz','nnamdi','toledo']},registry:{...registry,assets:{...registry.assets,TOLEDO_RED:{...registry.assets.ROZ_RED}}},map,scene});
+ assert.ok(out.warnings.some(x=>/EARL habla en cuadro y no está en el reparto del bloque/.test(x)),out.warnings.join('\n'));assert.deepEqual(out.refs.audios.map(a=>a.character),['nnamdi','roz','earl']);});
+// La cámara del primer plano está en x=-3.8 mirando a +x: x=-6 queda detrás.
+const rozOut=()=>({...shots,'ep01-s1-p2':{...shots['ep01-s1-p2'],staging:{...shots['ep01-s1-p2'].staging,placements:{roz:{x:-6,z:0}}}}});
+const section=(p,k)=>p.split('\n').find(l=>l.startsWith(k));
+test('FIRST FRAME y summary cuentan lo mismo: ROZ fuera por staging.placements → «Exactly 2», frase aparte y la profundidad solo entre visibles (#48)',()=>{const r=w.blockPrompt({project,sequence,shots:rozOut(),block,registry,map,scene});
+ const ff=section(r.prompt,'FIRST FRAME:');assert.match(ff,/contains EARL frame-centre, foreground, behind the cradle; NNAMDI frame-centre, background, at the strap of the cradle, in the positions of Video 1 frame 0\. ROZ is outside the frame at the start\. Exactly 2 people visible\. No empty establishing frame\.$/);
+ assert.doesNotMatch(ff,/ROZ frame-|just outside/);assert.match(r.prompt,/SINGLE CONTINUOUS TAKE matching Video 1\. Exactly 2 people visible\.\n/);assert.ok(!r.prompt.includes('[['));assert.deepEqual(r.warnings,[]);
+ assert.equal(r.refs.images.filter(i=>i.role==='character').length,3,'ROZ sigue siendo sujeto: entra después');});
+test('staging.proxies: la figura del entorno entra en FIRST FRAME y en el recuento, con su hoja (#48)',()=>{const sh={...shots,'ep01-s1-p2':{...shots['ep01-s1-p2'],staging:{...shots['ep01-s1-p2'].staging,proxies:{toledo:{x:1,z:-2.5}}}}},reg={...registry,assets:{...registry.assets,TOLEDO_RED:{...registry.assets.ROZ_RED}}};
+ const r=w.blockPrompt({project,sequence,shots:sh,block,registry:reg,map,scene});assert.match(section(r.prompt,'FIRST FRAME:'),/TOLEDO frame-\w+, \w+ground.*Exactly 4 people visible\./);assert.match(r.prompt,/Exactly 4 people visible\.\n/);
+ assert.deepEqual(r.refs.images.filter(i=>i.role==='character').map(i=>i.character),['roz','earl','nnamdi','toledo']);assert.deepEqual(r.warnings,[]);});
+test('background people: la misma frase en summary y FIRST FRAME, sin negativos sueltos; framePrompt añade el fondo solo con people (#48)',()=>{const p={...project,locations:[{id:sequence.location,name:'Hold 11',background:'people'}]};
+ const r=w.blockPrompt({project:p,sequence,shots,block,registry,map,scene}),phrase='Exactly 3 named people visible, with small distant background figures of the crew well behind them';
+ assert.ok(section(r.prompt,'FIRST FRAME:').includes(phrase+'. No empty establishing frame.'));assert.ok(r.prompt.includes('SINGLE CONTINUOUS TAKE matching Video 1. '+phrase+'.\n'));assert.deepEqual(r.warnings,[]);assert.deepEqual(w.strayNegatives(section(r.prompt,'FIRST FRAME:')+'\n'+r.prompt.split('\n')[r.prompt.split('\n').indexOf('summary:')+1]),[]);
+ const {block:b,cast}=A.blocks[0],m=w.mergeRegistryTexts(A.registry,T43).registry,loc=A.sequence.location;
+ const none=w.framePrompt({project:{...A.project,locations:[{id:loc,background:'none'}]},sequence:A.sequence,shots:A.shots,block:b,registry:m,map:A.map,scene:A.scene,cast}).prompt;assert.equal(none,aread(`ref-43/${b.id}.txt`));
+ const ppl=w.framePrompt({project:{...A.project,locations:[{id:loc,background:'people'}]},sequence:A.sequence,shots:A.shots,block:b,registry:{...m,texts:{...m.texts,people:'the villagers'}},map:A.map,scene:A.scene,cast}).prompt;
+ assert.match(ppl,/in the scene[^.]*, with small distant background figures of the villagers well behind them\./);assert.equal(ppl.replace(/, with small distant background figures of the villagers well behind them/,''),none);});
+test('nombres cortos que chocan: sujetos, FIRST FRAME y diálogo con el nombre del registro (#48)',()=>{const p={...project,characters:project.characters.map(c=>c.id==='earl'?{...c,name:'Roz Earl'}:c.id==='roz'?{...c,name:'Roz Vance'}:c)};
+ const reg=structuredClone(registry);reg.assets.ROZ_RED.descriptor='ROZ VANCE: '+reg.assets.ROZ_RED.descriptor;reg.assets.EARL_RED.descriptor='EARL ROZ: '+reg.assets.EARL_RED.descriptor;
+ const r=w.blockPrompt({project:p,sequence,shots,block,registry:reg,map,scene});assert.match(r.prompt,/<Subject 1> ROZ VANCE is Image 1/);assert.match(r.prompt,/<Subject 2> EARL ROZ is Image 2/);
+ assert.match(section(r.prompt,'FIRST FRAME:'),/ROZ VANCE frame-.*EARL ROZ frame-/);assert.match(r.prompt,/At approximately [\d.]+s, EARL ROZ[^<\n]*says exactly/);assert.doesNotMatch(r.prompt,/> ROZ is Image|(contains|;) ROZ frame-/);});
