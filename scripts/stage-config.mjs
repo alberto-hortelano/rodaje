@@ -10,6 +10,7 @@
 // set valida y guarda con store.save (sube la revisión y regenera los derivados).
 // staging aplica {"shots":{"<idPlano>":{campo:valor|null}}} (null borra) y renombra la clave heredada potatoes a swarm en todos los planos;
 // Admite también {"cast":{"<idPlano>":[ids]|null}}: reparto del plano en el prompt (t.cast, #48); null lo borra.
+// Y {"cameraRig":{"<idPlano>":rig|null}}: cámara del plano (t.cameraRig, #49, docs/ensayo-3d.md); null la borra.
 // sin --lote guarda con store.save; con --lote reescribe assets/<lote>/project-snapshot.json en su mismo formato; --simular solo lista los planos que cambiarían.
 // No escribe nada si hay ids desconocidos o errores de staging.
 // catalogo sin --desde imprime {variants, zones, channels, defaultVariant} (null si faltan); con --desde valida y guarda con store.save:
@@ -18,7 +19,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {load,save,dir} from '../app/store.mjs';
-import {rehearsalStageErrors,rehearsalConfig,stagingIssues,castIssues,patchProjectStaging,stageFallback,stageCatalogErrors,catalogIssues,STAGE_CATALOG_KEYS,shotCastIssues,locationIssues,LOCATION_BACKGROUNDS} from '../app/workflow.mjs';
+import {rehearsalStageErrors,rehearsalConfig,stagingIssues,castIssues,patchProjectStaging,patchShotField,stageFallback,stageCatalogErrors,catalogIssues,STAGE_CATALOG_KEYS,shotCastIssues,locationIssues,LOCATION_BACKGROUNDS} from '../app/workflow.mjs';
 import {readJSON,writeJSON,writeFileAtomic} from '../lib/json.mjs';
 import {parseArgs} from '../lib/args.mjs';
 import {cliProject, usageExit} from '../lib/cli.mjs';
@@ -53,17 +54,18 @@ if (cmd === 'set') {
 }
 if (cmd === 'staging') {
   const input = readJSON(opts.desde), isMap = v => !!v && typeof v === 'object' && !Array.isArray(v);
-  if (!isMap(input) || (input.shots !== undefined && !isMap(input.shots)) || (input.cast !== undefined && !isMap(input.cast)) || (input.shots === undefined && input.cast === undefined)) { console.error('El fichero de parches necesita {"shots":{"<idPlano>":{...}}} y/o {"cast":{"<idPlano>":[ids]|null}}.'); process.exit(1); }
-  const patches = input.shots || {}, casts = input.cast || {};
+  const fields = ['cast', 'cameraRig'];
+  if (!isMap(input) || [...fields, 'shots'].some(k => input[k] !== undefined && !isMap(input[k])) || [...fields, 'shots'].every(k => input[k] === undefined)) { console.error('El fichero de parches necesita {"shots":{"<idPlano>":{...}}}, {"cast":{"<idPlano>":[ids]|null}} y/o {"cameraRig":{"<idPlano>":rig|null}}.'); process.exit(1); }
+  const patches = input.shots || {};
   const file = opts.lote ? path.join(dir(p.id), 'assets', opts.lote, 'project-snapshot.json') : null;
   const raw = file ? fs.readFileSync(file, 'utf8') : null, target = file ? JSON.parse(raw) : p, where = file ? `${opts.lote}/project-snapshot.json` : 'proyecto.json';
-  const {project: next, changed, unknown} = patchProjectStaging(target, patches);
-  // Reparto del plano: en cualquier plano, tenga o no staging.
-  const castUnknown = Object.keys(casts).filter(id => !shotsOf(next).some(({t}) => t.id === id));
-  for (const {t} of shotsOf(next)) if (Object.hasOwn(casts, t.id)) { const before = JSON.stringify(t.cast); if (casts[t.id] === null) delete t.cast; else t.cast = structuredClone(casts[t.id]); if (JSON.stringify(t.cast) !== before && !changed.includes(t.id)) changed.push(t.id); }
+  let {project: next, changed, unknown} = patchProjectStaging(target, patches);
+  // Reparto y cámara del plano: en cualquier plano, tenga o no staging.
+  const fieldUnknown = new Set();
+  for (const field of fields) { const r = patchShotField(next, field, input[field] || {}); next = r.project; for (const id of r.changed) if (!changed.includes(id)) changed.push(id); for (const id of r.unknown) fieldUnknown.add(id); }
   const {errors, warnings} = issuesOf(next, rehearsalConfig(file ? stageFallback(next, p) : next));
   if (unknown.length) errors.unshift(...unknown.map(id => `${id}: no hay plano con staging con ese id en ${where}`));
-  if (castUnknown.length) errors.unshift(...castUnknown.map(id => `${id}: no hay plano con ese id en ${where}`));
+  if (fieldUnknown.size) errors.unshift(...[...fieldUnknown].map(id => `${id}: no hay plano con ese id en ${where}`));
   for (const e of errors) console.error('  ' + e);
   for (const w of warnings) console.error('  aviso: ' + w);
   if (errors.length) { console.error(`No se guarda: ${errors.length} errores.`); process.exit(1); }
