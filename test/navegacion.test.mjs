@@ -27,9 +27,9 @@ test('rutas: sin vista, library o desconocida → árbol; sin proyecto, library 
 
 test('rutas: solo los parámetros de la vista; el resto null',()=>{
  const all='&episode=e&sequence=s&shot=t&storyboard=b&environment=n&character=h&location=l&scene=c&panel=v&node=k';
- assert.deepEqual(parseRoute('?project=x&view=storyboard'+all),{project:'x',view:'storyboard',episode:null,sequence:null,shot:null,storyboard:'b',environment:null,character:null,location:null,scene:'c',panel:'v',node:null,q:null,f:null});
- assert.deepEqual(parseRoute('?project=x&view=shot'+all),{project:'x',view:'shot',episode:'e',sequence:'s',shot:'t',storyboard:null,environment:null,character:null,location:null,scene:null,panel:null,node:null,q:null,f:null});
- assert.deepEqual(parseRoute('?project=x&view=shots'+all),{project:'x',view:'shots',episode:null,sequence:'s',shot:null,storyboard:null,environment:null,character:null,location:null,scene:null,panel:null,node:null,q:null,f:null});
+ assert.deepEqual(parseRoute('?project=x&view=storyboard'+all),{project:'x',view:'storyboard',episode:null,sequence:null,shot:null,storyboard:'b',environment:null,character:null,location:null,scene:'c',panel:'v',node:null,q:null,f:null,at:null});
+ assert.deepEqual(parseRoute('?project=x&view=shot'+all),{project:'x',view:'shot',episode:'e',sequence:'s',shot:'t',storyboard:null,environment:null,character:null,location:null,scene:null,panel:null,node:null,q:null,f:null,at:null});
+ assert.deepEqual(parseRoute('?project=x&view=shots'+all),{project:'x',view:'shots',episode:null,sequence:'s',shot:null,storyboard:null,environment:null,character:null,location:null,scene:null,panel:null,node:null,q:null,f:null,at:null});
  assert.equal(parseRoute('?project=x&view=tree'+all).node,'k');assert.equal(parseRoute('?project=x&view=environment'+all).environment,'n');assert.equal(parseRoute('?project=x&view=rehearsal'+all).episode,'e');
  assert.deepEqual(Object.values(parseRoute('?project=x&view=overview'+all)).filter(Boolean),['x','overview']);
  assert.equal(parseRoute('?project=x&view=storyboard&storyboard=b&scene=').scene,null);assert.equal(parseRoute('?project=x&view=storyboard&storyboard=b&panel=').panel,null);});
@@ -58,15 +58,17 @@ test('navActive: vistas de detalle marcan su lista',()=>{
  assert.deepEqual(['character','location','characters','locations'].map(navActive),['characters','locations','characters','locations']);});
 
 test('rutas: páginas de personaje y de ambiente (#60)',()=>{
- const all='&episode=e&sequence=s&shot=t&storyboard=b&environment=n&character=h&location=l&scene=c&panel=v&node=k';
- assert.deepEqual(parseRoute('?project=x&view=character'+all),{project:'x',view:'character',episode:null,sequence:null,shot:null,storyboard:null,environment:null,character:'h',location:null,scene:null,panel:null,node:null,q:null,f:null});
- assert.deepEqual(parseRoute('?project=x&view=location'+all),{project:'x',view:'location',episode:null,sequence:null,shot:null,storyboard:null,environment:null,character:null,location:'l',scene:null,panel:null,node:null,q:null,f:null});
- for(const v of ['tree','storyboard','shot','characters','locations','environment'])assert.deepEqual([parseRoute('?project=x&view='+v+all).character,parseRoute('?project=x&view='+v+all).location],[null,null],v);
+ const all='&episode=e&sequence=s&shot=t&storyboard=b&environment=n&character=h&location=l&scene=c&panel=v&node=k&at=seq/f1';
+ assert.deepEqual(parseRoute('?project=x&view=character'+all),{project:'x',view:'character',episode:null,sequence:null,shot:null,storyboard:null,environment:null,character:'h',location:null,scene:null,panel:null,node:null,q:null,f:null,at:'seq/f1'});
+ assert.deepEqual(parseRoute('?project=x&view=location'+all),{project:'x',view:'location',episode:null,sequence:null,shot:null,storyboard:null,environment:null,character:null,location:'l',scene:null,panel:null,node:null,q:null,f:null,at:'seq/f1'});
+ for(const v of ['tree','storyboard','shot','characters','locations','environment'])assert.deepEqual([parseRoute('?project=x&view='+v+all).character,parseRoute('?project=x&view='+v+all).location,parseRoute('?project=x&view='+v+all).at],[null,null,null],v);
  assert.equal(parseRoute('?project=x&view=character&character=').character,null);assert.equal(parseRoute('?view=character&character=h').view,'library');
  for(const q of ['?project=x&view=character&character=ana','?project=x&view=location&location=plaza%20mayor','?project=x&view=character'])assert.equal(routeQuery(parseRoute(q)),q);
  assert.equal(routeQuery({project:'x',view:'character',character:'a/b',location:'l'}),'?project=x&view=character&character=a%2Fb');
  const k=q=>routeKey(parseRoute(q));assert.notEqual(k('?project=x&view=character&character=a'),k('?project=x&view=character&character=b'));
- assert.notEqual(k('?project=x&view=location&location=a'),k('?project=x&view=location&location=b'));assert.equal(k('?project=x&view=location&location=a'),JSON.stringify(['x','location','a']));
+ assert.notEqual(k('?project=x&view=location&location=a'),k('?project=x&view=location&location=b'));assert.equal(k('?project=x&view=location&location=a'),JSON.stringify(['x','location','a','']));
+ assert.notEqual(k('?project=x&view=character&character=a&at=act%2Fe1'),k('?project=x&view=character&character=a'));
+ for(const q of ['?project=x&view=character&character=ana&at=seq%2Ff1','?project=x&view=location&location=plaza&at=scene%2Fsb1%2Fsc1'])assert.equal(routeQuery(parseRoute(q)),q);
  assert.deepEqual(ROUTE_KEYS.filter(x=>!Object.values(ROUTE_PARAMS).flat().includes(x)),[]);});
 
 test('rutas: q y f del buscador (#59) solo en Storyboards y Planos, fuera del scroll',()=>{

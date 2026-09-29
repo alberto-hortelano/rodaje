@@ -27,5 +27,5 @@ export function relProject(){return {id:'rel',name:'Relaciones',type:'serie',lan
    {id:'f2',title:'Ficha dos',location:'bosque',silent:true,cast:[{character:'beto',x:0,z:0,yaw:0}],shots:[
     relShot('t5',{staging:{proxies:{dani:{x:1,z:2}}}}),relShot('t6',{cast:['ana','fantasma']})]},
    {id:'f3',title:'Ficha tres',silent:false,cast:[],shots:[]}]}]};}
-// relProject con n planos más en c1 (cast ana): para el plegado de Apariciones por tamaño de página y el recorte «y N más» (#61).
+// relProject con n planos más en c1 (cast ana): para Apariciones con muchas viñetas y planos (#61, #69) y el recorte «y N más» (#61).
 export function relProjectMany(n){const p=relProject(),c1=p.episodes[0].sequences.find(s=>s.id==='c1');for(let i=1;i<=n;i++)c1.shots.push(relShot('m'+i,{cast:['ana']}));return p;}

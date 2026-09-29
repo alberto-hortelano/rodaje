@@ -1,14 +1,14 @@
 // Enlaces de relaciones en el navegador (#61, #67): la raíz de la Escaleta no calcula relaciones y cada página pinta las de su nivel; story, escena,
-// viñeta, Planos, estudio y Animación con su línea; «Pnn ·» sin repetir; página de entidad sin id y con id inexistente; plegado de Apariciones
-// por tamaño de página; sin desbordamiento a 390 px. Servidor con RODAJE_DATA temporal y el fixture de #58 (textos inventados).
+// viñeta, Planos, estudio y Animación con su línea; «Pnn ·» sin repetir; página de entidad sin id y con id inexistente;
+// sin desbordamiento a 390 px. Servidor con RODAJE_DATA temporal y el fixture de #58 (textos inventados).
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import {spawnServer} from './fixtures/hijos.mjs';
 import {withChrome,newRenderContext,chromePath,VIEWPORTS} from '../lib/chrome.mjs';
-import {relProject,relProjectMany} from './fixtures/relaciones.mjs';
-const ROOT=path.resolve(import.meta.dirname,'..'),DATA=fs.mkdtempSync(path.join(os.tmpdir(),'rodaje-enlaces-')),id='enlaces-'+process.pid,big='enlaces-big-'+process.pid;
+import {relProject} from './fixtures/relaciones.mjs';
+const ROOT=path.resolve(import.meta.dirname,'..'),DATA=fs.mkdtempSync(path.join(os.tmpdir(),'rodaje-enlaces-')),id='enlaces-'+process.pid;
 const SIN_CHROME=!fs.existsSync(chromePath())&&'sin Chrome';
 const port=await new Promise(r=>{const s=net.createServer().listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>r(p));});});
 const write=(pid,p)=>{p.id=pid;fs.mkdirSync(path.join(DATA,pid),{recursive:true});fs.writeFileSync(path.join(DATA,pid,'proyecto.json'),JSON.stringify(p));};
-{const p=relProject();p.episodes[0].sequences.find(s=>s.id==='c1').shots[0].title='P01 · Entrada';write(id,p);}write(big,relProjectMany(50));
+{const p=relProject();p.episodes[0].sequences.find(s=>s.id==='c1').shots[0].title='P01 · Entrada';write(id,p);}
 let child;
 test.before(()=>new Promise((resolve,reject)=>{child=spawnServer(process.execPath,[path.join(ROOT,'app/server.mjs')],{cwd:ROOT,env:{...process.env,PORT:String(port),RODAJE_DATA:DATA,RODAJE_LAN:'',RODAJE_TLS_CERT:'',RODAJE_TLS_KEY:''},stdio:['ignore','pipe','pipe']});let out='';
  const t=setTimeout(()=>reject(Error('El servidor no arrancó: '+out)),15000);child.stdout.on('data',d=>{out+=d;if(out.includes('Rodaje ·')){clearTimeout(t);resolve();}});child.stderr.on('data',d=>out+=d);child.on('exit',c=>reject(Error('El servidor salió con '+c+': '+out)));}));
@@ -52,12 +52,7 @@ test('entidades: sin id, la lista sin aviso; con id inexistente, el aviso',{skip
  await load(page,'&view=character');assert.equal(new URL(page.url()).searchParams.get('view'),'characters');assert.equal(await page.$eval('#toast',t=>getComputedStyle(t).display),'none');
  await load(page,'&view=character&character=zzz');assert.equal(new URL(page.url()).searchParams.get('view'),'characters');assert.equal((await page.textContent('#toast')).trim(),'No existe el personaje zzz');}));
 
-test('Apariciones: con más de 40 viñetas y planos en la página, las secuencias empiezan plegadas',{skip:SIN_CHROME},()=>session(async page=>{
- await page.addInitScript(k=>localStorage.setItem(k,'1'),'rodaje-appear-all-'+big);await load(page,'&view=character&character=ana',big);
- const seqs=await page.$$eval('details.ap-sequence',l=>l.map(d=>d.open));assert.ok(seqs.length>=2);assert.ok(seqs.every(o=>!o));
- await load(page,'&view=character&character=beto');assert.ok((await page.$$eval('details.ap-sequence',l=>l.map(d=>d.open))).every(Boolean),'en una página pequeña, abiertas');}));
-
 test('móvil a 390 px: sin desbordamiento horizontal ni errores',{skip:SIN_CHROME},()=>session(async page=>{
  const wide=()=>page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
  await load(page,'&view=tree&node=seq/f1');assert.ok(await wide()<=0,'tree');
- for(const q of ['&view=storyboard&storyboard=sb2','&view=storyboard&storyboard=sb2&scene=sc2','&view=storyboard&storyboard=sb2&scene=sc2&panel=P3','&view=shot&episode=e1&sequence=c2&shot=t3','&view=shots','&view=character&character=ana']){await load(page,q);assert.ok(await wide()<=0,q);}},{width:390,height:844}));
+ for(const q of ['&view=storyboard&storyboard=sb2','&view=storyboard&storyboard=sb2&scene=sc2','&view=storyboard&storyboard=sb2&scene=sc2&panel=P3','&view=shot&episode=e1&sequence=c2&shot=t3','&view=shots','&view=character&character=ana','&view=character&character=ana&at=seq%2Ff1']){await load(page,q);assert.ok(await wide()<=0,q);}},{width:390,height:844}));

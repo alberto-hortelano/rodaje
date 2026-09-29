@@ -29393,7 +29393,7 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, routeHref, historyStep, historyState, entryScroll, navActive, sequenceRole, treeModel, levelCrumbs, levelResolve, levelRoute, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, appearanceTree, appearanceEnvironments, relationLinks, relationLine, appearanceOpen, shotLabel, voiceStatusLabel, storyboardItems, storyboardResultSections, storyboardPage, storyScenes, movePanel, panelSceneOptions, shotItems, filterShotGroups, filterView as filterView2, hasFilters, parseFilters, filtersParam } from "./workflow.mjs";
+import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, routeHref, historyStep, historyState, entryScroll, navActive, sequenceRole, treeModel, levelCrumbs, levelResolve, levelRoute, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, appearanceTree, appearanceEnvironments, relationLinks, relationLine, appearanceLevel, appearanceCrumbs, APPEARANCE_LEVELS, shotLabel, voiceStatusLabel, storyboardItems, storyboardResultSections, storyboardPage, storyScenes, movePanel, panelSceneOptions, shotItems, filterShotGroups, filterView as filterView2, hasFilters, parseFilters, filtersParam } from "./workflow.mjs";
 
 // app/filtros.source.js
 import { filterView, toggleFilter } from "./workflow.mjs";
@@ -29507,6 +29507,7 @@ var storyboardId;
 var environmentId;
 var characterId = null;
 var locationId = null;
+var apAt = null;
 var sceneId = null;
 var panelId = null;
 var treeNode = null;
@@ -29532,7 +29533,7 @@ var sbPlayers = /* @__PURE__ */ new Map();
 var filt = { q: "", f: {} };
 var filterMount = null;
 var filterOpen = null;
-var currentRoute = () => ({ project: p?.id || null, view, episode: episodeId, sequence: view === "shots" ? shotsFocus : sequenceId, shot: shotId, storyboard: storyboardId, environment: environmentId, character: characterId, location: locationId, scene: sceneId, panel: panelId, node: treeNode, q: hasFilters(view) ? filt.q || null : null, f: hasFilters(view) ? filtersParam(filt.f) || null : null });
+var currentRoute = () => ({ project: p?.id || null, view, episode: episodeId, sequence: view === "shots" ? shotsFocus : sequenceId, shot: shotId, storyboard: storyboardId, environment: environmentId, character: characterId, location: locationId, at: view === "character" || view === "location" ? apAt : null, scene: sceneId, panel: panelId, node: treeNode, q: hasFilters(view) ? filt.q || null : null, f: hasFilters(view) ? filtersParam(filt.f) || null : null });
 function applyRoute(r) {
   view = r.view;
   if (view === "shot" || view === "anim") {
@@ -29545,6 +29546,7 @@ function applyRoute(r) {
   if (view === "environment") environmentId = r.environment;
   if (view === "character") characterId = r.character;
   if (view === "location") locationId = r.location;
+  apAt = (view === "character" || view === "location") && r.at || null;
   sceneId = view === "storyboard" && r.scene || null;
   panelId = view === "storyboard" && r.panel || null;
   treeNode = view === "tree" && r.node || null;
@@ -29842,18 +29844,33 @@ var apCount = (a) => {
   const t2 = [a.counts.panels ? plural(a.counts.panels, "vi\xF1eta", "vi\xF1etas") : "", a.counts.shots ? plural(a.counts.shots, "plano", "planos") : ""].filter(Boolean).join(" \xB7 ");
   return t2 ? `<span class="pill">${t2}</span>` : "";
 };
-function apHTML(a, total) {
-  const eyebrow = a.kind === "act" ? p.type === "serie" ? "CAP\xCDTULO" : "ACTO" : AP_EYEBROW[a.kind];
-  if (a.kind === "shot" || a.kind === "panel" && !a.children.length) return `<div class="ap-leaf" data-ap="${esc2(a.key)}"><span class="eyebrow">${eyebrow}</span>${apLink(a)}${apMarks(a)}${apLines(a)}</div>`;
-  const open = appearanceOpen(a, total);
-  return `<details class="ap-node ap-${a.kind}" data-ap="${esc2(a.key)}"${open ? " open" : ""}><summary><span class="eyebrow">${eyebrow}</span>${apLink(a)}${apCount(a)}${apMarks(a)}</summary><div class="ap-kids">${apLines(a)}${a.children.map((c) => apHTML(c, total)).join("")}</div></details>`;
+var apEyebrow = (a) => a.kind === "act" ? p.type === "serie" ? "CAP\xCDTULO" : "ACTO" : AP_EYEBROW[a.kind];
+var AP_OPEN = { act: "Abrir en la Escaleta", story: "Abrir story", scene: "Abrir escena" };
+var apOpen = (a) => AP_OPEN[a.kind] || (a.route?.view === "shots" ? "Abrir en Planos" : "Abrir en la Escaleta");
+var apPage = (a, text2 = "Abrir") => `<a class="ap-page" href="${esc2(routeQuery({ project: p.id, ...a.route }))}" data-route title="${esc2(apOpen(a) + " \xB7 " + a.label)}">${esc2(text2)} \u2197</a>`;
+var apRow = (a, ent) => `<article class="ap-row ap-${a.kind}" data-ap="${esc2(a.key)}">${a.children.length ? `<a class="ap-enter" href="${esc2(routeQuery({ project: p.id, ...ent, at: a.key }))}" data-route><span class="eyebrow">${apEyebrow(a)}</span><b>${esc2(a.label)}</b><span class="ap-chev" aria-hidden="true">\u203A</span></a>` : `<span class="ap-enter ap-still"><span class="eyebrow">${apEyebrow(a)}</span><b>${esc2(a.label)}</b></span>`}<span class="ap-meta">${apCount(a)}${apMarks(a)}</span>${apPage(a)}${apLines(a)}</article>`;
+var apInline = (a, sub = false) => `<div class="ap-leaf${sub ? " ap-sub" : ""}" data-ap="${esc2(a.key)}"><span class="eyebrow">${apEyebrow(a)}</span>${apLink(a)}${apMarks(a)}${apLines(a)}</div>` + a.children.map((c) => apInline(c, true)).join("");
+var apChildren = (list, ent) => list.length ? `<div class="ap-levels">${list.map((a) => APPEARANCE_LEVELS.has(a.kind) ? apRow(a, ent) : apInline(a)).join("")}</div>` : '<p class="tiny">Nada m\xE1s por debajo de este nivel.</p>';
+function apResolve(key, inherited) {
+  const all = appearStore.get(), index = relationIndexFor(p), T2 = appearanceTree(index, key, { current: !all, inherited }), L2 = appearanceLevel(T2, apAt, index);
+  if ((L2.key ?? null) !== (apAt ?? null)) {
+    if (L2.missing) toast(`Sin apariciones${all ? "" : " vigentes"} en ese nivel: se muestra ${L2.node ? "\xAB" + L2.node.label + "\xBB" : "el resumen"}.`);
+    apAt = L2.key;
+    replaceNext = true;
+  }
+  return { all, index, T: T2, L: L2, key, inherited };
 }
-function appearancesHTML(key, { inherited = true, note = "" } = {}) {
-  const all = appearStore.get(), index = relationIndexFor(p), T2 = appearanceTree(index, key, { current: !all, inherited }), t2 = T2.total;
-  const sum = [[t2.acts, p.type === "serie" ? "cap\xEDtulo" : "acto", p.type === "serie" ? "cap\xEDtulos" : "actos"], [t2.sequences, "secuencia", "secuencias"], [t2.storys, "story", "storys"], [t2.scenes, "escena", "escenas"], [t2.panels, "vi\xF1eta", "vi\xF1etas"], [t2.shots, "plano", "planos"], [t2.lines, "l\xEDnea", "l\xEDneas"]].filter(([n]) => n).map(([n, a, b2]) => plural(n, a, b2)).join(" \xB7 ");
+function appearancesHTML(X2, { note = "" } = {}) {
+  const { all, index, T: T2, L: L2, key, inherited } = X2, t2 = T2.total, [v2, ...rest] = key.split("/"), ent = { view: v2, [v2]: rest.join("/") };
+  const sum = [[t2.acts, p.type === "serie" ? "cap\xEDtulo" : "acto", p.type === "serie" ? "cap\xEDtulos" : "actos"], [t2.sequences, "secuencia", "secuencias"], [t2.storys, "story", "storys"], [t2.scenes, "escena", "escenas"], [t2.panels, "vi\xF1eta", "vi\xF1etas"], [t2.shots, "plano", "planos"], [t2.lines, "l\xEDnea", "l\xEDneas"]].filter(([n2]) => n2).map(([n2, a, b2]) => plural(n2, a, b2)).join(" \xB7 ");
   const empty = !T2.roots.length ? `<div class="empty"><h2>Sin apariciones todav\xEDa.</h2>${!all && appearanceTree(index, key, { current: false, inherited }).roots.length ? "<p>Hay apariciones en versiones no vigentes: marca \xABTodas las versiones\xBB.</p>" : ""}</div>` : "";
-  return entitySection("Apariciones", `<div class="row between"><p class="tiny">${esc2(sum || "Ninguna.")}</p><div class="row"><label class="ap-all"><input type="checkbox" data-appear-all${all ? " checked" : ""}> Todas las versiones</label>${btn("Desplegar todo", "ap-open")}${btn("Plegar todo", "ap-fold")}</div></div>${note ? `<p class="tiny">${note}</p>` : ""}${empty || `<div class="ap-tree">${T2.roots.map((a) => apHTML(a, T2.total)).join("")}</div>`}`);
+  const n = L2.node, head = n ? `<div class="ap-head ap-${n.kind}" data-ap="${esc2(n.key)}"><span class="eyebrow">${apEyebrow(n)}</span><h3>${esc2(n.label)}</h3><span class="ap-meta">${apCount(n)}${apMarks(n)}</span>${apPage(n, apOpen(n))}${apLines(n)}</div>` : "";
+  return entitySection("Apariciones", `<div class="row between"><p class="tiny">${esc2(sum || "Ninguna.")}</p><label class="ap-all"><input type="checkbox" data-appear-all${all ? " checked" : ""}> Todas las versiones</label></div>${note ? `<p class="tiny">${note}</p>` : ""}${empty || head + apChildren(n ? n.children : T2.roots, ent)}`);
 }
+var apLevelPage = (item, X2, heading2, actions, note) => {
+  const v2 = X2.key.split("/")[0];
+  return crumbsNav(appearanceCrumbs(p, { view: v2, [v2]: item.id }, X2.L)) + heading2(esc2(item.name), "Apariciones \xB7 " + esc2(apEyebrow(X2.L.node).toLowerCase() + " " + X2.L.node.label), actions) + appearancesHTML(X2, { note });
+};
 var envLinks = (list) => list.length ? `<div class="entity-envs">${list.map((e) => `<div class="note"><a href="${esc2(routeQuery({ project: p.id, ...e.route }))}" data-route>${esc2(e.name)}</a> <span class="tiny">${esc2(e.via.map((v2) => v2 === "environment" ? "entorno del ambiente" : "modelSpace").join(" \xB7 "))}${e.nodes ? " \xB7 " + plural(e.nodes, "nodo", "nodos") : ""}</span></div>`).join("")}</div>` : '<p class="tiny">Ninguno.</p>';
 async function entityData(kind, id3) {
   try {
@@ -29863,11 +29880,16 @@ async function entityData(kind, id3) {
   }
 }
 function characterPage(c, { ent, err }, heading2) {
+  const X2 = apResolve("character/" + c.id, true);
+  if (X2.L.key) return apLevelPage(c, X2, heading2, entityActions(c, "character"));
   const voiceAssets = err ? `<p class="error">No se pudo leer el registro: ${esc2(err)}</p>` : (ent?.assets || []).filter((a) => a.kind === "voice").map(assetNote).join("");
-  return crumbsNav(levelCrumbs(p, { view: "character", character: c.id })) + heading2(esc2(c.name), c.kind === "voice" ? "Solo voz" : "Personaje", entityActions(c, "character")) + entityTop(c) + entitySection("Voz", `${voiceLine(c)}${voiceStatusLabel(c.voiceStatus) ? ` <span class="pill" title="${esc2(c.voiceStatus)}">${esc2(voiceStatusLabel(c.voiceStatus))}</span>` : ""}${c.voicePrompt ? `<p class="entity-text"><b>Voice prompt:</b> ${esc2(c.voicePrompt)}</p>` : ""}${c.voiceBrief ? `<p class="entity-text"><b>Resumen:</b> ${esc2(c.voiceBrief)}</p>` : ""}${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}${voiceActions(c)}${voiceAssets ? `<div class="entity-assets">${voiceAssets}</div>` : ""}`) + entitySection("Hojas y referencias", entityDocs(ent) + entityAssets(ent, err, ["character", "group"], "Sin assets de personaje en el registro.")) + (c.kind !== "voice" ? entitySection("Variantes", variantsBlock(c) || '<p class="tiny">Sin variantes.</p>') : "") + entitySection("Entornos 3D", envLinks(appearanceEnvironments(relationIndexFor(p), "character/" + c.id, { current: !appearStore.get() }))) + appearancesHTML("character/" + c.id);
+  return crumbsNav(levelCrumbs(p, { view: "character", character: c.id })) + heading2(esc2(c.name), c.kind === "voice" ? "Solo voz" : "Personaje", entityActions(c, "character")) + entityTop(c) + entitySection("Voz", `${voiceLine(c)}${voiceStatusLabel(c.voiceStatus) ? ` <span class="pill" title="${esc2(c.voiceStatus)}">${esc2(voiceStatusLabel(c.voiceStatus))}</span>` : ""}${c.voicePrompt ? `<p class="entity-text"><b>Voice prompt:</b> ${esc2(c.voicePrompt)}</p>` : ""}${c.voiceBrief ? `<p class="entity-text"><b>Resumen:</b> ${esc2(c.voiceBrief)}</p>` : ""}${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}${voiceActions(c)}${voiceAssets ? `<div class="entity-assets">${voiceAssets}</div>` : ""}`) + entitySection("Hojas y referencias", entityDocs(ent) + entityAssets(ent, err, ["character", "group"], "Sin assets de personaje en el registro.")) + (c.kind !== "voice" ? entitySection("Variantes", variantsBlock(c) || '<p class="tiny">Sin variantes.</p>') : "") + entitySection("Entornos 3D", envLinks(appearanceEnvironments(relationIndexFor(p), "character/" + c.id, { current: !appearStore.get() }))) + appearancesHTML(X2);
 }
+var AP_LOCATION_NOTE = "Solo secuencias, escenas y planos con este ambiente propio: las vi\xF1etas y los planos heredan el de su escena o su secuencia.";
 function locationPage(l3, { ent, err }, heading2) {
-  return crumbsNav(levelCrumbs(p, { view: "location", location: l3.id })) + heading2(esc2(l3.name), esc2(l3.kind || "Ambiente"), entityActions(l3, "location")) + entityTop(l3) + entitySection("Referencias", entityDocs(ent) + entityAssets(ent, err, ["location"], "Sin referencias en el registro.")) + entitySection("Encuadre 3D", modelSpaceBlock(l3) || '<p class="tiny">Sin encuadre 3D.</p>') + entitySection("Entorno 3D", envLinks(appearanceEnvironments(relationIndexFor(p), "location/" + l3.id, { current: !appearStore.get() }))) + appearancesHTML("location/" + l3.id, { inherited: false, note: "Solo secuencias, escenas y planos con este ambiente propio: las vi\xF1etas y los planos heredan el de su escena o su secuencia." });
+  const X2 = apResolve("location/" + l3.id, false);
+  if (X2.L.key) return apLevelPage(l3, X2, heading2, entityActions(l3, "location"), AP_LOCATION_NOTE);
+  return crumbsNav(levelCrumbs(p, { view: "location", location: l3.id })) + heading2(esc2(l3.name), esc2(l3.kind || "Ambiente"), entityActions(l3, "location")) + entityTop(l3) + entitySection("Referencias", entityDocs(ent) + entityAssets(ent, err, ["location"], "Sin referencias en el registro.")) + entitySection("Encuadre 3D", modelSpaceBlock(l3) || '<p class="tiny">Sin encuadre 3D.</p>') + entitySection("Entorno 3D", envLinks(appearanceEnvironments(relationIndexFor(p), "location/" + l3.id, { current: !appearStore.get() }))) + appearancesHTML(X2, { note: AP_LOCATION_NOTE });
 }
 function modal(title, body, handler, submitLabel = "Guardar") {
   const m2 = $2("#modal");
@@ -30003,7 +30025,7 @@ async function render() {
       locationId = null;
       return render();
     }
-    const data2 = await entityData(view, item.id);
+    const lvl = apAt && apResolve(view + "/" + item.id, chars).L.key, data2 = lvl ? { ent: null, err: null } : await entityData(view, item.id);
     if (generation !== renderGeneration) return;
     html3 = chars ? characterPage(item, data2, heading2) : locationPage(item, data2, heading2);
   }
@@ -30540,10 +30562,6 @@ async function act(action) {
   if (a === "nav") return goRoute({ view: routeView(b2) });
   if (a === "tree") return goRoute({ view: "tree", node: action.slice(5) || null });
   if (a === "shots") return goRoute({ view: "shots", sequence: b2 || null });
-  if (a === "ap-open" || a === "ap-fold") {
-    document.querySelectorAll("details.ap-node").forEach((d3) => d3.open = a === "ap-open");
-    return;
-  }
   if (a === "sb-current") {
     const b0 = p.storyboards.find((x2) => x2.id === b2);
     if (!confirm(`\xBFMarcar \xAB${b0.title}\xBB como el story vigente de su secuencia?`)) return;

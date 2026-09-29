@@ -269,12 +269,12 @@ export function environmentList(p){return (p?.environments||[]).map(e=>{const v=
 export function modelSpaceEnvironment(p,modelSpace){const m=modelSpace?.model;return m?(p?.environments||[]).find(e=>e.builder&&e.data&&e.data===m)||null:null;}
 // Rutas de la app (#57): ?project=…&view=…&<parámetros de la vista>. Los alias (outline, episodes, ship) llevan a la vista que los sustituye;
 // con proyecto, una vista desconocida, library o ninguna llevan al árbol. sequence de shots enfoca y no cuenta para el scroll; node es la página de la Escaleta;
-// scene y panel del storyboard son páginas (#68): la escena y la viñeta.
+// scene y panel del storyboard son páginas (#68): la escena y la viñeta; at de personaje y ambiente es el nivel de sus Apariciones (#69).
 export const VIEWS=['tree','overview','ideas','characters','locations','environments','environment','character','location','storyboards','storyboard','shots','shot','rehearsal','anim','montaje','issues','jobs'];
 export const VIEW_ALIASES={outline:'tree',episodes:'shots',ship:'environments'};
-export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene','panel'],environment:['environment'],character:['character'],location:['location'],tree:['node'],shots:['sequence','q','f'],storyboards:['q','f']};
+export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene','panel'],environment:['environment'],character:['character','at'],location:['location','at'],tree:['node'],shots:['sequence','q','f'],storyboards:['q','f']};
 export const FOCUS_PARAMS={shots:['sequence']};
-export const ROUTE_KEYS=['episode','sequence','shot','storyboard','environment','character','location','scene','panel','node','q','f'];
+export const ROUTE_KEYS=['episode','sequence','shot','storyboard','environment','character','location','scene','panel','node','q','f','at'];
 // Buscador y facetas (#59): q y f no cuentan para el scroll; en la URL, f conserva ':' y ',' legibles (f=act:e1,cast:ana).
 export const FILTER_PARAMS=['q','f'];
 const routeValue=(k,v)=>FILTER_PARAMS.includes(k)?encodeURIComponent(v).replace(/%3A/g,':').replace(/%2C/g,','):encodeURIComponent(v);
@@ -1021,7 +1021,7 @@ const levelEntry=(model,key)=>model?.index instanceof Map?model.index.get(key)??
 // Claves desde la raíz hasta key (incluida); [] si no existe.
 export function treePath(model,key){const out=[];let k=key,e;while(k!==null&&k!==undefined&&(e=levelEntry(model,k))){out.unshift(k);k=e.parent;}return out;}
 // ---- Escaleta por niveles (#67): cada nodo de treeModel es una página (acto, ficha, prueba y grupos) o redirige a su vista (story, escena,
-// planos sin viñeta). LEVELS da la etiqueta y la ruta de cada tipo; #68 añade la viñeta (su página) y el plano (su estudio); #69 usa el prefijo de entidad.
+// planos sin viñeta). LEVELS da la etiqueta y la ruta de cada tipo; #68 añade la viñeta (su página) y el plano (su estudio).
 const LEVELS={
  act:{label:n=>n.episode.title||n.episode.id,route:n=>({view:'tree',node:n.key})},
  ficha:{label:n=>n.code+' · '+(n.sequence.title||n.sequence.id),route:n=>({view:'tree',node:n.key})},
@@ -1197,7 +1197,7 @@ export function descendants(index,key,{current=false}={}){const seen=new Set(),w
 export function linksTo(index,targetKey,q={}){const ok=relMatch(q);return (index?.to?.get(targetKey)||[]).filter(l=>ok(l)&&(!q.current||!trail(index,l.from).some(n=>offCurrent(index,n))));}
 // Relacionados con key: para un nodo del árbol, los destinos de los enlaces de su subárbol; para un personaje, ambiente o entorno, los nodos que
 // lo enlazan. Map clave → enlaces, en orden de aparición.
-// Diagnóstico (#61): llamadas a relatedTo; el árbol plegado no debe hacer ninguna.
+// Diagnóstico (#61): llamadas a relatedTo; pintar niveles que no se muestran no debe hacer ninguna.
 export const relationCounters={relatedTo:0};
 export function relatedTo(index,key,q={}){relationCounters.relatedTo++;const out=new Map(),n=index?.nodes?.get(key);if(!n)return out;const add=(k,l)=>{if(!out.has(k))out.set(k,[]);out.get(k).push(l);};
  if(ENTITY_KINDS.has(n.kind)){for(const l of linksTo(index,key,q))add(l.from,l);return out;}
@@ -1261,10 +1261,25 @@ export function relationLine(L,{max=6}={}){const groups=[],group=(rel,label,item
  group('location',k=>k===1?'Ambiente':'Ambientes',(L?.location||[]).map(inh));group('environment','3D',(L?.environment||[]).map(inh));
  group('missing','No existen',(L?.missing||[]).map(m=>({key:m.kind+'/'+m.id,label:m.id,route:null,notes:[]})));
  return {groups};}
-// Plegado de Apariciones (#61): secuencias y storys se pliegan con más de node viñetas+planos o si la página entera pasa de page.
-export const APPEARANCE_FOLD={node:30,page:40};
-export function appearanceOpen(a,total,{node=APPEARANCE_FOLD.node,page=APPEARANCE_FOLD.page}={}){if(a?.kind!=='sequence'&&a?.kind!=='story')return true;
- const n=(a.counts?.panels||0)+(a.counts?.shots||0),t=(total?.panels||0)+(total?.shots||0);return !(n>node||t>page);}
+// Tipos que son nivel en Apariciones (#69); viñetas y planos se pintan en línea dentro de su nivel.
+export const APPEARANCE_LEVELS=new Set(['act','sequence','story','scene']);
+// Nivel de Apariciones que corresponde a at (#69), sobre el árbol T de appearanceTree: la raíz sin at; el nodo si es nivel de T; el nivel
+// contenedor de una viñeta o un plano de T; si at no está en T, el ancestro más cercano de trail(index, at) que sea nivel en T, o la raíz, con
+// missing. key: clave canónica (null en la raíz); path: nodos de T desde la raíz hasta node. Pura; no lanza con entradas raras.
+export function appearanceLevel(T,at,index=null){const root={key:null,node:null,path:[],missing:false},byKey=new Map(),parentOf=new Map();
+ const walk=(list,parent)=>{for(const a of Array.isArray(list)?list:[]){if(!isObj(a)||byKey.has(a.key))continue;byKey.set(a.key,a);parentOf.set(a.key,parent);walk(a.children,a.key);}};walk(T?.roots,null);
+ const up=k=>{while(k!==null&&k!==undefined&&!APPEARANCE_LEVELS.has(byKey.get(k)?.kind))k=parentOf.get(k);return k??null;};
+ const at_=(k,missing)=>{if(k===null)return {...root,missing};const path=[];for(let x=k;x!==null&&x!==undefined;x=parentOf.get(x))path.unshift(byKey.get(x));return {key:k,node:byKey.get(k),path,missing};};
+ if(at===null||at===undefined||at==='')return root;
+ if(byKey.has(at))return at_(up(at),false);
+ const near=(index?.nodes instanceof Map?trail(index,at):[]).map(n=>n.key).reverse().find(k=>byKey.has(k));
+ return at_(near===undefined?null:up(near),true);}
+// Migas de Apariciones (#69): las de levelCrumbs del personaje o ambiente y, si level tiene camino, el nombre enlazado a la página sin at y un paso
+// por nodo del camino (con at; el último sin ruta). Sin personaje/ambiente → []. Pura.
+export function appearanceCrumbs(p,route,level){const v=route?.view,base=levelCrumbs(p,{view:v,[v]:route?.[v]});
+ if(!base.length||!level?.path?.length)return base;const id=route[v],out=[base[0],{...base[1],route:{view:v,[v]:id}},
+  ...level.path.map(a=>({key:a.key,kind:a.kind,label:a.label,route:{view:v,[v]:id,at:a.key}}))];
+ out[out.length-1]={...out.at(-1),route:null};return out;}
 // ---- Buscador y facetas (#59): lógica de la barra de búsqueda de las vistas transversales (docs/ARQUITECTURA.md). Puras; el estado va en la URL
 // (q, f) y en localStorage, nunca en proyecto.json. Ítem {key, kind, id, text, facets:{faceta:[valores]}, group, subs?, ref}; sub {key, kind, scene,
 // label, text, facets}. Definición de faceta {id, label, sub?, values:[{value, label}]}; sub: también se exige a las subs para marcar coincidencias.

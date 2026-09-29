@@ -62,7 +62,8 @@ test('levelCrumbs: personaje y ambiente',()=>{
  assert.deepEqual(lr(levelCrumbs(m,{view:'location',location:'loc'})),[['Ambientes',{view:'locations'}],['Loc',null]]);
  assert.deepEqual(levelCrumbs(m,{view:'character',character:'nada'}),[]);assert.deepEqual(levelCrumbs(m,{view:'location',location:null}),[]);
  for(const view of ['shots','overview','storyboards','characters'])assert.deepEqual(levelCrumbs(m,{view}),[],view);
- assert.deepEqual(levelCrumbs({},{view:'character',character:'ana'}),[]);});
+ assert.deepEqual(levelCrumbs({},{view:'character',character:'ana'}),[]);
+ assert.deepEqual(levelCrumbs(m,{view:'character',character:'ana',at:'act/e1'}),levelCrumbs(m,{view:'character',character:'ana'}),'levelCrumbs ignora at (#69)');});
 
 test('levelCrumbs y levelKey no mutan y aceptan el modelo ya construido',()=>{
  const p=withShots(),before=structuredClone(p),model=treeModel(p);

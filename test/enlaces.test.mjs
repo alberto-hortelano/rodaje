@@ -1,6 +1,6 @@
-// #61: enlaces de relaciones de cada nodo (relationLinks, relationLine), etiqueta de plano, voiceStatus legible y plegado de Apariciones.
+// #61: enlaces de relaciones de cada nodo (relationLinks, relationLine), etiqueta de plano, voiceStatus legible (el plegado de Apariciones, sustituido por niveles en #69).
 import test from 'node:test';import assert from 'node:assert/strict';
-import {relationIndex,relationLinks,relationLine,relationCounters,shotLabel,voiceStatusLabel,VOICE_STATUS,appearanceOpen,APPEARANCE_FOLD,appearanceTree} from '../app/workflow.mjs';
+import {relationIndex,relationLinks,relationLine,relationCounters,shotLabel,voiceStatusLabel,VOICE_STATUS,appearanceTree} from '../app/workflow.mjs';
 import {relProject,relProjectMany} from './fixtures/relaciones.mjs';
 
 const ids=list=>list.map(e=>e.id);
@@ -84,11 +84,3 @@ test('voiceStatusLabel: valores conocidos legibles, desconocidos tal cual, vací
  assert.equal(voiceStatusLabel('algo-raro'),'algo-raro');assert.equal(voiceStatusLabel('toString'),'toString');
  for(const v of [undefined,null,'',3])assert.equal(voiceStatusLabel(v),'');});
 
-test('appearanceOpen: umbral por nodo y por página; actos y escenas abiertos',()=>{
- const a=(kind,panels,shots=0)=>({kind,counts:{panels,shots}}),T=(panels,shots=0)=>({panels,shots});
- assert.deepEqual(APPEARANCE_FOLD,{node:30,page:40});
- assert.equal(appearanceOpen(a('act',100),T(100)),true);assert.equal(appearanceOpen(a('sequence',20,11),T(31)),false);
- assert.equal(appearanceOpen(a('story',5),T(30,11)),false);assert.equal(appearanceOpen(a('sequence',5),T(20)),true);assert.equal(appearanceOpen(a('scene',50),T(50)),true);
- assert.equal(appearanceOpen(a('sequence',30,0),T(40)),true,'los umbrales son estrictos');assert.equal(appearanceOpen(a('sequence',5),T(5),{page:4}),false);
- const B=appearanceTree(relationIndex(relProjectMany(50)),'character/ana',{current:false});assert.ok(B.total.shots+B.total.panels>40);
- assert.equal(appearanceOpen(B.roots[0].children.find(x=>x.kind==='sequence'),B.total),false);});
