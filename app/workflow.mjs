@@ -481,6 +481,59 @@ export function cameraPresets(camera,{characters=[]}={}){const c=camCopy(camera)
   out.push({id:'pan-follow:'+id,label:`Panorámica siguiendo a ${name}`,rig:{type:'follow',start:camCopy(c),follow:{character:id,mode:'look',smoothing:.5}}},{id:'follow:'+id,label:`Acompañar a ${name}`,rig:{type:'follow',start:camCopy(c),follow:{character:id,mode:'track',smoothing:.5}}});}
  out.push({id:'handheld',label:'Cámara en mano',rig:{type:'handheld',start:camCopy(c),shake:.03}},{id:'free',label:'Grabación libre',rig:{type:'track',start:camCopy(c),track:[{t:0,...camCopy(c)}],trackSmoothing:.5}});
  return out;}
+// ---- Vista Animación (#50; docs/ensayo-3d.md): voz del navegador por personaje, reloj y líneas, grabación y recorte de la pista, edición del rig.
+// Hablantes del capítulo sin repetir, por orden de primera aparición.
+export function episodeSpeakers(episode){return uniq((episode?.sequences||[]).flatMap(s=>(s.shots||[]).flatMap(t=>(t.lines||[]).map(l=>l.character))));}
+// Voz por defecto del navegador: las del idioma base (lang ^base, sin mayúsculas) repartidas por orden de hablante; '' si no hay.
+export function ttsDefaultVoiceURI(voices,speakerIds,id,base){const re=new RegExp('^'+base+'\\b','i'),own=(voices||[]).filter(v=>re.test(v.lang||'')),i=Math.max(0,(speakerIds||[]).indexOf(id));return own[i%Math.max(1,own.length)]?.voiceURI||'';}
+// Voz elegida (localStorage) o la de por defecto; una elección vacía vuelve a la de por defecto.
+export function ttsVoiceURI({voices,speakerIds,id,saved,base}){return saved?.[id]||ttsDefaultVoiceURI(voices,speakerIds,id,base);}
+// Parámetros de la utterance de una línea: texto hablado, idioma del proyecto y tono del personaje.
+export function ttsParams(line,{speech,voicePitch,voiceURI,rate=1}){return {text:line.spokenText||line.text,lang:speech.locale,pitch:voicePitch?.[line.character]??1,rate,voiceURI};}
+export const TIMELINE_FPS=24,TRACK_SMOOTHING_DEFAULT=.5;
+const r3c=n=>Math.round(n*1000)/1000;
+// Instante del scrub: múltiplo de 1/fps dentro de [0, duración], con 3 decimales.
+export function snapTime(time,duration,fps=TIMELINE_FPS){const t=Math.round((Number(time)||0)*fps)/fps;return r3c(Math.min(Math.max(0,duration),Math.max(0,t)));}
+// Avance del reloj: con bucle, al llegar al final vuelve a 0 (wrapped); sin bucle se queda en la duración (ended).
+export function clockTick({time,duration,loop},dt){const next=time+Math.max(0,dt);if(next<duration)return {time:next,ended:false,wrapped:false};return loop?{time:0,ended:false,wrapped:true}:{time:duration,ended:true,wrapped:false};}
+// Líneas del plano en el reloj, por inicio; fin acotado a la duración (estimatedDuration o 3 s).
+export function lineSchedule(lines,duration,channels=projectChannels(null)){return (lines||[]).filter(l=>Number.isFinite(l?.start)).map(l=>({id:l.id,character:l.character,start:l.start,end:Math.min(duration,l.start+(l.estimatedDuration||3)),text:l.spokenText||l.text||'',offscreen:lineOffscreen(channels,l)})).sort((a,b)=>a.start-b.start);}
+// Línea que hay que lanzar al pasar el reloj de prev a now: la última con prev < start ≤ now (con un salto grande, solo la última).
+export function lineToLaunch(schedule,prev,now){return (schedule||[]).filter(l=>l.start>prev&&l.start<=now).at(-1)||null;}
+// Línea en pantalla (subtítulo) en el instante time: la de mayor inicio con start ≤ time < end.
+export function activeLineAt(schedule,time){return (schedule||[]).filter(l=>l.start<=time&&time<l.end).at(-1)||null;}
+// Marcas de la línea de tiempo en % de la duración.
+export function timelineMarks(schedule,duration){return (schedule||[]).map(l=>({id:l.id,at:l.start,pct:duration>0?r3c(Math.min(100,Math.max(0,l.start/duration*100))):0,label:l.text}));}
+export function roundCamera(c,dp=3){const k=10**dp,r=v=>Math.round(v*k)/k;return {position:c.position.map(r),target:c.target.map(r),fov:r(c.fov)};}
+// Grabación: una muestra por cada fotograma k/fps ya transcurrido y aún sin muestra (si el navegador va lento, repite la cámara actual). Nunca pasa de la duración.
+export function recordSamples(track,time,camera,{duration,fps=TIMELINE_FPS}){const out=[...(track||[])],last=Math.floor(Math.min(time,duration)*fps+1e-9);for(let k=out.length;k<=last;k++)out.push({t:Math.min(r3c(k/fps),duration),...roundCamera(camera)});return out;}
+// Recorte de una pista a [from, to]: extremos interpolados y las muestras interiores, sin desplazar tiempos.
+export function trimTrack(track,from,to,{duration}){if(!(from<to))throw Error('El recorte necesita un inicio anterior al final');const rig={type:'track',start:track[0],track},at=x=>({t:r3c(x),...roundCamera(cameraAt(rig,x,duration))});
+ const out=[];for(const s of [at(from),...track.filter(s=>s.t>from&&s.t<to).map(s=>at(s.t)),at(to)])if(!out.length||s.t>out.at(-1).t)out.push(s);return out;}
+// Rig de una grabación: track con la primera muestra como start y el suavizado por defecto.
+export function recordedRig(track,{smoothing}={}){const k=track[0];return {type:'track',start:{position:[...k.position],target:[...k.target],fov:k.fov},track:structuredClone(track),trackSmoothing:smoothing??TRACK_SMOOTHING_DEFAULT};}
+// Borrador del editor: el rig del plano o uno fijo con su cámara; nunca comparte objetos con el proyecto.
+export function rigFromShot(shot){return isObj(shot?.cameraRig)?structuredClone(shot.cameraRig):{type:'fixed',start:camCopy(shot.camera)};}
+// Fijar inicio o fin con la cámara actual. Fin en un fijo lo convierte en movimiento; follow y track no tienen fin; track tampoco admite fijar el inicio.
+export function rigWithCamera(rig,which,camera){const r=structuredClone(rig),c=camCopy(camera);
+ if(which==='start'){if(r.type==='track')return {error:'La pista grabada fija su propio inicio: regraba o recórtala'};r.start=c;return {rig:r};}
+ if(which!=='end')return {error:'Cámara desconocida: '+which};
+ if(r.type==='fixed')return {rig:{...r,type:'move',end:c,easing:'smooth'}};if(r.type==='move'||r.type==='handheld'){r.end=c;return {rig:r};}
+ return {error:r.type==='follow'?'El seguimiento no tiene cámara final: sigue al personaje hasta el último fotograma':'La pista grabada no tiene cámara final: regraba o recórtala'};}
+// Cambio de tipo conservando start; quita las claves que el nuevo tipo no usa.
+export function rigWithType(rig,type,{positioned=[]}={}){if(!CAMERA_RIG_TYPES.includes(type))return {error:'Tipo de cámara desconocido: '+type};if(rig.type===type)return {rig:structuredClone(rig)};const start=camCopy(rig.start),moving={...(isObj(rig.end)?{end:camCopy(rig.end)}:{}),...(rig.easing?{easing:rig.easing}:{}),...(Array.isArray(rig.hold)?{hold:[...rig.hold]}:{})};
+ if(type==='fixed')return {rig:{type,start}};
+ if(type==='move')return {rig:{type,start,end:camCopy(rig.end||start),...(rig.easing?{easing:rig.easing}:{}),...(Array.isArray(rig.hold)?{hold:[...rig.hold]}:{})}};
+ if(type==='follow'){if(!positioned.length)return {error:'No hay nadie colocado a quien seguir'};return {rig:{type,start,follow:{character:positioned[0],mode:'look',smoothing:.5}}};}
+ if(type==='track')return {rig:{type,start,track:[{t:0,...camCopy(start)}],trackSmoothing:TRACK_SMOOTHING_DEFAULT}};
+ return {rig:{type,start,...moving,shake:rig.shake??.03,...(Number.isInteger(rig.seed)?{seed:rig.seed}:{})}};}
+// Controles del editor que tienen sentido para cada tipo.
+export function rigControls(type){const moving=type==='move'||type==='handheld';return {end:moving,easing:moving,hold:moving,follow:type==='follow',trackSmoothing:type==='track',trim:type==='track',shake:type==='handheld'};}
+// «Inicio/Final de cámara» de la vista del plano: sin rig, camera/cameraEnd como siempre; con rig, además start/end del rig. anim: el cambio solo se hace en la vista Animación.
+export function applyShotCamera(shot,which,camera){const t=structuredClone(shot),key=which==='start'?'camera':'cameraEnd';if(!isObj(t.cameraRig)){t[key]=camCopy(camera);return {shot:t};}
+ const r=rigWithCamera(t.cameraRig,which,camera);if(r.error)return {error:r.error,anim:true};t.cameraRig=r.rig;t[key]=camCopy(camera);return {shot:t};}
+// Planos de capítulo enlazados a una viñeta del storyboard (t.storyboardShot).
+export function storyboardAnimTargets(project,storyboardShotId){const out=[];for(const e of project?.episodes||[])for(const s of e.sequences||[])for(const t of s.shots||[])if(t.storyboardShot===storyboardShotId)out.push({episode:e.id,sequence:s.id,shot:t.id});return out;}
 // Errores y avisos del staging y de la cámara (cameraRig) de un plano frente al reparto de su secuencia y la configuración del ensayo.
 export function stagingIssues(shot,sequence,R,{characters}={}){const errors=[],warnings=[],st=shot?.staging;
  if(shot?.cameraRig!==undefined){const w=shot.id+': cameraRig: ',r=cameraRigIssues(shot.cameraRig,{duration:shot.duration,cast:shotCast(shot,sequence),positioned:uniq([...(sequence?.cast||[]).map(a=>a.character),...Object.keys(proxiesOf(shot))])});errors.push(...r.errors.map(e=>w+e));warnings.push(...r.warnings.map(e=>w+e));if(!r.errors.length){const z=rigFovSpan(shot.cameraRig,shot.duration);if(z.zoom)warnings.push(`${w}la cámara hace zum (fov vertical de ${z.start.toFixed(1)}° a ${z.end.toFixed(1)}°): OPTICS lo describe como un zum continuo`);}
