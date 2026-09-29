@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {spawnSync} from 'node:child_process';
 import {DATA} from '../lib/paths.mjs';
 import {stripCode,builderIssues,checkProject,RULES} from '../lib/proyecto-check.mjs';
-import {storysProject,storysSpec} from './fixtures/escaleta-storys.mjs';import {storyMigrationPlan} from '../app/workflow.mjs';
+import {storysProject,storysSpec} from './fixtures/escaleta-storys.mjs';import {relProject} from './fixtures/relaciones.mjs';import {storyMigrationPlan} from '../app/workflow.mjs';
 
 const mk=(manifest,fileMap)=>checkProject({manifest,files:Object.keys(fileMap),read:f=>{if(!(f in fileMap))throw Error('no leer '+f);if(fileMap[f]===null)throw Error('binario '+f);return fileMap[f];}});
 const rules=(found,rule)=>found.filter(x=>x.rule===rule);
@@ -121,9 +121,17 @@ test('package.json: check:proyectos es estricto (sin --report)',()=>{
  assert.equal(pkg.scripts['check:proyectos'],'node scripts/proyecto-check.mjs --all');});
 
 test('R-storys (#56): errores de store.validate y avisos del modelo escaleta → story → planos',()=>{
- assert.deepEqual(RULES,['R-code','R-builder','R-manifest','R-before','R-abs','R-storys']);
+ assert.deepEqual(RULES,['R-code','R-builder','R-manifest','R-before','R-abs','R-storys','R-hablantes']);
  const check=manifest=>checkProject({manifest,files:['proyecto.json'],read:()=>'{}'}).filter(x=>x.rule==='R-storys');
  assert.deepEqual(check(storysProject()),[]);const m=storyMigrationPlan(storysProject(),storysSpec()).next;assert.deepEqual(check(m),[]);
  m.storyboards.push({id:'sb-z',title:'Z',sequences:[],outlineSequence:'nada'});delete m.episodes[0].sequences[0].currentStoryboard;
  assert.deepEqual(check(m).map(x=>[x.level,x.file,x.detail]),[['error','proyecto.json','El story sb-z enlaza una secuencia inexistente: nada'],['aviso','proyecto.json','La secuencia x-colgado tiene 2 storys y ninguno vigente']]);
  assert.deepEqual(check(null),[]);assert.deepEqual(check({episodes:'x'}),[]);});
+
+test('R-hablantes (#58): un aviso por línea de viñeta sin personaje',()=>{
+ const check=manifest=>checkProject({manifest,files:['proyecto.json'],read:()=>'{}'}).filter(x=>x.rule==='R-hablantes');
+ assert.deepEqual(check(relProject()).map(x=>[x.level,x.file,x.detail]),[
+  ['aviso','proyecto.json','Story sb1 · Viñeta A1: la línea 3 («Nadie», canal ext) no tiene personaje; no pasa al plano. Crea el personaje o corrige el nombre.'],
+  ['aviso','proyecto.json','Story sb1 · Viñeta A2: la línea 1 («sin hablante») no tiene personaje; no pasa al plano. Crea el personaje o corrige el nombre.']]);
+ const p=relProject();p.characters.push({id:'nadie',name:'Nadie',kind:'voice'});p.storyboards[0].sequences[0].shots[1].dialogue=[];assert.deepEqual(check(p),[]);
+ assert.deepEqual(check(storysProject()),[]);assert.deepEqual(check(null),[]);assert.deepEqual(check({storyboards:'x'}),[]);});

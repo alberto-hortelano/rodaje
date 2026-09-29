@@ -29393,7 +29393,7 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, navActive, sequenceRole, treeModel, treePath, treeOpenKeys, storyCrumbs, storyVersionOptions, setCurrentStory, shotGroups, projectStats } from "./workflow.mjs";
+import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, navActive, sequenceRole, treeModel, treePath, treeOpenKeys, storyCrumbs, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings } from "./workflow.mjs";
 import { createStage as createStage3 } from "./stage.js";
 var state;
 var p = null;
@@ -30474,8 +30474,8 @@ async function act(action) {
       const dialogue = f2.dialogue.split("\n").map((x2) => x2.trim()).filter(Boolean).map((x2) => {
         const m2 = /^([^:(]+?)\s*(?:\(([a-z]+)\))?\s*:\s*(.*)$/i.exec(x2);
         if (!m2) return { who: "", channel: "", text: x2 };
-        const who = m2[1].trim(), w = who.toLowerCase(), c0 = p.characters.find((c2) => c2.id.toLowerCase() === w || c2.name.toLowerCase() === w || c2.name.toLowerCase().split(/\s+/)[0] === w);
-        return { who, channel: (m2[2] || "").toLowerCase(), text: m2[3], ...c0 ? { character: c0.id } : {} };
+        const who = m2[1].trim(), c0 = resolveSpeaker(p, { who });
+        return { who, channel: (m2[2] || "").toLowerCase(), text: m2[3], ...c0 ? { character: c0 } : {} };
       });
       const cast = f2.cast.split(",").map((x2) => x2.trim()).filter(Boolean);
       for (const x2 of cast) if (!p.characters.some((c2) => c2.id === x2)) throw Error("Personaje desconocido: " + x2);
@@ -30588,10 +30588,11 @@ async function act(action) {
       sequenceId = r.sequence.id;
       return goRoute({ view: "shots", sequence: r.sequence.id });
     }
-    const e = storyboardToEpisode(p, b0, id2);
+    const e = storyboardToEpisode(p, b0, id2), lost = storyboardDialogueWarnings(p, b0);
     p.episodes.push(e);
     await save();
-    toast(`Cap\xEDtulo creado con ${e.sequences.reduce((n, s2) => n + s2.shots.length, 0)} planos. Las voces quedan fuera de campo hasta colocar el reparto 3D.`);
+    for (const w of lost) console.warn(w);
+    toast(`Cap\xEDtulo creado con ${e.sequences.reduce((n, s2) => n + s2.shots.length, 0)} planos. Las voces quedan fuera de campo hasta colocar el reparto 3D.${lost.length ? ` \xB7 ${lost.length} l\xEDneas sin personaje (detalle en la consola)` : ""}`);
     return goRoute({ view: "shots", sequence: e.sequences[0]?.id || null });
   }
   if (a === "outline") {

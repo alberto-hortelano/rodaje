@@ -12,7 +12,7 @@ import path from 'node:path';
 import {load, save, dir} from '../app/store.mjs';
 import {takeOption} from '../lib/args.mjs';
 import {cliProject, usageExit} from '../lib/cli.mjs';
-import {storyboardShotDraft, mergeStoryboardShot, storyboardInsertIndex, findStoryboardShot, storyPlansTarget, storyLocation, parseShotCameras, cameraFileWarnings, shotRigIssues, shotCastIssues, effectiveEnvironment, locationEnvironment} from '../app/workflow.mjs';
+import {storyboardShotDraft, mergeStoryboardShot, storyboardInsertIndex, findStoryboardShot, storyPlansTarget, storyLocation, parseShotCameras, cameraFileWarnings, shotRigIssues, shotCastIssues, effectiveEnvironment, locationEnvironment, unresolvedDialogue, dialogueLineWarning} from '../app/workflow.mjs';
 
 const USAGE = 'Uso: node scripts/storyboard-3d.mjs <storyboard> <viñeta> [--secuencia <id>] [--camaras fichero] [--force] [--plan] [--project id]';
 const args = process.argv.slice(2);
@@ -49,6 +49,7 @@ try {
   const linked = seq.shots.filter(t => t.storyboardShot === v.id);
   if (linked.length > 1) warn(`${linked.length} planos de la secuencia enlazan ${code}: se actualiza el primero (${linked[0].id})`);
   const prev = linked[0] || null;
+  for (const u of unresolvedDialogue(p, v)) warn(dialogueLineWarning(v, u));
   const draft = storyboardShotDraft(p, v, {castIds: (seq.cast || []).map(a => a.character)});
   const {shot} = mergeStoryboardShot(prev, draft, {camera: entry?.camera || null, preset: entry?.momento || null, force});
   if (prev) seq.shots[seq.shots.indexOf(prev)] = shot;

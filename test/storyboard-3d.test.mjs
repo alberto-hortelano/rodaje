@@ -97,7 +97,8 @@ test('castPlacements: conserva las colocaciones y coloca en semicírculo solo a 
 
 test('storyboardSequenceMerge: reejecutar conserva cámara, staging, cast, audio, colocaciones y planos a mano, con avisos',()=>{
  const p=project(),sb=p.storyboards[0],seq=p.episodes[0].sequences[0];
- const first=storyboardSequenceMerge(p,sb,seq,counter('f'));assert.deepEqual(first.warnings,[]);assert.deepEqual(first.sequence.shots.map(t=>t.storyboardShot),['v1','v2','v3']);
+ const nadie='Viñeta A01: la línea 4 («Nadie») no tiene personaje; no pasa al plano. Crea el personaje o corrige el nombre.';
+ const first=storyboardSequenceMerge(p,sb,seq,counter('f'));assert.deepEqual(first.warnings,[nadie]);assert.deepEqual(first.sequence.shots.map(t=>t.storyboardShot),['v1','v2','v3']);
  assert.deepEqual(first.sequence,storyboardToSequence(p,sb,seq,counter('f')));Object.assign(seq,first.sequence);assert.doesNotThrow(()=>validate(p));
  // Ediciones: rig, staging y cast del plano de v1, audio de su primera línea, colocación de ana, un plano a mano tras v1 y otro de una viñeta que se borra.
  const [t1,t2,t3]=seq.shots;t1.cameraRig={type:'fixed',start:A};t1.staging={environment:{preset:'camino'}};t1.cast=['ana'];t1.lines[0].audio='assets/hi.mp3';t1.lines[0].audioDuration=1.2;
@@ -106,7 +107,7 @@ test('storyboardSequenceMerge: reejecutar conserva cámara, staging, cast, audio
  sb.sequences[0].shots=sb.sequences[0].shots.filter(v=>v.id!=='v2');
  const {sequence:out,warnings}=storyboardSequenceMerge(p,sb,seq,counter('h'));
  assert.deepEqual(out.shots.map(t=>t.id),[t1.id,'manual',t2.id,t3.id,again0.shots[4].id]);
- assert.deepEqual(warnings,[`«Inserto» (manual) no viene del storyboard: se conserva en su sitio`,`«A02 · Puerta» (${t2.id}): su viñeta v2 ya no está en el storyboard; se conserva en su sitio`]);
+ assert.deepEqual(warnings,[`«Inserto» (manual) no viene del storyboard: se conserva en su sitio`,`«A02 · Puerta» (${t2.id}): su viñeta v2 ya no está en el storyboard; se conserva en su sitio`,nadie]);
  const o1=out.shots[0];assert.deepEqual(o1.cameraRig,{type:'fixed',start:A});assert.deepEqual(o1.staging,{environment:{preset:'camino'}});assert.deepEqual(o1.cast,['ana']);assert.equal(o1.lines[0].audio,'assets/hi.mp3');assert.equal(o1.lines[0].id,t1.lines[0].id);
  assert.equal(out.cast.find(a=>a.character==='ana').x,7);assert.ok(out.cast.some(a=>a.character==='cai'));assert.deepEqual(out.shots[1],manual);
  Object.assign(seq,out);assert.doesNotThrow(()=>validate(p));

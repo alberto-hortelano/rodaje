@@ -5,18 +5,21 @@
 //   node scripts/perfil.mjs set  [proyecto] <id> --acting <fichero.txt> --voice "<voice prompt>"
 //   node scripts/perfil.mjs set  [proyecto] <id> --acting-text "<párrafo>"
 //   node scripts/perfil.mjs list [proyecto]
+//   node scripts/perfil.mjs add  [proyecto] <id> --name "<nombre>" [--kind person|voice] [--color #rrggbb]   (personaje nuevo, sin voz asignada)
 // Proyecto: [proyecto] o --project id, RODAJE_PROJECT o el activo en la app (se imprime «Proyecto: X» en stderr).
 import fs from 'node:fs';
-import {load,save} from '../app/store.mjs';import {forbiddenEmotionWords} from '../app/workflow.mjs';import {takeOption} from '../lib/args.mjs';import {cliProject,usageExit} from '../lib/cli.mjs';
-const USAGE='Uso: perfil.mjs list [proyecto] · show|set [proyecto] <id> [--acting fichero | --acting-text texto] [--voice texto] · [--project id]';
+import {load,save} from '../app/store.mjs';import {forbiddenEmotionWords,characterDraft} from '../app/workflow.mjs';import {takeOption} from '../lib/args.mjs';import {cliProject,usageExit} from '../lib/cli.mjs';
+const USAGE='Uso: perfil.mjs list [proyecto] · show|set [proyecto] <id> [--acting fichero | --acting-text texto] [--voice texto] · add [proyecto] <id> --name nombre [--kind person|voice] [--color #rrggbb] · [--project id]';
 const argv=process.argv.slice(2);const p0=takeOption(argv,'--project');const cmd=argv.shift();
-if(!['list','show','set'].includes(cmd))usageExit(USAGE);
+if(!['list','show','set','add'].includes(cmd))usageExit(USAGE);
 // Posicionales hasta la primera --opción; el resto son opciones.
 const cut=argv.findIndex(a=>a.startsWith('--')),pos=cut<0?argv:argv.slice(0,cut),flags=cut<0?[]:argv.slice(cut);
 const {project,args:[id]}=cliProject({usage:USAGE,opts:{project:p0},args:pos,positional:cmd==='list'?0:1});
 if(cmd!=='list'&&!id)usageExit(USAGE,'Falta el personaje');
 const opt=k=>{const i=flags.indexOf(k);return i>=0?flags[i+1]:undefined;};
 const p=load(project);
+if(cmd==='add'){const r=characterDraft(p,{id,name:opt('--name'),kind:opt('--kind')??'person',color:opt('--color')});if(r.errors.length){for(const e of r.errors)console.error('Error: '+e);process.exit(1);}
+ p.characters.push(r.character);save(p,p.revision);console.log(`Creado ${r.character.id} (${r.character.kind}, «${r.character.name}») · revisión ${p.revision}. Sin voz asignada.`);process.exit(0);}
 if(cmd==='list'){for(const c of p.characters)console.log(`${c.id.padEnd(8)} ${c.kind||'person'}  acting=${c.acting?c.acting.split(/\s+/).length+' palabras':'—'}  voicePrompt=${c.voicePrompt?'sí':'—'}`);process.exit(0);}
 const c=p.characters.find(c=>c.id===id);if(!c){console.error('Personaje desconocido: '+id);process.exit(2);}
 if(cmd==='show'){console.log(`# ${c.name}\n\n## Interpretación\n${c.acting||'—'}\n\n## Voice prompt\n${c.voicePrompt||'—'}`);process.exit(0);}

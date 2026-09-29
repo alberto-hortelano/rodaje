@@ -15,9 +15,9 @@ export function spreadDialogue(n,duration){const step=n?Math.max(0,duration-1)/n
 // Convierte un storyboard en un capítulo editable: cada viñeta es un plano; el diálogo se reparte en el tiempo del plano; todas las voces quedan fuera de campo hasta colocar el reparto 3D.
 export function storyboardToEpisode(p,sb,newId=()=>crypto.randomUUID()){
 return {id:newId(),title:sb.title||'Capítulo desde storyboard',synopsis:sb.description||'',storyboard:sb.id,sequences:(sb.sequences||[]).map(s=>{const shots=(s.shots||[]);return {id:newId(),title:s.title||'Secuencia',location:p.locations.some(l=>l.id===s.location)?s.location:(p.locations[0]?.id||''),variant:zoneVariant(p,shots[0]?.zone),ambiencePrompt:shots.map(t=>t.sound).filter(Boolean)[0]||'',ambienceGain:.18,silent:false,cast:[],props:[],storyboardSequence:s.id,shots:shots.map(t=>{const {cast,staging,...rest}=storyboardShotDraft(p,t,{newId});return rest;})};})};}
-// Plano nuevo de una viñeta (#51): duración 1–15, hablante por id o nombre, diálogo repartido; cada línea va fuera de campo si su personaje no está en castIds.
+// Plano nuevo de una viñeta (#51): duración 1–15, hablante con resolveSpeaker (las líneas sin personaje no pasan), diálogo repartido; cada línea va fuera de campo si su personaje no está en castIds.
 // cast: los personajes físicos de la viñeta; staging vacío.
-export function storyboardShotDraft(p,t,{newId=()=>crypto.randomUUID(),castIds=[]}={}){const speaker=l=>{if(l.character&&p.characters.some(c=>c.id===l.character))return l.character;const who=String(l.who||'').trim().toLowerCase();return p.characters.find(c=>c.id.toLowerCase()===who||c.name.toLowerCase().split(/\s+/)[0]===who||c.name.toLowerCase()===who)?.id;};const cam=()=>({position:[4,2.5,7],target:[0,1,0],fov:45});
+export function storyboardShotDraft(p,t,{newId=()=>crypto.randomUUID(),castIds=[]}={}){const speaker=speakerResolver(p);const cam=()=>({position:[4,2.5,7],target:[0,1,0],fov:45});
  const duration=Math.max(1,Math.min(15,Number(t.duration)||5));const lines=(t.dialogue||[]).map(l=>({...l,character:speaker(l)})).filter(l=>l.character);const starts=spreadDialogue(lines.length,duration);
  return {id:newId(),title:[t.code,t.title].filter(Boolean).join(' · ')||'Plano',description:[t.action,t.camera?`Cámara: ${t.camera}`:''].filter(Boolean).join('\n'),duration,camera:cam(),cameraEnd:cam(),lines:lines.map((l,i)=>({id:newId(),character:l.character,text:String(l.text||''),start:starts[i],offscreen:!castIds.includes(l.character),...(l.channel?{channel:l.channel}:{})})),history:[],storyboardShot:t.id,...(t.render?{storyboardRender:t.render}:{}),cast:uniq((t.cast||[]).filter(id=>p.characters.some(c=>c.id===id&&c.kind!=='voice'))),staging:{}};}
 // Diálogo al reaplicar una viñeta: cada línea nueva se empareja con la primera anterior sin usar del mismo personaje y texto, que se conserva entera
@@ -37,12 +37,13 @@ export function mergeStoryboardShot(prev,draft,{camera=null,preset=null,force=fa
 // Reparto de la secuencia: conserva las colocaciones que ya hay y coloca en semicírculo (radio 3 × 2 m) los ids que faltan.
 export function castPlacements(existing,ids){const out=(existing||[]).map(a=>({...a})),have=new Set(out.map(a=>a.character));ids.forEach((character,i)=>{if(have.has(character))return;const a=Math.PI*(i+.5)/ids.length;out.push({character,x:Math.round(Math.cos(a)*300)/100,z:Math.round(-Math.sin(a)*200)/100,yaw:0});});return out;}
 // Rellena (o vuelve a aplicar) una secuencia con todas las viñetas de un storyboard, en orden: un plano por viñeta con mergeStoryboardShot.
-// Los planos sin viñeta, de viñetas que ya no están o repetidos se conservan detrás del plano que tenían delante, con un aviso.
+// Los planos sin viñeta, de viñetas que ya no están o repetidos se conservan detrás del plano que tenían delante, con un aviso. Las líneas de diálogo sin personaje, también con aviso (#58).
 export function storyboardSequenceMerge(p,sb,seq,newId=()=>crypto.randomUUID()){const physical=id=>p.characters.some(c=>c.id===id&&c.kind!=='voice');const shots=(sb.sequences||[]).flatMap(s=>s.shots||[]);const ids=[...new Set(shots.flatMap(t=>t.cast||[]))].filter(physical);
  const location=storyLocation(p,sb),old=seq.shots||[],used=new Set(),warnings=[],sbIds=new Set(shots.map(t=>t.id));
  const out=shots.map(v=>{const k=old.findIndex((t,i)=>!used.has(i)&&t.storyboardShot===v.id);if(k>=0)used.add(k);return {k:k>=0?k:null,shot:mergeStoryboardShot(k>=0?old[k]:null,storyboardShotDraft(p,v,{newId,castIds:ids})).shot};});
  old.forEach((t,k)=>{if(used.has(k))return;const name=`«${t.title||t.id}» (${t.id})`;warnings.push(!t.storyboardShot?`${name} no viene del storyboard: se conserva en su sitio`:sbIds.has(t.storyboardShot)?`${name} repite la viñeta ${t.storyboardShot}: se conserva aparte`:`${name}: su viñeta ${t.storyboardShot} ya no está en el storyboard; se conserva en su sitio`);
   let at=0,best=-1;out.forEach((x,i)=>{if(x.k!==null&&x.k<k&&x.k>best){best=x.k;at=i+1;}});out.splice(at,0,{k,shot:structuredClone(t)});});
+ warnings.push(...storyboardDialogueWarnings(p,sb));
  return {sequence:{...seq,location,cast:castPlacements(seq.cast,ids),storyboard:sb.id,shots:out.map(x=>x.shot)},warnings};}
 // Compatible con la versión anterior: la secuencia de storyboardSequenceMerge, sin los avisos.
 export function storyboardToSequence(p,sb,seq,newId=()=>crypto.randomUUID()){return storyboardSequenceMerge(p,sb,seq,newId).sequence;}
@@ -1015,3 +1016,129 @@ export function shotGroups(p){return (Array.isArray(p?.episodes)?p.episodes:[]).
 // Cifras de la vista Proyecto. shots: planos fuera de las pruebas; tests: secuencias de prueba.
 export function projectStats(p){const rows=outline(p),all=seqList(p),len=k=>Array.isArray(p?.[k])?p[k].length:0;
  return {acts:len('episodes'),sequences:rows.length,minutes:rows.reduce((n,r)=>n+r.minutes,0),storys:storyList(p).length,shots:all.filter(x=>x.sequence.test!==true).reduce((n,x)=>n+(x.sequence.shots||[]).length,0),tests:all.filter(x=>x.sequence.test===true).length,characters:len('characters'),locations:len('locations'),environments:len('environments')};}
+// ---- Relaciones (#58): hablante de las líneas e índice de relaciones del proyecto (docs/ARQUITECTURA.md). Puras: no mutan ni escriben.
+// Hablante de una línea ({character?, who?}): character si es el id de un personaje; si no, who (sin espacios alrededor, sin mayúsculas) contra
+// id, nombre completo o primera palabra del nombre; gana el primer personaje del proyecto que lo tenga. who vacío o sin personaje: null.
+export function speakerResolver(p){const map=new Map(),ids=new Set();
+ for(const c of Array.isArray(p?.characters)?p.characters:[]){if(!isObj(c)||typeof c.id!=='string')continue;ids.add(c.id);const name=String(c.name??'').toLowerCase();
+  for(const k of [c.id.toLowerCase(),name,name.split(/\s+/)[0]])if(!map.has(k))map.set(k,c.id);}
+ return e=>{if(typeof e?.character==='string'&&ids.has(e.character))return e.character;const who=String(e?.who??'').trim().toLowerCase();return who?map.get(who)??null:null;};}
+export function resolveSpeaker(p,entry){return speakerResolver(p)(entry);}
+const unresolvedWith=(sp,panel)=>(Array.isArray(panel?.dialogue)?panel.dialogue:[]).flatMap((l,index)=>sp(l)?[]:[{index,who:l?.who,channel:l?.channel||''}]);
+// Líneas del diálogo de una viñeta que no llegan a un plano porque no tienen personaje.
+export function unresolvedDialogue(p,panel){return unresolvedWith(speakerResolver(p),panel);}
+export function dialogueLineWarning(panel,{index,who,channel}){return `Viñeta ${panel?.code||panel?.id}: la línea ${index+1} («${who||'sin hablante'}»${channel?', canal '+channel:''}) no tiene personaje; no pasa al plano. Crea el personaje o corrige el nombre.`;}
+export function storyboardDialogueWarnings(p,sb){const sp=speakerResolver(p);return (Array.isArray(sb?.sequences)?sb.sequences:[]).flatMap(s=>Array.isArray(s?.shots)?s.shots:[]).flatMap(t=>unresolvedWith(sp,t).map(u=>dialogueLineWarning(t,u)));}
+const REL_PREFIX={act:'act',sequence:'seq',seq:'seq',story:'sb',sb:'sb',scene:'scene',panel:'panel',shot:'shot',character:'character',location:'location',environment:'environment'};
+// Claves del índice; act, seq, sb y scene son las de treeModel.
+export function relKey(kind,...ids){return [REL_PREFIX[kind]||kind,...ids].join('/');}
+// Quién aparece en un plano y de dónde sale: su cast; si no, visibleCast o el reparto de la secuencia, más los proxies (como shotCast).
+export function shotAppearance(shot,sequence){if(Array.isArray(shot?.cast))return shot.cast.map(character=>({character,via:'shot.cast'}));
+ const base=Array.isArray(shot?.visibleCast)?shot.visibleCast.map(character=>({character,via:'visibleCast'})):(Array.isArray(sequence?.cast)?sequence.cast:[]).filter(isObj).map(a=>({character:a.character,via:'sequence.cast'}));
+ const seen=new Set();return [...base,...Object.keys(proxiesOf(shot)).map(character=>({character,via:'proxy'}))].filter(x=>!seen.has(x.character)&&seen.add(x.character));}
+// Entornos 3D de un ambiente: el de location.environment y el del modelSpace, sin repetir.
+function locationEnvs(p,l){const out=[],add=(e,envVia)=>{if(e&&typeof e.id==='string'&&!out.some(x=>x.id===e.id))out.push({id:e.id,envVia});};
+ add(isObj(l)&&l.environment?(Array.isArray(p?.environments)?p.environments:[]).find(e=>isObj(e)&&e.id===l.environment):null,'environment');add(isObj(l)?modelSpaceEnvironment(p,l.modelSpace):null,'modelSpace');return out;}
+// Índice de relaciones: nodos del árbol de treeModel (acto → ficha → story → escena → viñeta → plano; contenedor bajo su story; plano sin viñeta
+// bajo su secuencia) más personajes, ambientes y entornos, y enlaces appears, speaks, location y environment en los dos sentidos.
+export function relationIndex(p){const nodes=new Map(),links=[],from=new Map(),to=new Map(),panelShots=new Map(),shotPanel=new Map(),sequenceShots=new Map(),unresolved=[],dangling=[];
+ const locationEnvironments=new Map(),environmentLocations=new Map(),envVia=new Map();
+ const node=(kind,id,data,parent,extra={})=>{const key=relKey(kind,...[].concat(id));if(nodes.has(key))return null;const n={key,kind,id:[].concat(id).at(-1),order:0,parent,children:[],data,...extra};nodes.set(key,n);return n;};
+ const chars=new Map((Array.isArray(p?.characters)?p.characters:[]).filter(c=>isObj(c)&&typeof c.id==='string').map(c=>[c.id,c]));
+ const locs=(Array.isArray(p?.locations)?p.locations:[]).filter(l=>isObj(l)&&typeof l.id==='string'),envs=(Array.isArray(p?.environments)?p.environments:[]).filter(e=>isObj(e)&&typeof e.id==='string');
+ for(const c of chars.values())node('character',c.id,c,null);for(const l of locs)node('location',l.id,l,null);for(const e of envs)node('environment',e.id,e,null);
+ for(const l of locs){const lk=relKey('location',l.id);for(const x of locationEnvs(p,l)){const ek=relKey('environment',x.id);if(!nodes.has(ek))continue;pushTo(locationEnvironments,lk,ek);pushTo(environmentLocations,ek,lk);envVia.set(lk+'\0'+ek,x.envVia);}}
+ const link=l=>{links.push(l);pushTo(from,l.from,l);pushTo(to,l.to,l);};
+ const target=(kind,id,src,via)=>{const k=relKey(kind,id);if(typeof id==='string'&&nodes.has(k)&&nodes.get(k).kind===kind)return k;dangling.push({from:src,to:k,via});return null;};
+ const place=(src,loc,via,inherited)=>{if(typeof loc!=='string'||!loc)return;const k=inherited?(nodes.has(relKey('location',loc))?relKey('location',loc):null):target('location',loc,src,via);if(!k)return;
+  link({from:src,to:k,rel:'location',via,...(inherited?{inherited:true}:{})});
+  for(const ek of locationEnvironments.get(k)||[])link({from:src,to:ek,rel:'environment',via,through:k,envVia:envVia.get(k+'\0'+ek),...(inherited?{inherited:true}:{})});};
+ const CH=projectChannels(p),sp=speakerResolver(p);
+ // Árbol: actos, secuencias, storys, escenas, viñetas y planos.
+ for(const e of Array.isArray(p?.episodes)?p.episodes:[])if(isObj(e)&&typeof e.id==='string')node('act',e.id,e,null);
+ const seqs=seqList(p).filter(x=>isObj(x.episode)&&typeof x.sequence.id==='string'&&nodes.has(relKey('act',x.episode.id)));
+ for(const {episode,sequence:s} of seqs)node('sequence',s.id,s,null,{episode:episode.id,role:sequenceRole(p,s)});
+ for(const b of storyList(p)){if(typeof b.id!=='string')continue;const f=linkOf(b)?nodes.get(relKey('sequence',linkOf(b))):null,ficha=f?.kind==='sequence'&&f.role==='outline'?f:null;
+  const n=node('story',b.id,b,ficha?.key??null,ficha?{version:storyVersions(p,ficha.id).get(b.id),current:ficha.data.currentStoryboard===b.id}:{});if(!n)continue;
+  for(const sc of Array.isArray(b.sequences)?b.sequences:[]){if(!isObj(sc)||typeof sc.id!=='string')continue;const scn=node('scene',[b.id,sc.id],sc,n.key);if(!scn)continue;
+   for(const t of Array.isArray(sc.shots)?sc.shots:[])if(isObj(t)&&typeof t.id==='string')node('panel',t.id,t,scn.key);}}
+ for(const {episode,sequence:s} of seqs){const sk=relKey('sequence',s.id),n=nodes.get(sk);if(n.data!==s)continue;
+  n.parent=n.role==='container'?relKey('story',s.storyboard):relKey('act',episode.id);
+  for(const t of Array.isArray(s.shots)?s.shots:[]){if(!isObj(t)||typeof t.id!=='string')continue;const pk=typeof t.storyboardShot==='string'&&nodes.get(relKey('panel',t.storyboardShot))?.kind==='panel'?relKey('panel',t.storyboardShot):null;
+   const tn=node('shot',t.id,t,pk||sk,{episode:episode.id,role:n.role,sequence:sk});if(!tn)continue;pushTo(sequenceShots,sk,tn.key);if(pk){pushTo(panelShots,pk,tn.key);shotPanel.set(tn.key,pk);}}}
+ for(const n of nodes.values())if(n.parent!==null&&!nodes.has(n.parent))n.parent=null;
+ for(const n of nodes.values())if(n.parent!==null)nodes.get(n.parent).children.push(n.key);
+ for(const list of panelShots.values())list.sort((a,b)=>ROLE_ORDER[nodes.get(a).role]-ROLE_ORDER[nodes.get(b).role]);
+ // Hijos: los storys de una ficha por versión y antes que sus planos propios; en un story, las escenas y luego su contenedor; en una viñeta, panelShots.
+ const rank=n=>n.kind==='story'?n.version??0:n.kind==='scene'?0:n.kind==='shot'&&nodes.get(n.parent)?.kind==='sequence'?1e9:1;
+ for(const n of nodes.values()){if(n.kind==='panel')n.children=[...(panelShots.get(n.key)||[])];else if(n.kind==='sequence'||n.kind==='story')n.children.sort((a,b)=>rank(nodes.get(a))-rank(nodes.get(b)));}
+ // Orden del proyecto: recorrido en profundidad desde los actos, los storys sin ficha y las fichas de personajes, ambientes y entornos.
+ let order=0;const visit=k=>{const n=nodes.get(k);n.order=order++;for(const c of n.children)visit(c);};
+ for(const kind of ['act','story','character','location','environment'])for(const n of [...nodes.values()])if(n.kind===kind&&n.parent===null)visit(n.key);
+ // Enlaces.
+ for(const n of nodes.values()){
+  if(n.kind==='scene')place(n.key,n.data.location,'scene.location',false);
+  else if(n.kind==='panel'){const t=n.data,scene=nodes.get(n.parent),story=nodes.get(scene.parent),cast=Array.isArray(t.cast)?t.cast:[];
+   for(const c of cast){const k=target('character',c,n.key,'panel.cast');if(k)link({from:n.key,to:k,rel:'appears',via:'panel.cast'});}
+   (Array.isArray(t.dialogue)?t.dialogue:[]).forEach((l,index)=>{const id=sp(l);if(!id){unresolved.push({panel:n.key,scene:scene.key,story:story.key,index,who:l?.who,channel:l?.channel||'',code:t.code||''});return;}
+    link({from:n.key,to:relKey('character',id),rel:'speaks',via:'dialogue',channel:l.channel||'direct',offscreen:!!channelOf(CH,l.channel).offscreen||!cast.includes(id)||chars.get(id).kind==='voice',line:index});});
+   place(n.key,scene.data.location,'scene.location',true);}
+  else if(n.kind==='sequence')place(n.key,n.data.location,'sequence.location',false);
+  else if(n.kind==='shot'){const t=n.data,s=nodes.get(n.sequence).data;
+   for(const a of shotAppearance(t,s)){const k=target('character',a.character,n.key,a.via);if(k)link({from:n.key,to:k,rel:'appears',via:a.via});}
+   for(const l of Array.isArray(t.lines)?t.lines:[]){if(!isObj(l))continue;const k=target('character',l.character,n.key,'lines');if(k)link({from:n.key,to:k,rel:'speaks',via:'lines',channel:l.channel||'direct',offscreen:lineOffscreen(CH,l),line:l.id});}
+   if(t.location)place(n.key,t.location,'shot.location',false);else place(n.key,s.location,'sequence.location',true);}}
+ return {revision:p?.revision??null,nodes,links,from,to,panelShots,shotPanel,sequenceShots,locationEnvironments,environmentLocations,unresolved,dangling};}
+const relCache=new WeakMap();
+// relationIndex memorizado por objeto y revision.
+export function relationIndexFor(p){if(!isObj(p))return relationIndex(p);const c=relCache.get(p);if(c&&c.revision===(p.revision??null))return c.index;const index=relationIndex(p);relCache.set(p,{revision:index.revision,index});return index;}
+const ENTITY_KINDS=new Set(['character','location','environment']);
+// Story no vigente de una ficha que tiene vigente: con current, su rama no cuenta por encima de él.
+const offCurrent=(index,n)=>n.kind==='story'&&!n.current&&!!n.parent&&(index.nodes.get(n.parent)?.children||[]).some(k=>index.nodes.get(k)?.current===true);
+const relMatch=(q={})=>{const rels=q.rel===undefined?null:[].concat(q.rel);return l=>(!rels||rels.includes(l.rel))&&(!q.where||q.where(l));};
+// Nodos desde la raíz hasta key (incluido); [] si no existe.
+export function trail(index,key){const out=[];let n=index?.nodes?.get(key);while(n){out.unshift(n);n=n.parent===null?null:index.nodes.get(n.parent);}return out;}
+// key y todo lo que cuelga de ella, en orden, más los planos de cada secuencia por pertenencia (sequenceShots: los de un contenedor o una prueba
+// cuelgan de su viñeta); con current, bajo una ficha con vigente se saltan los demás storys (y sus planos), también los planos que una secuencia
+// alcanzada por debajo de key tiene enlazados a viñetas de esos storys; los de la propia key cuentan siempre.
+export function descendants(index,key,{current=false}={}){const seen=new Set(),walk=k=>{const n=index?.nodes?.get(k);if(!n||seen.has(k))return;if(current&&k!==key&&offCurrent(index,n))return;seen.add(k);n.children.forEach(walk);if(n.kind==='sequence')for(const t of index.sequenceShots?.get(k)||[])if(!current||k===key||!trail(index,t).some(x=>offCurrent(index,x)))walk(t);};walk(key);return [...seen];}
+// Enlaces que llegan a targetKey (con current, sin los que salen de la rama de un story no vigente).
+export function linksTo(index,targetKey,q={}){const ok=relMatch(q);return (index?.to?.get(targetKey)||[]).filter(l=>ok(l)&&(!q.current||!trail(index,l.from).some(n=>offCurrent(index,n))));}
+// Relacionados con key: para un nodo del árbol, los destinos de los enlaces de su subárbol; para un personaje, ambiente o entorno, los nodos que
+// lo enlazan. Map clave → enlaces, en orden de aparición.
+export function relatedTo(index,key,q={}){const out=new Map(),n=index?.nodes?.get(key);if(!n)return out;const add=(k,l)=>{if(!out.has(k))out.set(k,[]);out.get(k).push(l);};
+ if(ENTITY_KINDS.has(n.kind)){for(const l of linksTo(index,key,q))add(l.from,l);return out;}
+ const ok=relMatch(q);for(const k of descendants(index,key,q))for(const l of index.from.get(k)||[])if(ok(l))add(l.to,l);return out;}
+// Nodos de tipo kind cuyo subárbol enlaza targetKey, en orden del proyecto; para kind 'sequence', también la secuencia a la que pertenece el plano
+// (contenedor o prueba). Con current, la rama de un story no vigente no cuenta para su ficha ni su acto.
+export function holders(index,targetKey,kind,q={}){const out=new Set(),ok=relMatch(q);
+ for(const l of index?.to?.get(targetKey)||[]){if(!ok(l))continue;let blocked=false;for(const n of trail(index,l.from).reverse()){if(n.kind===kind&&!blocked)out.add(n.key);if(kind==='sequence'&&n.sequence)out.add(n.sequence);if(q.current&&offCurrent(index,n))blocked=true;}}
+ return [...out].sort((a,b)=>index.nodes.get(a).order-index.nodes.get(b).order);}
+// Ambiente de las secuencias sin planos a partir de environments[].sequences (scripts/ambientes-secuencias.mjs). choose: {entorno: ambiente} cuando el
+// entorno es de varios ambientes. Solo propone location en secuencias sin planos (ningún digest cambia); lo demás, con aviso.
+export function sequenceLocationPlan(p,{choose={}}={}){const warnings=[],errors=[],ops=[],envs=(Array.isArray(p?.environments)?p.environments:[]).filter(isObj),locs=(Array.isArray(p?.locations)?p.locations:[]).filter(isObj);
+ const seqOf=id=>seqList(p).find(x=>x.sequence.id===id)?.sequence||null,proposals=new Map();
+ for(const envId of Object.keys(isObj(choose)?choose:{}))if(!envs.some(e=>e.id===envId))errors.push(`Entorno desconocido: ${envId}`);
+ for(const e of envs){if(!Array.isArray(e.sequences))continue;const cands=locs.filter(l=>locationEnvs(p,l).some(x=>x.id===e.id)).map(l=>l.id),list=cands.join(', ')||'ninguno';
+  const chosen=isObj(choose)&&Object.hasOwn(choose,e.id)?choose[e.id]:undefined;
+  if(chosen!==undefined&&!cands.includes(chosen)){errors.push(`${chosen} no es un ambiente del entorno ${e.id} (candidatos: ${list})`);continue;}
+  const loc=chosen??(cands.length===1?cands[0]:null);
+  for(const id of e.sequences){const s=seqOf(id);
+   if(!s){warnings.push(`${id}: la secuencia no existe (entorno ${e.id})`);continue;}
+   if((s.shots||[]).length){if(!cands.includes(s.location))warnings.push(`${id}: tiene ${s.shots.length} planos y su ambiente (${s.location||'ninguno'}) no es del entorno ${e.id} (${list}); no se toca`);continue;}
+   if(!cands.length){warnings.push(`${id}: el entorno ${e.id} no es de ningún ambiente`);continue;}
+   if(!loc&&cands.includes(s.location))continue;
+   if(!loc){warnings.push(`${id}: el entorno ${e.id} es de varios ambientes (${list}); elige uno`);continue;}
+   if(s.location===loc)continue;
+   if(s.location){warnings.push(`${id}: ya tiene el ambiente ${s.location}, distinto de ${loc} (entorno ${e.id}); no se toca`);continue;}
+   pushTo(proposals,id,{sequence:id,location:loc,environment:e.id});}}
+ for(const [id,list] of proposals){if(new Set(list.map(x=>x.location)).size>1){warnings.push(`${id}: la reclaman entornos con ambientes distintos (${list.map(x=>x.environment+' → '+x.location).join(', ')}); no se toca`);continue;}ops.push(list[0]);}
+ const next=structuredClone(p);for(const o of ops)seqList(next).find(x=>x.sequence.id===o.sequence).sequence.location=o.location;
+ return {ops,warnings,errors,next};}
+function pushTo(m,k,v){if(!m.has(k))m.set(k,[]);m.get(k).push(v);}
+// Personaje nuevo (scripts/perfil.mjs add): id en minúsculas con guiones y libre entre los ids que comprueba store.validate; kind person o voice.
+export function characterDraft(p,{id,name,kind='person',color}={}){const errors=[],all=[];const ls=x=>Array.isArray(x)?x.filter(isObj):[];
+ const sbs=ls(p?.storyboards),eps=ls(p?.episodes);for(const x of [...ls(p?.characters),...ls(p?.locations),...eps,...ls(p?.issues),...eps.flatMap(e=>ls(e.sequences)),...eps.flatMap(e=>ls(e.sequences).flatMap(s=>ls(s.shots))),...sbs,...sbs.flatMap(b=>ls(b.sequences)),...sbs.flatMap(b=>ls(b.sequences).flatMap(s=>ls(s.shots)))])all.push(x.id);
+ if(typeof id!=='string'||!/^[a-z][a-z0-9-]*$/.test(id))errors.push('El id debe empezar por letra y llevar solo minúsculas, cifras y guiones');else if(all.includes(id))errors.push('El id ya existe en el proyecto: '+id);
+ const n=String(name??'').trim();if(!n)errors.push('Falta el nombre');if(!['person','voice'].includes(kind))errors.push('kind debe ser person o voice');
+ return {character:errors.length?null:{id,name:n,kind,color:color||'#8e9ca0',description:'',voice:''},errors};}
