@@ -2,7 +2,7 @@
 // Libre tiene dos cámaras (#52): la órbita de OrbitControls y el vuelo con teclado y ratón (flyStep), que cada fotograma se aplica con stage.setCamera.
 // «Renderizar vídeo» (#51): guarda si hay cambios y lanza el trabajo anim3d del plano (renderVideo); renderJob da su último trabajo para el progreso.
 import {createStage} from './stage.js';
-import {rehearsalConfig,projectChannels,cameraAt,cameraContext,cameraPresets,shotCast,CAMERA_RIG_TYPES,CAMERA_EASINGS,episodeSpeakers,ttsVoiceURI,ttsParams,TIMELINE_FPS,TRACK_SMOOTHING_DEFAULT,snapTime,clockTick,lineSchedule,lineToLaunch,activeLineAt,timelineMarks,recordSamples,trimTrack,recordedRig,rigFromShot,rigWithCamera,rigWithType,rigControls,stageSequence,shotRigIssues,anim3dReady,anim3dButton,flyKey,flyFromCamera,flyStep,flyCamera,flyPrefs,flySpeedStep} from './workflow.mjs';
+import {rehearsalConfig,projectChannels,cameraAt,cameraPresets,shotCast,CAMERA_RIG_TYPES,CAMERA_EASINGS,episodeSpeakers,ttsVoiceURI,ttsParams,TIMELINE_FPS,TRACK_SMOOTHING_DEFAULT,snapTime,clockTick,lineSchedule,lineToLaunch,activeLineAt,timelineMarks,recordSamples,trimTrack,recordedRig,rigFromShot,rigWithCamera,rigWithType,rigControls,stageSequence,shotRigIssues,anim3dReady,anim3dButton,flyKey,flyFromCamera,flyStep,flyCamera,flyPrefs,flySpeedStep} from './workflow.mjs';
 import {loadVoicePrefs,saveVoicePrefs,speakLine} from './tts.source.js';
 const CAM_PREFS='rodaje-anim-camera',TYPE_LABELS={fixed:'Fija',move:'Movimiento (inicio → fin)',follow:'Seguimiento de un personaje',track:'Pista grabada',handheld:'Cámara en mano'},EASING_LABELS={linear:'Lineal',smooth:'Suave','ease-in':'Arranque lento','ease-out':'Frenada lenta'};
 export async function mountAnim(root,{getProject,ids,save,markDirty,toast,isDirty=()=>false,renderVideo=null,renderJob=()=>null}){
@@ -11,7 +11,7 @@ export async function mountAnim(root,{getProject,ids,save,markDirty,toast,isDirt
  let {p,e,s,t}=find();if(!t)throw Error('Plano no encontrado');
  const R=rehearsalConfig(p,t),speech=R.speech,CH=projectChannels(p),synth=window.speechSynthesis,saved=loadVoicePrefs(p.id),speakerIds=episodeSpeakers(e),nameOf=id=>p.characters.find(c=>c.id===id)?.name||id;
  const cast=shotCast(t,s),positioned=[...new Set([...(s.cast||[]).map(a=>a.character),...Object.keys(t.staging?.proxies||{})])],followable=positioned.filter(id=>cast.includes(id));
- let ctx=cameraContext({shot:t,sequence:s,R}),draft=rigFromShot(t),rawTrack=draft.type==='track'?structuredClone(draft.track):null,stage=null,disposed=false;
+ let ctx=null,draft=rigFromShot(t),rawTrack=draft.type==='track'?structuredClone(draft.track):null,stage=null,disposed=false;
  const prefs=(()=>{try{return flyPrefs(JSON.parse(localStorage.getItem(CAM_PREFS)));}catch{return flyPrefs(null);}})();
  let cam=prefs.mode,flySpeed=prefs.speed,fly=null,keys=new Set(),look=[0,0],drag=null;const touches=new Set();
  let time=0,playing=false,loop=false,mode='result',raf=0,last=0,launchFrom=0,voice=null,voices=[],speaker=null,recording=false,samples=[],countdown=null,renderTimer=0;
@@ -23,6 +23,8 @@ export async function mountAnim(root,{getProject,ids,save,markDirty,toast,isDirt
  const $=q=>root.querySelector(q),status=x=>$('[data-status]').textContent=x;
  stage=await createStage($('[data-viewport]'),{project:p,sequence:stageSequence(s,t),shot:t});
  if(disposed){stage.dispose();return {dispose(){}};}
+ // Cámara del resultado con el contexto del stage (actores sobre el suelo del entorno, #53): la vista da la misma cámara que el render.
+ ctx=stage.cameraContext();
  // Voz del navegador: mismas preferencias y voces por defecto que el Ensayo.
  const lineSpeakers=[...new Set(t.lines.map(l=>l.character))];
  function refreshVoices(){voices=synth?.getVoices()||[];$('[data-voices]').innerHTML=lineSpeakers.map(id=>{const sel=ttsVoiceURI({voices,speakerIds,id,saved,base:speech.base});return `<label>${esc(nameOf(id))}<select data-person="${esc(id)}"><option value="">Voz predeterminada</option>${voices.map(v=>`<option value="${esc(v.voiceURI)}" ${sel===v.voiceURI?'selected':''}>${esc(v.name)} · ${esc(v.lang)}</option>`).join('')}</select></label>`;}).join('')||'<p class="tiny">Este plano no tiene diálogo.</p>';root.querySelectorAll('[data-person]').forEach(el=>el.onchange=()=>{saved[el.dataset.person]=el.value;saveVoicePrefs(p.id,saved);});if(!playing)status(!synth?'Este navegador no dispone de síntesis de voz: usa Solo subtítulos.':!voices.length?'Esperando voces del navegador. Si no aparecen, activa Solo subtítulos.':'Voces del navegador listas. No se generan archivos de audio.');}
@@ -86,7 +88,7 @@ export async function mountAnim(root,{getProject,ids,save,markDirty,toast,isDirt
   on('[data-trim-apply]','onclick',()=>{const [a,b]=['from','to'].map(k=>snapTime(box.querySelector(`[data-trim="${k}"]`).value,D()));try{commit(recordedRig(trimTrack(rawTrack,a,b,{duration:D()}),{smoothing:draft.trackSmoothing}));}catch(err){toast(err.message);}});
   on('[data-record]','onclick',record);on('[data-save]','onclick',doSave);renderButton();}
  // Guardar con el save() de la app (control de revisión). Si falla, el proyecto sigue en local con la pista.
- async function doSave(){const b=$('[data-save]');if(b)b.disabled=true;try{t.cameraRig=structuredClone(draft);await save();({p,e,s,t}=find());if(!t)throw Error('El plano ya no existe en el proyecto guardado');ctx=cameraContext({shot:t,sequence:s,R});stage.updateShot(t);speaker=undefined;update();return true;}catch(err){toast(err.message);return false;}finally{if(!disposed)controls();}}
+ async function doSave(){const b=$('[data-save]');if(b)b.disabled=true;try{t.cameraRig=structuredClone(draft);await save();({p,e,s,t}=find());if(!t)throw Error('El plano ya no existe en el proyecto guardado');stage.updateShot(t);ctx=stage.cameraContext();speaker=undefined;update();return true;}catch(err){toast(err.message);return false;}finally{if(!disposed)controls();}}
  // Botón «Renderizar vídeo»: etiqueta y estado de anim3dButton con los errores del plano (anim3dReady) y su último trabajo.
  function renderButton(){const b=$('[data-render]');if(!b)return;const errors=renderVideo?anim3dReady(getProject(),ids.shotId).errors:['Esta vista no puede lanzar trabajos'],x=anim3dButton(renderJob(),errors);b.textContent=x.label;b.disabled=x.disabled;b.title=errors.join('\n');}
  async function renderClick(){const b=$('[data-render]');b.disabled=true;try{if(isDirty()&&!await doSave())return;await renderVideo();status('Vídeo en cola: el progreso sale en el botón y el resultado en la tarjeta de la viñeta.');}catch(err){toast(err.message);}finally{if(!disposed)renderButton();}}

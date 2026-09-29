@@ -566,7 +566,7 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus
 
 // app/anim.source.js
 import { createStage as createStage2 } from "./stage.js";
-import { rehearsalConfig as rehearsalConfig2, projectChannels, cameraAt, cameraContext, cameraPresets, shotCast, CAMERA_RIG_TYPES, CAMERA_EASINGS, episodeSpeakers as episodeSpeakers2, ttsVoiceURI as ttsVoiceURI2, ttsParams as ttsParams2, TIMELINE_FPS, TRACK_SMOOTHING_DEFAULT, snapTime, clockTick, lineSchedule, lineToLaunch, activeLineAt, timelineMarks, recordSamples, trimTrack, recordedRig, rigFromShot, rigWithCamera, rigWithType, rigControls, stageSequence, shotRigIssues, anim3dReady, anim3dButton, flyKey, flyFromCamera, flyStep, flyCamera, flyPrefs, flySpeedStep } from "./workflow.mjs";
+import { rehearsalConfig as rehearsalConfig2, projectChannels, cameraAt, cameraPresets, shotCast, CAMERA_RIG_TYPES, CAMERA_EASINGS, episodeSpeakers as episodeSpeakers2, ttsVoiceURI as ttsVoiceURI2, ttsParams as ttsParams2, TIMELINE_FPS, TRACK_SMOOTHING_DEFAULT, snapTime, clockTick, lineSchedule, lineToLaunch, activeLineAt, timelineMarks, recordSamples, trimTrack, recordedRig, rigFromShot, rigWithCamera, rigWithType, rigControls, stageSequence, shotRigIssues, anim3dReady, anim3dButton, flyKey, flyFromCamera, flyStep, flyCamera, flyPrefs, flySpeedStep } from "./workflow.mjs";
 var CAM_PREFS = "rodaje-anim-camera";
 var TYPE_LABELS = { fixed: "Fija", move: "Movimiento (inicio \u2192 fin)", follow: "Seguimiento de un personaje", track: "Pista grabada", handheld: "C\xE1mara en mano" };
 var EASING_LABELS = { linear: "Lineal", smooth: "Suave", "ease-in": "Arranque lento", "ease-out": "Frenada lenta" };
@@ -580,7 +580,7 @@ async function mountAnim(root, { getProject, ids, save: save2, markDirty, toast:
   if (!t2) throw Error("Plano no encontrado");
   const R2 = rehearsalConfig2(p2, t2), speech = R2.speech, CH = projectChannels(p2), synth = window.speechSynthesis, saved = loadVoicePrefs(p2.id), speakerIds = episodeSpeakers2(e), nameOf = (id3) => p2.characters.find((c) => c.id === id3)?.name || id3;
   const cast = shotCast(t2, s), positioned = [.../* @__PURE__ */ new Set([...(s.cast || []).map((a) => a.character), ...Object.keys(t2.staging?.proxies || {})])], followable = positioned.filter((id3) => cast.includes(id3));
-  let ctx = cameraContext({ shot: t2, sequence: s, R: R2 }), draft = rigFromShot(t2), rawTrack = draft.type === "track" ? structuredClone(draft.track) : null, stage2 = null, disposed = false;
+  let ctx = null, draft = rigFromShot(t2), rawTrack = draft.type === "track" ? structuredClone(draft.track) : null, stage2 = null, disposed = false;
   const prefs = (() => {
     try {
       return flyPrefs(JSON.parse(localStorage.getItem(CAM_PREFS)));
@@ -603,6 +603,7 @@ async function mountAnim(root, { getProject, ids, save: save2, markDirty, toast:
     return { dispose() {
     } };
   }
+  ctx = stage2.cameraContext();
   const lineSpeakers = [...new Set(t2.lines.map((l3) => l3.character))];
   function refreshVoices() {
     voices = synth?.getVoices() || [];
@@ -896,8 +897,8 @@ ${a.text}` : t2.lines.length ? "" : "ACCI\xD3N \xB7 " + (t2.description || "");
       await save2();
       ({ p: p2, e, s, t: t2 } = find2());
       if (!t2) throw Error("El plano ya no existe en el proyecto guardado");
-      ctx = cameraContext({ shot: t2, sequence: s, R: R2 });
       stage2.updateShot(t2);
+      ctx = stage2.cameraContext();
       speaker = void 0;
       update();
       return true;

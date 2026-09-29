@@ -36,6 +36,7 @@ Reglas que costó aprender:
 - **UV en metros** (una tesela cada 2 m) y texturas generadas en `texturas/` e `imagenes/`, con sus prompts en `PROMPTS-TEXTURAS.md`. Si una imagen no existe, se usa la de procedimiento.
 - **Tejados de siluetas no rectangulares:** cada alero es un plano y el tejado es el más bajo de todos, recortado (`clipHalf`). Una malla de celdas deja dientes de sierra.
 - **Suelos bajo puertas y arcos** (umbrales), y el terreno por debajo de la plataforma dentro del recinto, o el recorrido a pie se cae por los huecos.
+- **El suelo pisable se nombra `suelo` o `suelo-…`** (`suelo-sala`, `suelo-bodega`, `suelo-cresta`): la malla o un grupo antepasado suyo. El ensayo pone a los actores a la altura de esas mallas (`floorProbe` de `viewer/walk.mjs`, ver `docs/visor-3d.md`); tejados, muebles y figuras no cuentan aunque estén debajo del actor. Un terreno con cerros o taludes que no se llame así deja a los actores a la altura 0 del lugar elegido.
 
 ## 4. Comparar con la referencia: bucle, no a ojo
 
