@@ -566,7 +566,8 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus
 
 // app/anim.source.js
 import { createStage as createStage2 } from "./stage.js";
-import { rehearsalConfig as rehearsalConfig2, projectChannels, cameraAt, cameraContext, cameraPresets, shotCast, CAMERA_RIG_TYPES, CAMERA_EASINGS, episodeSpeakers as episodeSpeakers2, ttsVoiceURI as ttsVoiceURI2, ttsParams as ttsParams2, TIMELINE_FPS, TRACK_SMOOTHING_DEFAULT, snapTime, clockTick, lineSchedule, lineToLaunch, activeLineAt, timelineMarks, recordSamples, trimTrack, recordedRig, rigFromShot, rigWithCamera, rigWithType, rigControls, stageSequence, shotRigIssues, anim3dReady, anim3dButton } from "./workflow.mjs";
+import { rehearsalConfig as rehearsalConfig2, projectChannels, cameraAt, cameraContext, cameraPresets, shotCast, CAMERA_RIG_TYPES, CAMERA_EASINGS, episodeSpeakers as episodeSpeakers2, ttsVoiceURI as ttsVoiceURI2, ttsParams as ttsParams2, TIMELINE_FPS, TRACK_SMOOTHING_DEFAULT, snapTime, clockTick, lineSchedule, lineToLaunch, activeLineAt, timelineMarks, recordSamples, trimTrack, recordedRig, rigFromShot, rigWithCamera, rigWithType, rigControls, stageSequence, shotRigIssues, anim3dReady, anim3dButton, flyKey, flyFromCamera, flyStep, flyCamera, flyPrefs, flySpeedStep } from "./workflow.mjs";
+var CAM_PREFS = "rodaje-anim-camera";
 var TYPE_LABELS = { fixed: "Fija", move: "Movimiento (inicio \u2192 fin)", follow: "Seguimiento de un personaje", track: "Pista grabada", handheld: "C\xE1mara en mano" };
 var EASING_LABELS = { linear: "Lineal", smooth: "Suave", "ease-in": "Arranque lento", "ease-out": "Frenada lenta" };
 async function mountAnim(root, { getProject, ids, save: save2, markDirty, toast: toast2, isDirty = () => false, renderVideo = null, renderJob = () => null }) {
@@ -580,12 +581,21 @@ async function mountAnim(root, { getProject, ids, save: save2, markDirty, toast:
   const R2 = rehearsalConfig2(p2, t2), speech = R2.speech, CH = projectChannels(p2), synth = window.speechSynthesis, saved = loadVoicePrefs(p2.id), speakerIds = episodeSpeakers2(e), nameOf = (id3) => p2.characters.find((c) => c.id === id3)?.name || id3;
   const cast = shotCast(t2, s), positioned = [.../* @__PURE__ */ new Set([...(s.cast || []).map((a) => a.character), ...Object.keys(t2.staging?.proxies || {})])], followable = positioned.filter((id3) => cast.includes(id3));
   let ctx = cameraContext({ shot: t2, sequence: s, R: R2 }), draft = rigFromShot(t2), rawTrack = draft.type === "track" ? structuredClone(draft.track) : null, stage2 = null, disposed = false;
+  const prefs = (() => {
+    try {
+      return flyPrefs(JSON.parse(localStorage.getItem(CAM_PREFS)));
+    } catch {
+      return flyPrefs(null);
+    }
+  })();
+  let cam = prefs.mode, flySpeed = prefs.speed, fly = null, keys = /* @__PURE__ */ new Set(), look = [0, 0], drag = null;
+  const touches = /* @__PURE__ */ new Set();
   let time = 0, playing = false, loop = false, mode = "result", raf = 0, last2 = 0, launchFrom = 0, voice = null, voices = [], speaker = null, recording = false, samples = [], countdown = null, renderTimer = 0;
   const D2 = () => t2.duration, schedule = () => lineSchedule(t2.lines, D2(), CH), lineOf = (id3) => t2.lines.find((l3) => l3.id === id3);
-  root.innerHTML = `<div class="anim"><div class="anim-stage"><div class="stagebox"><div class="anim-view"><div data-viewport class="anim-viewport" style="aspect-ratio:16/9"></div><div data-countdown class="anim-countdown" hidden></div></div><div data-subtitle class="rehearsal-subtitle" aria-live="polite"></div><div class="stagefoot anim-transport"><button data-play aria-label="Reproducir">\u25B6</button><button data-pause aria-label="Pausa">\u23F8</button><button data-stop aria-label="Parar">\u25A0</button><button data-loop aria-pressed="false" title="Repetir en bucle">\u27F3 Bucle</button><label class="anim-check"><input data-silent type="checkbox"> Solo subt\xEDtulos</label><output data-time>0,00 s</output></div></div>
+  root.innerHTML = `<div class="anim"><div class="anim-stage"><div class="stagebox"><div class="anim-view"><div data-viewport class="anim-viewport" tabindex="0" aria-label="Visor 3D: en Vuelo, WASD o flechas para moverse" style="aspect-ratio:16/9"></div><div data-countdown class="anim-countdown" hidden></div></div><div data-subtitle class="rehearsal-subtitle" aria-live="polite"></div><div class="stagefoot anim-transport"><button data-play aria-label="Reproducir">\u25B6</button><button data-pause aria-label="Pausa">\u23F8</button><button data-stop aria-label="Parar">\u25A0</button><button data-loop aria-pressed="false" title="Repetir en bucle">\u27F3 Bucle</button><label class="anim-check"><input data-silent type="checkbox"> Solo subt\xEDtulos</label><output data-time>0,00 s</output></div></div>
  <div class="anim-timeline"><input data-scrub type="range" min="0" max="${D2()}" step="${1 / TIMELINE_FPS}" value="0" aria-label="Tiempo del plano"><div class="anim-marks" data-marks></div></div>
  <p data-status role="status" class="tiny"></p><details class="panel"><summary>Voces del navegador por personaje</summary><div class="grid" data-voices></div></details></div>
- <aside class="panel anim-side"><div class="row"><button data-mode="free" aria-pressed="false">Libre</button><button data-mode="result" aria-pressed="true">Ver resultado</button></div><p class="tiny">Libre: arrastra para orbitar y rueda (o pellizca) para acercar. Ver resultado: la c\xE1mara del plano en cada instante.</p><div data-controls></div><div class="actions"><button data-render class="primary">Renderizar v\xEDdeo</button></div><p class="tiny">Renderizar v\xEDdeo: el plano guardado, con su c\xE1mara y las voces que tengan audio, a un v\xEDdeo de la vi\xF1eta con versi\xF3n nueva (se ve en su tarjeta del storyboard).</p></aside></div>`;
+ <aside class="panel anim-side"><div class="row"><button data-mode="free" aria-pressed="false">Libre</button><button data-mode="result" aria-pressed="true">Ver resultado</button></div><div data-cambox hidden><div class="row"><button data-cam="orbit" aria-pressed="true">\xD3rbita</button><button data-cam="fly" aria-pressed="false">Vuelo</button></div><label data-flyspeed>Velocidad de vuelo \xB7 <span data-out="fly"></span> m/s<input data-speed type="range" min="${Math.log2(0.25)}" max="${Math.log2(20)}" step="0.01"></label></div><p class="tiny">Libre \xB7 \xD3rbita: arrastra para orbitar y rueda (o pellizca) para acercar. Libre \xB7 Vuelo: clic en el visor; WASD o flechas, Q/E sube y baja, May\xFAs r\xE1pido, arrastra para mirar, rueda para la velocidad (en t\xE1ctil, \xF3rbita). Ver resultado: la c\xE1mara del plano en cada instante.</p><div data-controls></div><div class="actions"><button data-render class="primary">Renderizar v\xEDdeo</button></div><p class="tiny">Renderizar v\xEDdeo: el plano guardado, con su c\xE1mara y las voces que tengan audio, a un v\xEDdeo de la vi\xF1eta con versi\xF3n nueva (se ve en su tarjeta del storyboard).</p></aside></div>`;
   const $3 = (q) => root.querySelector(q), status2 = (x2) => $3("[data-status]").textContent = x2;
   stage2 = await createStage2($3("[data-viewport]"), { project: p2, sequence: stageSequence(s, t2), shot: t2 });
   if (disposed) {
@@ -646,8 +656,13 @@ ${a.text}` : t2.lines.length ? "" : "ACCI\xD3N \xB7 " + (t2.description || "");
   }
   function frame(now) {
     raf = requestAnimationFrame(frame);
-    const dt2 = Math.min(1, (now - last2) / 1e3);
+    const rawDt = (now - last2) / 1e3, dt2 = Math.min(1, rawDt);
     last2 = now;
+    if (!disposed && flying() && fly) {
+      fly = flyStep(fly, { keys, look, speed: flySpeed }, rawDt);
+      look = [0, 0];
+      stage2.setCamera(flyCamera(fly, stage2.camera().fov));
+    }
     if (!playing || disposed) return;
     const r = clockTick({ time, duration: D2(), loop: loop && !recording }, dt2);
     if (r.wrapped) hush();
@@ -682,10 +697,50 @@ ${a.text}` : t2.lines.length ? "" : "ACCI\xD3N \xB7 " + (t2.description || "");
     update();
   }
   function setMode(m2) {
+    const was = mode;
     mode = m2;
-    stage2.orbit(m2 === "free");
+    if (m2 !== "free") releaseKeys();
+    else if (was !== "free" && cam === "fly") fly = flyFromCamera(stage2.camera());
+    stage2.orbit(m2 === "free" && cam === "orbit");
     root.querySelectorAll("[data-mode]").forEach((b2) => b2.setAttribute("aria-pressed", String(b2.dataset.mode === m2)));
+    camUI();
     update();
+  }
+  const flying = () => mode === "free" && cam === "fly" && !touches.size, savePrefs = () => {
+    try {
+      localStorage.setItem(CAM_PREFS, JSON.stringify({ mode: cam, speed: flySpeed }));
+    } catch {
+    }
+  };
+  function releaseKeys() {
+    keys.clear();
+    look = [0, 0];
+    if (fly) fly = { ...fly, velocity: [0, 0, 0] };
+  }
+  function setCam(c) {
+    releaseKeys();
+    if (mode === "free" && c === "fly" && cam !== "fly") {
+      fly = flyFromCamera(stage2.camera());
+      stage2.orbit(false);
+    } else if (mode === "free" && c === "orbit" && cam === "fly") {
+      if (fly) stage2.setCamera(flyCamera(fly, stage2.camera().fov));
+      stage2.orbit(true);
+    }
+    cam = c;
+    savePrefs();
+    camUI();
+  }
+  function setSpeed(v2) {
+    flySpeed = flySpeedStep(v2, 0);
+    savePrefs();
+    camUI();
+  }
+  function camUI() {
+    $3("[data-cambox]").hidden = mode !== "free";
+    root.querySelectorAll("[data-cam]").forEach((b2) => b2.setAttribute("aria-pressed", String(b2.dataset.cam === cam)));
+    $3("[data-flyspeed]").hidden = cam !== "fly";
+    $3('[data-out="fly"]').textContent = flySpeed.toFixed(2).replace(".", ",");
+    $3("[data-speed]").value = Math.log2(flySpeed);
   }
   function commit(rig) {
     draft = rig;
@@ -725,6 +780,7 @@ ${a.text}` : t2.lines.length ? "" : "ACCI\xD3N \xB7 " + (t2.description || "");
   }
   function finishRecording() {
     recording = false;
+    releaseKeys();
     hush();
     rawTrack = samples;
     samples = [];
@@ -734,6 +790,7 @@ ${a.text}` : t2.lines.length ? "" : "ACCI\xD3N \xB7 " + (t2.description || "");
     status2(`Grabadas ${rawTrack.length} muestras. Ajusta el suavizado o recorta y guarda.`);
   }
   function abortRecording(msg) {
+    releaseKeys();
     if (countdown) {
       clearInterval(countdown);
       countdown = null;
@@ -748,6 +805,7 @@ ${a.text}` : t2.lines.length ? "" : "ACCI\xD3N \xB7 " + (t2.description || "");
     status2(msg);
   }
   const onVisibility = () => {
+    if (document.hidden) releaseKeys();
     if (document.hidden && (recording || countdown)) abortRecording("Grabaci\xF3n cancelada: la pesta\xF1a qued\xF3 oculta. La c\xE1mara anterior se conserva.");
     else if (document.hidden && playing) pause();
   };
@@ -776,7 +834,7 @@ ${a.text}` : t2.lines.length ? "" : "ACCI\xD3N \xB7 " + (t2.description || "");
   ${c.trackSmoothing ? `<label>Suavizado \xB7 <span data-out="ts">${num(draft.trackSmoothing ?? 0)}</span><input data-smoothing type="range" min="0" max="1" step="0.05" value="${draft.trackSmoothing ?? 0}"></label>` : ""}
   ${c.trim && rawTrack?.length > 1 ? `<div class="two anim-two"><label>Recortar desde \xB7 s<input data-trim="from" type="number" min="0" max="${D2()}" step="${1 / TIMELINE_FPS}" value="${num(draft.track[0].t, 3)}"></label><label>hasta \xB7 s<input data-trim="to" type="number" min="0" max="${D2()}" step="${1 / TIMELINE_FPS}" value="${num(draft.track.at(-1).t, 3)}"></label></div><button data-trim-apply>Aplicar recorte</button><p class="tiny">El recorte parte de la \xFAltima grabaci\xF3n (${rawTrack.length} muestras); fuera del tramo la c\xE1mara queda quieta.</p>` : ""}
   <div class="actions"><button data-record class="lime">${draft.type === "track" && rawTrack?.length > 1 ? "\u25CF Regrabar" : "\u25CF Grabar"}</button><button data-save class="primary" ${iss.errors.length ? "disabled" : ""}>Guardar</button></div>
-  ${iss.errors.length ? `<p class="error">${iss.errors.map(esc2).join("\n")}</p>` : ""}${iss.warnings.length ? `<p class="tiny">${iss.warnings.map(esc2).join("<br>")}</p>` : ""}<p class="tiny">Grabar: cuenta atr\xE1s de 3 s y el plano suena desde 0; mueve la c\xE1mara con el rat\xF3n o el dedo hasta el final. Guardar crea una versi\xF3n del proyecto y cambia la huella del plano (la previsualizaci\xF3n aprobada queda pendiente).</p>`;
+  ${iss.errors.length ? `<p class="error">${iss.errors.map(esc2).join("\n")}</p>` : ""}${iss.warnings.length ? `<p class="tiny">${iss.warnings.map(esc2).join("<br>")}</p>` : ""}<p class="tiny">Grabar: cuenta atr\xE1s de 3 s y el plano suena desde 0; mueve la c\xE1mara con el rat\xF3n o el dedo, o volando con el teclado (Libre \xB7 Vuelo), hasta el final. Guardar crea una versi\xF3n del proyecto y cambia la huella del plano (la previsualizaci\xF3n aprobada queda pendiente).</p>`;
     const on = (q, ev, fn) => box.querySelectorAll(q).forEach((el) => el[ev] = () => fn(el));
     const apply2 = (r) => {
       if (r.error) {
@@ -895,6 +953,58 @@ ${a.text}` : t2.lines.length ? "" : "ACCI\xD3N \xB7 " + (t2.description || "");
     time = snapTime(b2.dataset.at, D2());
     update();
   });
+  const vp = $3("[data-viewport]"), typing = (el) => el && (/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) || el.isContentEditable);
+  const onKey = (ev) => {
+    if (typing(ev.target)) return;
+    const k = flyKey(ev.key);
+    if (ev.type === "keyup") {
+      if (k) keys.delete(k);
+      if (k && flying()) ev.preventDefault();
+      return;
+    }
+    if (!flying() || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (k) {
+      keys.add(k);
+      ev.preventDefault();
+    } else if (ev.key === " ") ev.preventDefault();
+  };
+  const onDown = (ev) => {
+    vp.focus({ preventScroll: true });
+    if (ev.pointerType === "touch" || ev.button !== 0 || !flying()) return;
+    drag = ev.pointerId;
+    vp.setPointerCapture?.(ev.pointerId);
+  };
+  const onMove = (ev) => {
+    if (ev.pointerId === drag && flying()) look = [look[0] + ev.movementX, look[1] + ev.movementY];
+  };
+  const onUp = (ev) => {
+    if (ev.pointerId === drag) {
+      drag = null;
+      if (vp.hasPointerCapture?.(ev.pointerId)) vp.releasePointerCapture(ev.pointerId);
+    }
+    if (touches.delete(ev.pointerId) && !touches.size && mode === "free" && cam === "fly") {
+      fly = flyFromCamera(stage2.camera());
+      stage2.orbit(false);
+    }
+  };
+  const onTouch = (ev) => {
+    if (ev.pointerType !== "touch" || mode !== "free" || cam !== "fly") return;
+    touches.add(ev.pointerId);
+    releaseKeys();
+    stage2.orbit(true);
+  };
+  const onWheel = (ev) => {
+    if (!flying()) return;
+    ev.preventDefault();
+    setSpeed(flySpeedStep(flySpeed, ev.deltaY));
+  };
+  const onBlur = () => {
+    releaseKeys();
+    drag = null;
+  }, listeners = [[vp, "keydown", onKey], [vp, "keyup", onKey], [vp, "pointerdown", onDown], [vp, "pointerdown", onTouch, { capture: true }], [vp, "pointermove", onMove], [vp, "pointerup", onUp], [vp, "pointercancel", onUp], [vp, "wheel", onWheel, { passive: false }], [vp, "blur", onBlur], [vp, "focusout", onBlur], [window, "blur", onBlur]];
+  for (const [el, ev, fn, o] of listeners) el.addEventListener(ev, fn, o);
+  root.querySelectorAll("[data-cam]").forEach((b2) => b2.onclick = () => setCam(b2.dataset.cam));
+  $3("[data-speed]").oninput = (ev) => setSpeed(2 ** Number(ev.target.value));
   $3("[data-render]").onclick = renderClick;
   renderTimer = setInterval(renderButton, 2e3);
   stage2.setCamera(cameraAt(draft, 0, D2(), ctx));
@@ -904,6 +1014,8 @@ ${a.text}` : t2.lines.length ? "" : "ACCI\xD3N \xB7 " + (t2.description || "");
   raf = requestAnimationFrame(frame);
   return { dispose() {
     disposed = true;
+    releaseKeys();
+    for (const [el, ev, fn, o] of listeners) el.removeEventListener(ev, fn, o);
     cancelAnimationFrame(raf);
     clearInterval(renderTimer);
     if (countdown) clearInterval(countdown);

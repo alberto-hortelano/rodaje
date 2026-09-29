@@ -576,6 +576,22 @@ export function rigWithType(rig,type,{positioned=[]}={}){if(!CAMERA_RIG_TYPES.in
  return {rig:{type,start,...moving,shake:rig.shake??.03,...(Number.isInteger(rig.seed)?{seed:rig.seed}:{})}};}
 // Controles del editor que tienen sentido para cada tipo.
 export function rigControls(type){const moving=type==='move'||type==='handheld';return {end:moving,easing:moving,hold:moving,follow:type==='follow',trackSmoothing:type==='track',trim:type==='track',shake:type==='handheld'};}
+// Vuelo de la vista Animación (#52): cámara libre con teclado y ratón, sin alabeo. Estado {position,yaw,pitch,distance,velocity}; yaw 0 mira a -Z (como viewer/walk.mjs).
+export const FLY_KEYS=['w','a','s','d','q','e','shift','arrowup','arrowdown','arrowleft','arrowright'],FLY_PITCH=1.45,FLY_SPEED={min:.25,max:20,default:2},FLY_FAST=3,FLY_TAU=.12,FLY_MAX_DT=.1,FLY_LOOK=.0025;
+export function flyKey(key){const k=typeof key==='string'?key.toLowerCase():'';return FLY_KEYS.includes(k)?k:null;}
+const flyDir=(yaw,pitch)=>[-Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch)];
+export function flyFromCamera({position,target}){const d=[0,1,2].map(i=>target[i]-position[i]);return {position:[...position],yaw:Math.atan2(-d[0],-d[2]),pitch:Math.atan2(d[1],Math.hypot(d[0],d[2])),distance:Math.max(1,Math.hypot(...d)),velocity:[0,0,0]};}
+// Un paso: la mirada gira (el cabeceo no pasa de ±FLY_PITCH, o no empeora si ya estaba fuera) y la velocidad tiende a la deseada con constante FLY_TAU, integrada de forma exacta: el resultado no depende de cómo se reparta dt.
+export function flyStep(state,{keys=[],look=[0,0],speed=FLY_SPEED.default,fast=false}={},dt=0){const h=Math.min(FLY_MAX_DT,Math.max(0,Number(dt)||0)),k=new Set([...keys].map(flyKey).filter(Boolean)),[lx,ly]=(look||[]).map(v=>Number(v)||0);
+ const yaw=state.yaw-(lx||0)*FLY_LOOK,p0=state.pitch,pitch=Math.min(Math.max(FLY_PITCH,p0),Math.max(Math.min(-FLY_PITCH,p0),p0-(ly||0)*FLY_LOOK));
+ const on=(...a)=>a.some(x=>k.has(x))?1:0,along=on('w','arrowup')-on('s','arrowdown'),side=on('d','arrowright')-on('a','arrowleft'),up=on('e')-on('q');
+ const f=flyDir(yaw,pitch),r=[Math.cos(yaw),0,-Math.sin(yaw)],m=[0,1,2].map(i=>f[i]*along+r[i]*side+(i===1?up:0)),n=Math.hypot(...m),v=flySpeedStep(speed,0)*(fast||k.has('shift')?FLY_FAST:1);
+ const vd=m.map(x=>n?x/n*v:0),v0=state.velocity||[0,0,0],e=Math.exp(-h/FLY_TAU);
+ return {...state,yaw,pitch,velocity:vd.map((x,i)=>x+(v0[i]-x)*e),position:state.position.map((p,i)=>p+vd[i]*h+(v0[i]-vd[i])*FLY_TAU*(1-e))};}
+export function flyCamera(state,fov){const d=flyDir(state.yaw,state.pitch);return {position:[...state.position],target:state.position.map((p,i)=>p+d[i]*state.distance),fov};}
+// Preferencias del navegador (localStorage 'rodaje-anim-camera'): modo de Libre y velocidad de vuelo, acotadas.
+export function flyPrefs(raw){return {mode:raw?.mode==='fly'?'fly':'orbit',speed:flySpeedStep(raw?.speed,0)};}
+export function flySpeedStep(speed,deltaY){const s=Number(speed),b=typeof speed==='number'&&Number.isFinite(s)?s:FLY_SPEED.default,d=Number(deltaY)||0,x=d<0?b*1.15:d>0?b/1.15:b;return Math.min(FLY_SPEED.max,Math.max(FLY_SPEED.min,x));}
 // «Inicio/Final de cámara» de la vista del plano: sin rig, camera/cameraEnd como siempre; con rig, además start/end del rig. anim: el cambio solo se hace en la vista Animación.
 export function applyShotCamera(shot,which,camera){const t=structuredClone(shot),key=which==='start'?'camera':'cameraEnd';if(!isObj(t.cameraRig)){t[key]=camCopy(camera);return {shot:t};}
  const r=rigWithCamera(t.cameraRig,which,camera);if(r.error)return {error:r.error,anim:true};t.cameraRig=r.rig;t[key]=camCopy(camera);return {shot:t};}
