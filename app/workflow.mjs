@@ -285,6 +285,16 @@ export function routeQuery(r){const parts=[];if(r?.project)parts.push(['project'
  for(const k of ROUTE_PARAMS[r?.view]||[])if(r[k]!==null&&r[k]!==undefined&&r[k]!=='')parts.push([k,r[k]]);
  return '?'+parts.map(([k,v])=>k+'='+routeValue(k,v)).join('&');}
 export function routeKey(r){const focus=[...FOCUS_PARAMS[r?.view]||[],...FILTER_PARAMS];return JSON.stringify([r?.project||'',r?.view,...(ROUTE_PARAMS[r?.view]||[]).filter(k=>!focus.includes(k)).map(k=>r[k])].map(x=>x??''));}
+// Historial (#66): push si cambia la ruta sin q ni f; replace en lo demás. history.state = {key: routeKey, scroll: [x, y]}.
+const ROUTE_NAMES=['project','view',...ROUTE_KEYS],validScroll=xy=>Array.isArray(xy)&&xy.length===2&&xy.every(Number.isFinite);
+// Búsqueda con la ruta y, detrás, los parámetros ajenos de la URL anterior (persist=0…) en su orden.
+export function routeHref(prevSearch,route){const keep=[...new URLSearchParams(prevSearch||'')].filter(([k])=>!ROUTE_NAMES.includes(k));return routeQuery(route)+(keep.length?'&'+new URLSearchParams(keep):'');}
+// Misma entrada: igual routeQuery sin q ni f, con la anterior normalizada por parseRoute (alias incluidos); ignora los parámetros ajenos.
+export function sameEntry(prevSearch,route){const bare=r=>routeQuery({...r,q:null,f:null});return bare(parseRoute(prevSearch))===bare(route);}
+export function historyStep(prevSearch,route,{replace=false}={}){return {method:replace||sameEntry(prevSearch,route)?'replace':'push',search:routeHref(prevSearch,route)};}
+export function historyState(route,scroll=null){return validScroll(scroll)?{key:routeKey(route),scroll:[scroll[0],scroll[1]]}:{key:routeKey(route)};}
+// Scroll guardado en la entrada, solo si su clave es la de la ruta; si no, null.
+export function entryScroll(state,route){return state&&state.key===routeKey(route)&&validScroll(state.scroll)?[state.scroll[0],state.scroll[1]]:null;}
 // Botón del menú que se marca en cada vista.
 export function navActive(view){return view==='environment'?'environments':view==='character'?'characters':view==='location'?'locations':view==='storyboard'?'storyboards':['shot','anim','rehearsal'].includes(view)?'shots':view;}
 // Entorno 3D enlazado a un ambiente (location.environment), o null.

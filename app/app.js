@@ -18181,10 +18181,10 @@ function cmd(side, selection) {
   return function({ state: state2, dispatch }) {
     if (!selection && state2.readOnly)
       return false;
-    let historyState = state2.field(historyField_, false);
-    if (!historyState)
+    let historyState2 = state2.field(historyField_, false);
+    if (!historyState2)
       return false;
-    let tr = historyState.pop(side, state2, selection);
+    let tr = historyState2.pop(side, state2, selection);
     if (!tr)
       return false;
     dispatch(tr);
@@ -29393,7 +29393,7 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, navActive, sequenceRole, treeModel, levelCrumbs, levelResolve, levelRoute, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, appearanceTree, appearanceEnvironments, relationLinks, relationLine, appearanceOpen, shotLabel, voiceStatusLabel, storyboardItems, storyboardResultSections, shotItems, filterShotGroups, filterView as filterView2, hasFilters, parseFilters, filtersParam } from "./workflow.mjs";
+import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, routeHref, historyStep, historyState, entryScroll, navActive, sequenceRole, treeModel, levelCrumbs, levelResolve, levelRoute, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, appearanceTree, appearanceEnvironments, relationLinks, relationLine, appearanceOpen, shotLabel, voiceStatusLabel, storyboardItems, storyboardResultSections, shotItems, filterShotGroups, filterView as filterView2, hasFilters, parseFilters, filtersParam } from "./workflow.mjs";
 
 // app/filtros.source.js
 import { filterView, toggleFilter } from "./workflow.mjs";
@@ -29522,6 +29522,10 @@ var renderedRoute = null;
 var renderGeneration = 0;
 var sbMedia = null;
 var montajeFocus = null;
+var fromHistory2 = false;
+var committedHref = null;
+var committedState = null;
+var scrollTimer = null;
 var sbPlayers = /* @__PURE__ */ new Map();
 var filt = { q: "", f: {} };
 var filterMount = null;
@@ -29551,21 +29555,27 @@ function applyRoute(r) {
 }
 async function goRoute(r) {
   if (dirty) await save();
+  fromHistory2 = false;
   applyRoute(r);
   return render();
 }
 function rememberPosition() {
-  if (renderedRoute) try {
+  if (!renderedRoute) return;
+  try {
     sessionStorage.setItem("rodaje:scroll:" + renderedRoute, JSON.stringify([scrollX, scrollY]));
   } catch {
   }
+  if (location.href === committedHref) history.replaceState({ ...history.state, scroll: [scrollX, scrollY] }, "", location.href);
 }
-function syncRoute() {
-  const u = new URL(location.href), keep = [...u.searchParams].filter(([k]) => !["project", "view", ...ROUTE_KEYS].includes(k));
-  u.search = routeQuery(currentRoute());
-  for (const [k, v2] of keep) u.searchParams.append(k, v2);
-  history.replaceState(null, "", u);
+function commitRoute(mode) {
+  const r = currentRoute(), { method, search } = historyStep(location.search, r, { replace: mode === "replace" }), u = new URL(location.href);
+  u.search = search;
+  if (method === "push") history.pushState(historyState(r), "", u);
+  else history.replaceState(historyState(r, entryScroll(history.state, r)), "", u);
+  committedHref = location.href;
+  committedState = history.state;
 }
+var syncRoute = () => commitRoute("replace");
 async function restorePosition(generation) {
   const key = routeKey(currentRoute());
   let xy = [0, 0];
@@ -29578,9 +29588,10 @@ async function restorePosition(generation) {
   await new Promise(requestAnimationFrame);
   if (generation !== renderGeneration) return;
   renderedRoute = key;
-  const el = pendingFocus && document.querySelector(pendingFocus);
+  const back = fromHistory2 && entryScroll(history.state, currentRoute()), el = !back && pendingFocus && document.querySelector(pendingFocus);
   pendingFocus = null;
-  if (el) {
+  if (back) scrollTo(back[0], back[1]);
+  else if (el) {
     el.scrollIntoView({ block: "start" });
     el.classList.add("target");
   } else scrollTo(xy[0], xy[1]);
@@ -29588,6 +29599,7 @@ async function restorePosition(generation) {
     shotsFocus = null;
     syncRoute();
   }
+  fromHistory2 = false;
 }
 var forgetTreeState = (id3) => {
   try {
@@ -29597,6 +29609,10 @@ var forgetTreeState = (id3) => {
 };
 history.scrollRestoration = "manual";
 window.addEventListener("pagehide", rememberPosition);
+window.addEventListener("scroll", () => {
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(rememberPosition, 150);
+}, { passive: true });
 document.addEventListener("toggle", (e) => {
   const d2 = e.target;
   if (!(d2 instanceof HTMLDetailsElement) || !d2.classList.contains("menu") || !d2.open) return;
@@ -30138,6 +30154,7 @@ y ${list.length - 20} m\xE1s` : "");
       return render();
     }
     shotState = await api("/api/shot-state?project=" + p.id + "&shot=" + t2.id);
+    if (generation !== renderGeneration) return;
     html3 = heading2(esc2(t2.title), esc2(e.title) + " / " + esc2(s.title), `<div class="row">${btn("\u2190 Planos", "nav:shots")}${btn("Editar secuencia", "sequence:" + s.id)}</div>`) + relHTML("shot/" + t2.id, { max: 12, cls: "rel-head" }) + `<div class="stepper"><div class="step active"><b>01 \xB7 PREPARAR</b>Escenario y c\xE1mara</div><div class="step"><b>02 \xB7 INTERPRETAR</b>Voces y ambiente</div><div class="step"><b>03 \xB7 REVISAR</b>Previsualizaci\xF3n</div><div class="step"><b>04 \xB7 APROBAR</b>${shotState.approved ? "\u2713 Aprobada" : "Pendiente"}</div><div class="step"><b>05 \xB7 DISE\xD1AR</b>Fotograma visual</div><div class="step"><b>06 \xB7 PRODUCIR</b>V\xEDdeo H3 Max</div></div><div class="wide"><div><div class="stagebox"><div id="viewport" style="aspect-ratio:16/9"></div><div class="stagefoot">${btn("\u25B6 Ensayar con audio", "play")}${btn("\u25A0 Parar", "stop")}${btn("Inicio de c\xE1mara", "camera-start")}${btn("Final de c\xE1mara", "camera-end")}</div></div><div class="shot-strip"><span>Tiempo</span><input id="scrub" aria-label="Tiempo del plano" type="range" min="0" max="${t2.duration}" step="0.041667" value="0"><output id="scrub-time">0.0 s</output></div><p class="tiny" style="margin:10px 0 20px">Arrastra para orbitar; rueda para acercar. Guarda el inicio y el final para definir el movimiento. Figuras corporales sin rig facial.</p><div class="panel"><div class="row between"><h2>Conversaci\xF3n</h2>${btn("+ Intervenci\xF3n", "new-line")}</div><div class="lines">${t2.lines.map((l3) => `<div class="line"><div class="fields">${select("Personaje", "character", p.characters.map((c) => [c.id, c.name + (c.kind === "voice" ? " \xB7 voz sin cuerpo" : "")]), l3.character).replace("<select ", '<select data-line="' + l3.id + '" ')}${input("Inicio \xB7 s", "start", l3.start, "number").replace("<input ", '<input min="0" step="0.05" data-line="' + l3.id + '" ')}</div>${area("Texto", "text", l3.text).replace("<textarea ", '<textarea data-line="' + l3.id + '" ')}${select("Canal", "channel", catalogOptions(projectChannels2(p), l3.channel, { channel: true }), l3.channel || "direct").replace("<select ", '<select data-line="' + l3.id + '" ')}<label><input style="width:auto" type="checkbox" name="offscreen" data-line="${l3.id}" ${l3.offscreen ? "checked" : ""}> Voz fuera de campo</label>${l3.audio ? `<audio controls src="${media(l3.audio)}"></audio><span class="tiny">${(l3.audioDuration || 0).toFixed(2)} s</span>` : ""}<div class="row">${btn("Generar voz", "line:" + l3.id)}${btn("Subir audio", "upload-line:" + l3.id)}${btn("Quitar", "remove-line:" + l3.id)}</div></div>`).join("") || '<p style="margin-top:15px">Un plano puede ser silencioso. A\xF1ade las intervenciones de quienes hablan.</p>'}</div></div><div class="panel"><h2>Continuidad del reparto</h2><p>Estas posiciones pertenecen a toda la secuencia.</p><table><thead><tr><th>Personaje</th><th>X</th><th>Z</th><th>Giro \xB0</th><th>Postura</th><th></th></tr></thead><tbody>${s.cast.map((a) => `<tr><td>${esc2(p.characters.find((c) => c.id === a.character)?.name)}</td>${["x", "z", "yaw"].map((k) => `<td><input type="number" step="${k === "yaw" ? 5 : 0.1}" value="${k === "yaw" ? Math.round(a[k] * 180 / Math.PI) : a[k]}" data-actor="${a.character}" data-field="${k}" aria-label="${k}"></td>`).join("")}<td><select data-actor="${a.character}" data-field="pose">${opts([["seated", "Sentado"], ["standing", "De pie"]], a.pose)}</select></td><td>${btn("\xD7", "remove-cast:" + a.character)}</td></tr>`).join("")}</tbody></table><div class="actions">${btn("+ A\xF1adir al reparto", "add-cast")}${btn("+ Elemento 3D", "add-prop")}${btn("Aplicar posiciones", "apply-stage")}</div></div></div><aside><section class="panel"><h3>El plano</h3>${input("T\xEDtulo", "title", t2.title).replace("<input ", '<input data-shot-field="title" ')}${area("Acci\xF3n e intenci\xF3n", "description", t2.description).replace("<textarea ", '<textarea data-shot-field="description" ')}${input("Duraci\xF3n \xB7 segundos (1\u201315)", "duration", t2.duration, "number").replace("<input ", '<input min="1" max="15" step="0.125" data-shot-field="duration" ')}<label><input style="width:auto" type="checkbox" data-shot-field="allowOverlap" ${t2.allowOverlap ? "checked" : ""}> Permitir solapamiento intencional</label>${btn("C\xE1mara fija (usar inicio)", "camera-fixed")}<hr style="border:0;border-top:1px solid #dfe4db;margin:20px 0"><h3>Ambiente de la secuencia</h3>${area("Descripci\xF3n del sonido", "ambiencePrompt", s.ambiencePrompt).replace("<textarea ", '<textarea data-sequence-field="ambiencePrompt" ')}<label>Volumen<input type="range" min="0" max="1" step="0.01" value="${s.ambienceGain ?? 0.18}" data-sequence-field="ambienceGain"></label><label><input style="width:auto" type="checkbox" data-sequence-field="silent" ${s.silent ? "checked" : ""}> Sin sonido ambiente</label>${s.ambience ? `<audio controls src="${media(s.ambience)}"></audio>` : ""}<div class="actions">${btn("Generar ambiente", "ambience")}${btn("Subir sonido", "upload-ambience")}</div></section><section class="panel"><h3>Revisi\xF3n y producci\xF3n</h3><p style="margin:12px 0">${shotState.issues.map(esc2).join("<br>") || "Fuentes listas para previsualizar."}</p>${t2.preview && t2.preview.hash !== shotState.hash ? '<p class="error">La previsualizaci\xF3n anterior est\xE1 desactualizada.</p>' : ""}<div class="actions">${btn("1. Renderizar 3D + sonido", "preview", "primary")}${btn("2. Aprobar previsualizaci\xF3n", "approve", shotState.approved ? "lime" : "")}${btn("3. Generar fotograma visual", "keyframe")}${btn("4. Convertir con H3 Max", "video")}</div><p class="tiny" style="margin-top:15px">Revisa el v\xEDdeo 3D antes de aprobar y el fotograma antes de convertir. Generar im\xE1genes, voces o v\xEDdeo usa tu cuenta de fal.ai.</p></section></aside></div><div class="two">${t2.preview ? `<div class="panel"><h2>Previsualizaci\xF3n ${t2.preview.hash === shotState.hash ? "actual" : "anterior"}</h2><video controls src="${media(t2.preview.file)}"></video><a href="${media(t2.preview.scene)}" target="_blank">Escena 3D y tiempos \xB7 JSON</a></div>` : ""}${t2.keyframe ? `<div class="panel"><h2>Fotograma visual</h2>${image(t2.keyframe.file)}</div>` : ""}${t2.final ? `<div class="panel"><h2>Conversi\xF3n final \xB7 revisar</h2><video controls src="${media(t2.final.file)}"></video></div>` : ""}</div><section class="panel"><h2>Versiones del plano</h2>${(t2.history || []).map((h, i2) => `<div class="job"><span>v${i2 + 1} \xB7 ${esc2(h.type)} \xB7 ${new Date(h.at).toLocaleString()}</span><a target="_blank" href="${media(h.file)}">Abrir \u2197</a></div>`).join("") || "<p>Aqu\xED se conservar\xE1n tus previsualizaciones, fotogramas y v\xEDdeos.</p>"}</section>`;
   }
   $2("#workspace").innerHTML = html3;
@@ -30157,22 +30174,39 @@ y ${list.length - 20} m\xE1s` : "");
   if (view === "montaje") {
     const focus = montajeFocus;
     montajeFocus = null;
-    stage = await mountMontaje($2("#montaje"), { project: p, api, toast, focus });
+    const m2 = await mountMontaje($2("#montaje"), { project: p, api, toast, focus });
+    if (generation !== renderGeneration) {
+      m2?.dispose?.();
+      return;
+    }
+    stage = m2;
   }
   if (view === "anim") {
     try {
       const target = shotId;
-      stage = await mountAnim($2("#anim"), { getProject: () => p, ids: { episodeId, sequenceId, shotId }, save, markDirty: () => {
+      const m2 = await mountAnim($2("#anim"), { getProject: () => p, ids: { episodeId, sequenceId, shotId }, save, markDirty: () => {
         dirty = true;
       }, toast, isDirty: () => dirty, renderVideo: () => api("/api/job", { project: p.id, type: "anim3d", target }).then((j) => {
         state.jobs.push(j);
         return j;
       }), renderJob: () => state.jobs.filter((j) => j.project === p.id && j.type === "anim3d" && j.target === target).sort((a, b2) => a.created.localeCompare(b2.created)).at(-1) || null });
+      if (generation !== renderGeneration) {
+        m2?.dispose?.();
+        return;
+      }
+      stage = m2;
     } catch (err) {
       $2("#anim").textContent = "No se pudo cargar la animaci\xF3n: " + err.message;
     }
   }
-  if (view === "rehearsal") stage = await mountRehearsal($2("#rehearsal"), { project: p, episode: p.episodes.find((e) => e.id === episodeId) });
+  if (view === "rehearsal") {
+    const m2 = await mountRehearsal($2("#rehearsal"), { project: p, episode: p.episodes.find((e) => e.id === episodeId) });
+    if (generation !== renderGeneration) {
+      m2?.dispose?.();
+      return;
+    }
+    stage = m2;
+  }
   if (view === "environment") {
     const e = (p.environments || []).find((x2) => x2.id === environmentId), el = $2("#environment-model");
     try {
@@ -30180,10 +30214,22 @@ y ${list.length - 20} m\xE1s` : "");
       if (v2.kind === "invalido") el.textContent = v2.message;
       else if (v2.kind === "mount") {
         const viewer = "/viewer/mount.mjs", module = await import(viewer);
-        stage = await module.mountEnvironment(el, { project: p, environment: e });
+        if (generation !== renderGeneration) return;
+        const m2 = await module.mountEnvironment(el, { project: p, environment: e });
+        if (generation !== renderGeneration) {
+          m2?.dispose?.();
+          return;
+        }
+        stage = m2;
       } else if (v2.kind === "glb") {
         const viewer = "/viewer/glb.mjs", module = await import(viewer);
-        stage = await module.mountGlb(el, { url: media(v2.url), name: e.name });
+        if (generation !== renderGeneration) return;
+        const m2 = await module.mountGlb(el, { url: media(v2.url), name: e.name });
+        if (generation !== renderGeneration) {
+          m2?.dispose?.();
+          return;
+        }
+        stage = m2;
       } else el.textContent = "Este entorno a\xFAn no tiene modelo. Sube un GLB.";
     } catch (err) {
       el.textContent = "No se pudo cargar el entorno 3D: " + err.message;
@@ -30379,7 +30425,12 @@ y ${list.length - 20} m\xE1s` : "");
       dirty = true;
     });
     try {
-      stage = await createStage3($2("#viewport"), { project: p, sequence: s, shot: t2 });
+      const m2 = await createStage3($2("#viewport"), { project: p, sequence: s, shot: t2 });
+      if (generation !== renderGeneration) {
+        m2?.dispose?.();
+        return;
+      }
+      stage = m2;
       $2("#scrub").oninput = (e) => {
         stage.stop();
         stage.pose(Number(e.target.value));
@@ -30389,10 +30440,11 @@ y ${list.length - 20} m\xE1s` : "");
       $2("#viewport").textContent = "No se pudo cargar el 3D: " + e.message;
     }
   }
-  syncRoute();
+  commitRoute(fromHistory2 ? "replace" : "auto");
   await restorePosition(generation);
 }
 async function act(action) {
+  fromHistory2 = false;
   const [a, b2, c, d2] = action.split(":");
   if (a === "rehearsal") {
     if (dirty) await save();
@@ -30495,7 +30547,6 @@ async function act(action) {
     api("/api/active", { project: b2 }).catch(() => {
     });
     applyRoute({ view: "tree" });
-    history.replaceState(null, "", "?project=" + b2);
     return render();
   }
   if (a === "settings") {
@@ -30969,15 +31020,46 @@ async function act(action) {
     return render();
   }
 }
-try {
-  state = await api("/api/state");
-  const r = parseRoute(location.search);
-  if (r.project) {
-    p = await api("/api/project?id=" + encodeURIComponent(r.project));
-    forgetTreeState(r.project);
+async function loadRoute(r) {
+  if ((r.project || null) !== (p?.id || null)) {
+    if (r.project) {
+      p = await api("/api/project?id=" + encodeURIComponent(r.project));
+      forgetTreeState(r.project);
+    } else {
+      p = null;
+      state = await api("/api/state");
+    }
   }
   applyRoute(r);
   if (view === "shot") current();
+}
+async function onPopState() {
+  clearTimeout(scrollTimer);
+  document.querySelectorAll("dialog[open]").forEach((d2) => d2.close());
+  if (dirty) {
+    try {
+      await save();
+    } catch (e) {
+      history.pushState(committedState, "", committedHref);
+      toast("No se pudo guardar; sigues en esta vista: " + e.message);
+      return;
+    }
+  }
+  try {
+    await loadRoute(parseRoute(location.search));
+  } catch (e) {
+    toast(e.message);
+    p = null;
+    applyRoute({ view: "library" });
+  }
+  fromHistory2 = true;
+  await render();
+}
+window.addEventListener("popstate", () => onPopState().catch((e) => toast(e.message)));
+try {
+  state = await api("/api/state");
+  await loadRoute(parseRoute(location.search));
+  fromHistory2 = true;
   await render();
 } catch (e) {
   $2("#app").textContent = e.message;
@@ -31008,6 +31090,10 @@ window.rodaje = { get environment() {
   return view === "environment" ? stage : null;
 }, get anim() {
   return view === "anim" ? stage : null;
+}, get stage() {
+  return stage;
+}, get view() {
+  return view;
 }, get project() {
   return p;
 }, act, api, reload, render };

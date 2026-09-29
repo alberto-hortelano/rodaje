@@ -1,7 +1,7 @@
 // Navegación (#57, #67): rutas con alias, árbol de la escaleta hasta los planos, versión del story, vista Planos y cifras del proyecto.
 // Puro sobre el fixture de #56, más comprobaciones de fuente (menú, vistas, renombrados) y estilo.
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
-import {VIEWS,VIEW_ALIASES,ROUTE_PARAMS,ROUTE_KEYS,FILTER_PARAMS,hasFilters,routeView,parseRoute,routeQuery,routeKey,navActive,treeModel,treePath,storyVersionOptions,setCurrentStory,shotGroups,projectStats,storyMigrationPlan} from '../app/workflow.mjs';
+import {VIEWS,VIEW_ALIASES,ROUTE_PARAMS,ROUTE_KEYS,FILTER_PARAMS,hasFilters,routeView,parseRoute,routeQuery,routeKey,routeHref,sameEntry,historyStep,historyState,entryScroll,navActive,treeModel,treePath,storyVersionOptions,setCurrentStory,shotGroups,projectStats,storyMigrationPlan} from '../app/workflow.mjs';
 import {validate} from '../app/store.mjs';
 import {storysProject,storysSpec,planShot} from './fixtures/escaleta-storys.mjs';
 
@@ -167,7 +167,7 @@ const reh=fs.readFileSync(new URL('../app/rehearsal.source.js',import.meta.url),
 test('fuente: menú, vistas nuevas, sin las antiguas y renombrados',()=>{
  assert.ok(src.includes("[['tree','Escaleta'],['overview','Proyecto'],['ideas','Historia e ideas'],['characters','Personajes y voces'],['locations','Ambientes'],['environments','Entornos 3D'],['storyboards','Storyboards'],['shots','Planos'],['montaje','Montaje'],['issues','Pendientes'],['jobs','Generaciones']]"));
  for(const x of ["view==='outline'","view==='episodes'","'nav:episodes'","view='episodes'","['outline','Escaleta']","'Vista del proyecto'"])assert.ok(!src.includes(x),'queda '+x);
- for(const x of ["view==='tree'","view==='shots'",'navActive(view)','applyRoute(r)','parseRoute(location.search)','routeQuery(currentRoute())'])assert.ok(src.includes(x),'falta '+x);
+ for(const x of ["view==='tree'","view==='shots'",'navActive(view)','applyRoute(r)','parseRoute(location.search)','historyStep(location.search,r'])assert.ok(src.includes(x),'falta '+x);
  assert.match(reh,/>Secuencia<select data-scene>/);assert.doesNotMatch(reh,/>Escena<select/);assert.ok(mont.includes('<dt>Secuencia</dt>'));assert.ok(!mont.includes('<dt>Escena</dt>'));
  for(const x of ["'Sin escenario'","'+ Escenario'","'Escenarios'",'Sin escenario','Escenario al crear'])assert.ok(!src.includes(x),'queda '+x);
  for(const x of ['Escena 3D y tiempos · JSON','Escenario y cámara','Elemento del escenario','la viñeta del storyboard y la secuencia'])assert.ok(src.includes(x),'falta '+x);});
@@ -189,6 +189,42 @@ test('estilos: niveles, miniaturas, migas sin desbordar y foco',()=>{
  assert.match(rule('.sb-seq.target'),/outline/);for(const x of ['.tree-kids','.tree-node','.tree-panel'])assert.ok(!css.includes(x),'queda '+x);});
 
 test('fuente: rutas y tarjetas de personaje y ambiente (#60)',()=>{
- assert.match(src,/\['project','view',\.\.\.ROUTE_KEYS\]/);assert.ok(!src.includes('data-kind="${view}"'),'el selector de versión no usa la vista');
+ assert.match(fs.readFileSync(new URL('../app/workflow.mjs',import.meta.url),'utf8'),/ROUTE_NAMES=\['project','view',\.\.\.ROUTE_KEYS\]/);assert.ok(!src.includes('data-kind="${view}"'),'el selector de versión no usa la vista');
  assert.ok(src.includes("el.dataset.kind==='character'?p.characters:p.locations"));
  for(const x of ['const characterCard=','const locationCard=',"list.map(chars?characterCard:locationCard)","'rodaje-appear-all-'+p.id",'data-appear-all','/api/entity?project=',"'No existe el personaje '","'No existe el ambiente '"])assert.ok(src.includes(x),'falta '+x);});
+
+// Historial (#66): push si cambia la ruta sin q/f; replace en filtros, en la misma ruta y si se fuerza.
+test('historial: push si cambia la ruta sin q/f',()=>{
+ const R=q=>parseRoute('?project=x&'+q),step=(prev,q,o)=>historyStep(prev,typeof q==='string'?(q.startsWith('?')?parseRoute(q):R(q)):q,o).method;
+ const push=[['?project=x&view=tree','view=tree&node=act/e1'],['?project=x&view=tree&node=act/e1','view=tree&node=seq/x'],['?project=x&view=storyboard&storyboard=a','view=storyboard&storyboard=a&scene=c'],
+  ['?project=x&view=storyboard&storyboard=a','view=storyboard&storyboard=b'],['?project=x&view=tree','view=shots&sequence=s'],['?project=x&view=shots','view=shot&episode=e&sequence=s&shot=t'],
+  ['?project=x&view=shot&episode=e&sequence=s&shot=t','view=anim&episode=e&sequence=s&shot=t'],['?project=x&view=shots','view=rehearsal&episode=e'],['?project=x&view=environments','view=environment&environment=n'],
+  ['?project=x&view=characters','view=character&character=h'],['?project=x&view=tree','view=montaje'],['?view=library','?project=x&view=tree'],['?project=x&view=tree','?view=library']];
+ for(const [a,b] of push)assert.equal(step(a,b),'push',a+' → '+b);
+ const replace=[['?project=x&view=storyboards&q=a','view=storyboards&q=b'],['?project=x&view=storyboards&f=act:e1','view=storyboards&f=act:e2'],['?project=x&view=storyboards','view=storyboards&q=a&f=cast:ana'],
+  ['?project=x&view=shot&episode=e&sequence=s&shot=t','view=shot&episode=e&sequence=s&shot=t'],['?project=x&view=outline','view=tree'],['','?view=library'],['?project=x&view=library','view=tree']];
+ for(const [a,b] of replace)assert.equal(step(a,b),'replace',a+' → '+b);
+ for(const [a,b] of push)assert.equal(step(a,b,{replace:true}),'replace','forzado: '+a+' → '+b);
+ assert.equal(historyStep('?project=x&view=tree',R('view=shots&sequence=s')).search,'?project=x&view=shots&sequence=s');});
+
+test('historial: routeHref conserva los parámetros ajenos',()=>{
+ const prev='?project=x&view=environment&environment=a&persist=0&foo=1';
+ assert.equal(routeHref(prev,{project:'x',view:'tree',node:'act/e1'}),'?project=x&view=tree&node=act%2Fe1&persist=0&foo=1');
+ assert.equal(routeHref(prev,{project:'x',view:'overview'}),'?project=x&view=overview&persist=0&foo=1','quita environment');
+ assert.equal(routeHref('?project=x&view=storyboards&q=a',{project:'x',view:'storyboards',q:'b',f:'act:e1'}),'?project=x&view=storyboards&q=b&f=act:e1');
+ assert.equal(historyStep(prev,{project:'x',view:'environment',environment:'a'}).method,'replace');assert.ok(sameEntry(prev,{project:'x',view:'environment',environment:'a'}));
+ assert.ok(!sameEntry(prev,{project:'x',view:'environment',environment:'b'}));});
+
+test('historial: historyState y entryScroll',()=>{
+ const shots=parseRoute('?project=x&view=shots'),shotsSeq=parseRoute('?project=x&view=shots&sequence=s'),sbs=parseRoute('?project=x&view=storyboards'),sbsQ=parseRoute('?project=x&view=storyboards&q=a');
+ assert.deepEqual(historyState(shots,[0,120]),{key:routeKey(shots),scroll:[0,120]});assert.equal(historyState(shots).key,historyState(shotsSeq).key);assert.equal(historyState(sbs).key,historyState(sbsQ).key);
+ assert.ok(!('scroll' in historyState(shots)));assert.ok(!('scroll' in historyState(shots,[1,NaN])));assert.ok(!('scroll' in historyState(shots,['1',2])));
+ assert.deepEqual(entryScroll(historyState(shots,[3,4]),shotsSeq),[3,4]);
+ for(const st of [null,undefined,{},historyState(sbs,[3,4]),{key:routeKey(shots),scroll:[1,NaN]},{key:routeKey(shots),scroll:['1',2]},{key:routeKey(shots),scroll:[1]},{key:routeKey(shots)}])assert.equal(entryScroll(st,shots),null,JSON.stringify(st));});
+
+test('historial: fuente',()=>{
+ assert.ok(!src.includes('history.replaceState(null'));assert.equal(src.split('history.pushState(historyState').length,2,'un solo push de ruta');
+ assert.equal(src.split("addEventListener('popstate'").length,2);assert.doesNotMatch(src,/if\(a==='open'\)[^}]*history\./,'open no escribe la URL a mano');
+ for(const f of ['mountAnim(','mountRehearsal(','mountMontaje(','mountEnvironment(','mountGlb(','createStage(']){const i=src.indexOf('await '+(['mountEnvironment(','mountGlb('].includes(f)?'module.':'')+f);assert.ok(i>0,f);
+  const rest=src.slice(i),g=rest.indexOf('generation!==renderGeneration'),a=rest.indexOf('stage=');assert.ok(g>0&&g<a,'guarda antes de stage= tras '+f);}
+ assert.match(src,/commitRoute\(fromHistory\?'replace':'auto'\)/);assert.match(src,/async function act\(action\)\{fromHistory=false;/);});
