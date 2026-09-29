@@ -2,17 +2,19 @@
 // enlazado a la viñeta (storyboardShot) con su duración, su diálogo, t.cast con su reparto, staging y, si el fichero de cámaras la trae, un cameraRig
 // fijo y staging.environment.preset (formato en docs/scripts.md). Reejecutar es idempotente: conserva la cámara, el staging, el reparto y el audio
 // de las líneas que no cambian; --force sustituye la cámara (y el preset si la entrada trae momento) por los del fichero. Sin coste.
-// Uso: node scripts/storyboard-3d.mjs <storyboard> <viñeta> --secuencia <id> [--camaras fichero] [--force] [--plan] [--project id]
+// Uso: node scripts/storyboard-3d.mjs <storyboard> <viñeta> [--secuencia <id>] [--camaras fichero] [--force] [--plan] [--project id]
 //   <viñeta>: código (A02) o id. --plan: imprime el plano resultante (JSON) sin escribir.
+//   La secuencia se resuelve con storyPlansTarget (#56): sin --secuencia (o con la ficha de escaleta del story), el contenedor de planos del story,
+//   que se crea al final del acto si no existe; un story sin outlineSequence necesita --secuencia.
 //   Avisos por stderr; última línea de stdout: «A02 · creado · plano <id> · posición 2/56 · cámara fichero · preset camino».
 import fs from 'node:fs';
 import path from 'node:path';
 import {load, save, dir} from '../app/store.mjs';
 import {takeOption} from '../lib/args.mjs';
 import {cliProject, usageExit} from '../lib/cli.mjs';
-import {storyboardShotDraft, mergeStoryboardShot, storyboardInsertIndex, findStoryboardShot, parseShotCameras, cameraFileWarnings, shotRigIssues, shotCastIssues, effectiveEnvironment, locationEnvironment} from '../app/workflow.mjs';
+import {storyboardShotDraft, mergeStoryboardShot, storyboardInsertIndex, findStoryboardShot, storyPlansTarget, storyLocation, parseShotCameras, cameraFileWarnings, shotRigIssues, shotCastIssues, effectiveEnvironment, locationEnvironment} from '../app/workflow.mjs';
 
-const USAGE = 'Uso: node scripts/storyboard-3d.mjs <storyboard> <viñeta> --secuencia <id> [--camaras fichero] [--force] [--plan] [--project id]';
+const USAGE = 'Uso: node scripts/storyboard-3d.mjs <storyboard> <viñeta> [--secuencia <id>] [--camaras fichero] [--force] [--plan] [--project id]';
 const args = process.argv.slice(2);
 const flag = name => { const i = args.indexOf(name); if (i < 0) return false; args.splice(i, 1); return true; };
 const plan = flag('--plan'), force = flag('--force');
@@ -21,17 +23,19 @@ const p0 = takeOption(args, '--project'), seqId = opt('--secuencia'), camaras = 
 const pos = args.filter(a => !a.startsWith('--'));
 if (pos.length < 2) usageExit(USAGE);
 const {project: projectId, args: [sbId, key]} = cliProject({usage: USAGE, opts: {project: p0}, args: pos});
-if (!seqId) usageExit(USAGE, 'Falta --secuencia <id>');
 
 try {
   const p = load(projectId);
   const sb = (p.storyboards || []).find(b => b.id === sbId);
   if (!sb) throw Error('Storyboard desconocido: ' + sbId);
   const v = findStoryboardShot(sb, key).shot, code = v.code || v.id;
-  const episode = p.episodes.find(e => e.sequences.some(s => s.id === seqId));
-  if (!episode) throw Error('Secuencia no encontrada: ' + seqId);
-  const seq = episode.sequences.find(s => s.id === seqId);
+  const target = storyPlansTarget(p, sbId, seqId || undefined);
+  if (!target) usageExit(USAGE, `Falta --secuencia <id>: el story ${sbId} no tiene secuencia de escaleta (outlineSequence)`);
+  if (target.errors.length) throw Error(target.errors[0]);
   const warn = w => console.error('Aviso: ' + w);
+  target.warnings.forEach(warn);
+  const seq = target.sequence;
+  if (target.created) { seq.location = storyLocation(p, sb); target.episode.sequences.splice(target.index, 0, seq); warn(`secuencia nueva ${seq.id} para los planos del story, al final de ${target.episode.title || target.episode.id}`); }
 
   let entry = null, file = null;
   if (camaras) {

@@ -20,6 +20,12 @@ put('ambientes/cargo/MAPA.md','# Mapa\n\n```prompt\nThe MURAL at frame-left.\n``
 const ep=snapshot.episodes[0],seq=ep.sequences[0],scene={characters:{},local_constraints:['x']};
 put(`capitulos/ep01/escenas/s${String(L.sceneNumber(ep,seq)).padStart(2,'0')}.json`,scene);
 
+test('sceneNumber: el de la secuencia si es entero > 0; si no, sourceScene del primer plano; si no, su posición',()=>{
+ const e={sequences:[{id:'a',shots:[]},{id:'b',shots:[{id:'t'},{id:'u',sourceScene:7}]}]},[a,b]=e.sequences;
+ assert.equal(L.sceneNumber(e,a),1);assert.equal(L.sceneNumber(e,b),7);
+ b.sceneNumber=3;assert.equal(L.sceneNumber(e,b),3);a.sceneNumber=5;assert.equal(L.sceneNumber(e,a),5);
+ for(const bad of [0,-1,2.5,'4',null]){a.sceneNumber=bad;assert.equal(L.sceneNumber(e,a),1,String(bad));}
+ e.sequences.unshift({id:'ficha',shots:[]});a.sceneNumber=1;assert.equal(L.sceneNumber(e,a),1,'una ficha insertada delante no la mueve');});
 test('lib/lotes solo importa node:*, ./paths, ./json y ../app/workflow',()=>{const src=fs.readFileSync(new URL('../lib/lotes.mjs',import.meta.url),'utf8');const from=[...src.matchAll(/from '([^']+)'/g)].map(m=>m[1]);assert.deepEqual(from.filter(f=>!f.startsWith('node:')).sort(),['../app/workflow.mjs','./json.mjs','./paths.mjs']);});
 test('nombres de lote y bloque: rechaza vacío, punto, dos puntos, barras y no cadenas',()=>{
  for(const bad of ['','.','..','a/b','../x','a\\b',undefined,null,3])assert.throws(()=>L.lotePaths(P,bad),/Lote no válido/,String(bad));

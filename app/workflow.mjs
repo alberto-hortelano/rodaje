@@ -39,7 +39,7 @@ export function castPlacements(existing,ids){const out=(existing||[]).map(a=>({.
 // Rellena (o vuelve a aplicar) una secuencia con todas las viñetas de un storyboard, en orden: un plano por viñeta con mergeStoryboardShot.
 // Los planos sin viñeta, de viñetas que ya no están o repetidos se conservan detrás del plano que tenían delante, con un aviso.
 export function storyboardSequenceMerge(p,sb,seq,newId=()=>crypto.randomUUID()){const physical=id=>p.characters.some(c=>c.id===id&&c.kind!=='voice');const shots=(sb.sequences||[]).flatMap(s=>s.shots||[]);const ids=[...new Set(shots.flatMap(t=>t.cast||[]))].filter(physical);
- const loc=(sb.sequences||[]).find(s=>s.location)?.location,location=p.locations.some(l=>l.id===loc)?loc:(p.locations[0]?.id||''),old=seq.shots||[],used=new Set(),warnings=[],sbIds=new Set(shots.map(t=>t.id));
+ const location=storyLocation(p,sb),old=seq.shots||[],used=new Set(),warnings=[],sbIds=new Set(shots.map(t=>t.id));
  const out=shots.map(v=>{const k=old.findIndex((t,i)=>!used.has(i)&&t.storyboardShot===v.id);if(k>=0)used.add(k);return {k:k>=0?k:null,shot:mergeStoryboardShot(k>=0?old[k]:null,storyboardShotDraft(p,v,{newId,castIds:ids})).shot};});
  old.forEach((t,k)=>{if(used.has(k))return;const name=`«${t.title||t.id}» (${t.id})`;warnings.push(!t.storyboardShot?`${name} no viene del storyboard: se conserva en su sitio`:sbIds.has(t.storyboardShot)?`${name} repite la viñeta ${t.storyboardShot}: se conserva aparte`:`${name}: su viñeta ${t.storyboardShot} ya no está en el storyboard; se conserva en su sitio`);
   let at=0,best=-1;out.forEach((x,i)=>{if(x.k!==null&&x.k<k&&x.k>best){best=x.k;at=i+1;}});out.splice(at,0,{k,shot:structuredClone(t)});});
@@ -219,9 +219,8 @@ export function pendingVoiceLines(shots,channels,{linea=null,force=false,soloEnC
 
 // Preview 3D estándar: un plano con render propio (customRenderer) no pasa por stage; se reproduce la preview guardada.
 export function previewIssues(shot){return shot?.customRenderer?['Plano con render propio: reproduce la preview guardada']:[];}
-// ---- Escaleta: secuencias en orden con número, minutos y una carátula (imagen) por secuencia.
+// ---- Escaleta: secuencias en orden con número, minutos y una carátula (imagen) por secuencia (outline y outlineTree, más abajo: #56).
 export function outlineSequence(p,id){for(const e of p.episodes||[])for(const s of e.sequences||[])if(s.id===id)return {episode:e,sequence:s};throw Error('Secuencia no encontrada');}
-export function outline(p){const rows=[];let n=0,start=0;for(const e of p.episodes||[])for(const s of e.sequences||[]){n++;const minutes=Number(s.minutes)||0;rows.push({episode:e,sequence:s,number:n,code:String(n).padStart(2,'0'),minutes,start});start+=minutes;}return rows;}
 // Prompt de la carátula: el explícito de la secuencia tal cual; si no, estilo del proyecto, título y texto de escaleta, y un solo fotograma 16:9 sin texto.
 export const COVER_TAIL='One single cinematic 16:9 film still. No text, no captions, no borders, no watermark.';
 export function coverPrompt(p,e,s){if(s.coverPrompt?.trim())return s.coverPrompt.trim();return [p.style||'',`Key image for the sequence "${s.title}"${e?.title?` (${e.title})`:''}${s.text?': '+s.text:'.'}`,COVER_TAIL].filter(Boolean).join('\n\n');}
@@ -336,12 +335,13 @@ export function shotLens(t){const l=t?.guide3d?.lens;if(typeof l==='number'&&Num
 export function captionText(project,line,channels=projectChannels(project)){const c=(project?.characters||[]).find(c=>c.id===line?.character),name=String(c?.name||line?.who||line?.character||'').trim().toUpperCase(),text=String(line?.text||'').trim();return name?`${name}${lineOffscreen(channels,line)?' (OFF)':''}: ${text}`:text;}
 // Una fila si cabe en max caracteres; si no, dos filas cortadas por la palabra que más las iguala.
 export function captionRows(text,max=60){const s=String(text||'').replace(/\s+/g,' ').trim();if(s.length<=max)return s?[s]:[];const w=s.split(' ');let best=null;for(let i=1;i<w.length;i++){const a=w.slice(0,i).join(' '),b=w.slice(i).join(' '),m=Math.max(a.length,b.length);if(!best||m<best.m)best={m,rows:[a,b]};}return best?best.rows:[s];}
-// Secuencia de capítulo que da tiempos y audio a las animáticas: entre las que tienen algún plano enlazado a una viñeta del storyboard,
-// 1) la que declara storyboard===sb.id, 2) más líneas con audio, 3) más planos enlazados, 4) la primera del proyecto. override la fuerza.
+// Secuencia de capítulo que da tiempos y audio a las animáticas: entre las que tienen algún plano enlazado a una viñeta del storyboard y no son
+// contenedor de otro story (#56), 1) la que declara storyboard===sb.id y no es prueba, 2) la que no es prueba, 3) más líneas con audio,
+// 4) más planos enlazados, 5) la primera del proyecto. override la fuerza.
 export function chapterSequenceFor(project,storyboard,{override}={}){const ids=new Set((storyboard?.sequences||[]).flatMap(s=>(s.shots||[]).map(t=>t.id)));const all=(project?.episodes||[]).flatMap(e=>(e.sequences||[]).map(s=>({episode:e,sequence:s})));
- const found=all.map((x,i)=>{const linked=(x.sequence.shots||[]).filter(t=>ids.has(t.storyboardShot));return {...x,i,own:x.sequence.storyboard===storyboard?.id?1:0,linked:linked.length,audio:linked.flatMap(t=>t.lines||[]).filter(l=>l.audio).length};}).filter(x=>x.linked);
+ const found=all.map((x,i)=>{const linked=(x.sequence.shots||[]).filter(t=>ids.has(t.storyboardShot));return {...x,i,own:x.sequence.storyboard===storyboard?.id&&x.sequence.test!==true?1:0,real:x.sequence.test===true?0:1,linked:linked.length,audio:linked.flatMap(t=>t.lines||[]).filter(l=>l.audio).length};}).filter(x=>x.linked&&!(sequenceRole(project,x.sequence)==='container'&&x.sequence.storyboard!==storyboard?.id));
  if(override){const f=all.find(x=>x.sequence.id===override);if(!f)throw Error('Secuencia de capítulo no encontrada: '+override);return {episode:f.episode,sequence:f.sequence,candidates:found.length};}
- if(!found.length)return null;found.sort((a,b)=>b.own-a.own||b.audio-a.audio||b.linked-a.linked||a.i-b.i);return {episode:found[0].episode,sequence:found[0].sequence,candidates:found.length};}
+ if(!found.length)return null;found.sort((a,b)=>b.own-a.own||b.real-a.real||b.audio-a.audio||b.linked-a.linked||a.i-b.i);return {episode:found[0].episode,sequence:found[0].sequence,candidates:found.length};}
 const ANIM_SLATE={'3d':'SIN FOTO 3D',fotogramas:'SIN FOTOGRAMA',voces:'SIN FOTOGRAMA'},posNum=v=>{const n=Number(v);return Number.isFinite(n)&&n>0?n:null;};
 // Línea de tiempo de la animática de un paso. source: la de chapterSequenceFor (o null: duración de la viñeta y diálogo repartido).
 // Duración de cada viñeta: la de su plano enlazado (el primero), la suya o 5 s. Cada línea empieza en su start y acaba en audioDuration,
@@ -834,3 +834,123 @@ export function stateErrors(tag,asset){const errors=[];if(asset?.states===undefi
  for(const [s,st] of Object.entries(asset.states)){if(!isObj(st)){errors.push(`${tag}@${s}: debe ser un objeto {drop, note}`);continue;}if(st.drop!==undefined&&(!Array.isArray(st.drop)||st.drop.some(x=>typeof x!=='string'||!x)))errors.push(`${tag}@${s}: drop debe ser una lista de textos`);if(st.note!==undefined&&typeof st.note!=='string')errors.push(`${tag}@${s}: note debe ser texto`);if(!st.drop?.length&&!st.note)errors.push(`${tag}@${s}: sin drop ni note`);
   if(Array.isArray(st.drop))for(const x of applyState(asset.descriptor||'',{drop:st.drop.filter(x=>typeof x==='string'&&x)}).missing)errors.push(`${tag}@${s}: no se encuentra «${x}» en el descriptor`);}
  return errors;}
+
+// ---- Escaleta y storys (#56). Una sola lista episodes[].sequences[] con tres papeles deducidos: ficha de escaleta (carátula, texto, minutos),
+// contenedor de los planos de un story (sequence.storyboard de un story enlazado) y prueba (test:true, fuera de la escaleta). El story apunta a su
+// ficha (storyboards[].outlineSequence) y la ficha marca el vigente (currentStoryboard). Sin enlaces todo es ficha, como antes. Puras: no mutan.
+export const OUTLINE_FIELDS=['minutes','text','coverPrompt','cover','covers'];
+const seqList=p=>(Array.isArray(p?.episodes)?p.episodes:[]).flatMap(e=>(Array.isArray(e?.sequences)?e.sequences:[]).map((s,i)=>({episode:e,sequence:s||{},i})));
+const storyList=p=>Array.isArray(p?.storyboards)?p.storyboards.filter(isObj):[];
+const storyOf=(p,id)=>storyList(p).find(b=>b.id===id)||null;
+const storyShotIds=b=>(Array.isArray(b?.sequences)?b.sequences:[]).flatMap(s=>(Array.isArray(s?.shots)?s.shots:[]).map(t=>t?.id));
+const linkOf=b=>typeof b?.outlineSequence==='string'&&b.outlineSequence?b.outlineSequence:null;
+const posInt=v=>Number.isInteger(v)&&v>0;
+export function sequenceRole(p,seq){if(seq?.test===true)return 'test';return seq?.storyboard&&linkOf(storyOf(p,seq.storyboard))?'container':'outline';}
+// Contenedor de los planos de un story: la primera secuencia que no es prueba con storyboard igual a su id.
+export function storyContainer(p,sbId){const x=seqList(p).find(x=>x.sequence.storyboard===sbId&&x.sequence.test!==true);return x?{episode:x.episode,sequence:x.sequence}:null;}
+// Versión de cada story de una ficha: la suya si es entera > 0; si no, el primer número libre en el orden de p.storyboards.
+export function storyVersions(p,fichaId){const list=storyList(p).filter(b=>linkOf(b)===fichaId),used=new Set(list.map(b=>b.version).filter(posInt)),out=new Map();let n=1;
+ for(const b of list){if(posInt(b.version))out.set(b.id,b.version);else{while(used.has(n))n++;used.add(n);out.set(b.id,n);}}return out;}
+// Árbol de la escaleta: actos con sus fichas numeradas (sus storys por versión, el vigente y su contenedor), pruebas aparte y storys sin ficha.
+export function outlineTree(p){let n=0,start=0;const fichas=new Set();
+ const acts=(Array.isArray(p?.episodes)?p.episodes:[]).map(e=>({episode:e,sequences:(Array.isArray(e?.sequences)?e.sequences:[]).filter(s=>sequenceRole(p,s)==='outline').map(s=>{fichas.add(s.id);n++;const minutes=Number(s.minutes)||0,current=typeof s.currentStoryboard==='string'?s.currentStoryboard:null;
+  const storys=[...storyVersions(p,s.id)].map(([id,version])=>({storyboard:storyOf(p,id),version,current:id===current,container:storyContainer(p,id)})).sort((a,b)=>a.version-b.version);
+  const row={sequence:s,number:n,code:String(n).padStart(2,'0'),minutes,start,current,storys,ownShots:(s.shots||[]).length};start+=minutes;return row;})}));
+ return {acts,tests:seqList(p).filter(x=>x.sequence.test===true).map(({episode,sequence})=>({episode,sequence})),unlinked:storyList(p).filter(b=>!fichas.has(linkOf(b))).map(b=>({storyboard:b,container:storyContainer(p,b.id)}))};}
+// Filas de la escaleta (vista Escaleta y carátulas): solo fichas, numeradas en orden.
+export function outline(p){return outlineTree(p).acts.flatMap(a=>a.sequences.map(r=>({episode:a.episode,sequence:r.sequence,number:r.number,code:r.code,minutes:r.minutes,start:r.start})));}
+// Errores (store.validate y check:proyectos) y avisos (solo check) del modelo escaleta → story → planos.
+export function storyModelIssues(p){const errors=[],warnings=[],sbs=storyList(p),all=seqList(p),seqOf=id=>all.find(x=>x.sequence.id===id);
+ const owner=new Map(sbs.flatMap(b=>storyShotIds(b).filter(Boolean).map(id=>[id,b.id])));
+ for(const b of sbs){const o=b.outlineSequence;
+  if(b.version!==undefined&&!posInt(b.version))errors.push(`El story ${b.id}: version debe ser un entero mayor que 0`);
+  if(o===undefined)continue;
+  if(!linkOf(b)){errors.push(`El story ${b.id}: outlineSequence debe ser el id de una secuencia`);continue;}
+  const f=seqOf(o);if(!f){errors.push(`El story ${b.id} enlaza una secuencia inexistente: ${o}`);continue;}
+  if(f.sequence.storyboard||f.sequence.test===true)errors.push(`El story ${b.id} enlaza ${o}, que no es una ficha de escaleta (${f.sequence.test===true?'es una prueba':'tiene los planos del story '+f.sequence.storyboard}): enlázalo a su ficha`);
+  const cs=all.filter(x=>x.sequence.storyboard===b.id&&x.sequence.test!==true);
+  if(cs.length>1)errors.push(`El story ${b.id} tiene ${cs.length} secuencias de planos (${cs.map(x=>x.sequence.id).join(', ')}): deja una o marca las demás como prueba`);
+  for(const c of cs)for(const t of c.sequence.shots||[]){const other=owner.get(t?.storyboardShot);if(other&&other!==b.id)errors.push(`El plano ${t.id} de ${c.sequence.id} enlaza la viñeta ${t.storyboardShot} del story ${other}, no de ${b.id}: no se mezclan planos de dos storys`);}
+  if(cs.length&&cs[0].episode!==f.episode)warnings.push(`Los planos del story ${b.id} (${cs[0].sequence.id}) están en otro acto que su ficha ${o}`);}
+ for(const o of new Set(sbs.map(linkOf).filter(Boolean))){const seen=new Map();for(const b of sbs.filter(b=>linkOf(b)===o&&posInt(b.version))){if(seen.has(b.version))errors.push(`Versión ${b.version} repetida en la secuencia ${o}: ${seen.get(b.version)} y ${b.id}`);else seen.set(b.version,b.id);}}
+ for(const {sequence:s} of all){
+  if(s.test!==undefined&&s.test!==true)errors.push(`La secuencia ${s.id}: test solo admite true`);
+  if(s.currentStoryboard!==undefined){const c=s.currentStoryboard,b=typeof c==='string'&&c?storyOf(p,c):null;
+   if(typeof c!=='string'||!c)errors.push(`La secuencia ${s.id}: currentStoryboard debe ser el id de un story`);
+   else if(!b)errors.push(`La secuencia ${s.id} marca vigente un story inexistente: ${c}`);
+   else if(linkOf(b)!==s.id)errors.push(`La secuencia ${s.id} marca vigente ${c}, que es de ${linkOf(b)?'la secuencia '+linkOf(b):'ninguna secuencia'}`);}
+  if(s.storyboard&&!storyOf(p,s.storyboard))warnings.push(`La secuencia ${s.id} apunta a un story inexistente: ${s.storyboard}`);
+  const linked=sbs.filter(b=>linkOf(b)===s.id);
+  if(linked.length&&!s.storyboard&&s.test!==true){if(!s.currentStoryboard)warnings.push(`La secuencia ${s.id} tiene ${linked.length} ${linked.length>1?'storys':'story'} y ninguno vigente`);
+   if((s.shots||[]).length)warnings.push(`La ficha ${s.id} tiene storys enlazados y además ${s.shots.length} planos propios`);}}
+ return {errors,warnings};}
+// Localización de los planos de un story: la de su primera escena que tenga una conocida; si no, la primera del proyecto.
+export function storyLocation(p,sb){const loc=(sb?.sequences||[]).find(s=>s.location)?.location;return p.locations.some(l=>l.id===loc)?loc:(p.locations[0]?.id||'');}
+// Dónde van los planos de un story (storyboard-a-secuencia, storyboard-3d y «Crear/actualizar planos del story»). null: story sin ficha y sin seqId
+// (comportamiento anterior). Pedir su ficha lleva a su contenedor, que se crea al final del acto si no existe; nunca se mezclan planos de dos storys.
+export function storyPlansTarget(p,sbId,seqId,{newId=()=>crypto.randomUUID()}={}){const sb=storyOf(p,sbId);if(!sb)throw Error('Storyboard no encontrado: '+sbId);
+ const errors=[],warnings=[],all=seqList(p),out=(x,created=false)=>({episode:x?.episode||null,index:x?x.i:-1,sequence:x?.sequence||null,created,errors,warnings});
+ const fichaId=linkOf(sb),ficha=fichaId?all.find(x=>x.sequence.id===fichaId):null;
+ if(fichaId&&!ficha){errors.push(`El story ${sb.id} enlaza una secuencia inexistente: ${fichaId}`);return out(null);}
+ const own=()=>{const c=all.find(x=>x.sequence.storyboard===sb.id&&x.sequence.test!==true);if(c)return out(c);const e=ficha.episode;
+  return out({episode:e,i:e.sequences.length,sequence:{id:newId(),title:sb.title,storyboard:sb.id,silent:false,ambienceGain:.18,ambiencePrompt:'',cast:[],props:[],shots:[]}},true);};
+ if(!seqId)return ficha?own():null;
+ const x=all.find(x=>x.sequence.id===seqId);if(!x){errors.push('Secuencia no encontrada: '+seqId);return out(null);}
+ const s=x.sequence;if(ficha&&s.id===fichaId)return own();
+ if(sequenceRole(p,s)==='container'&&s.storyboard!==sb.id){errors.push(`La secuencia ${s.id} tiene los planos del story ${s.storyboard}: no se mezclan con los de ${sb.id}`);return out(x);}
+ if(s.test===true){warnings.push(`La secuencia ${s.id} es una prueba: sus planos no cuentan como los del story`+(s.storyboard&&s.storyboard!==sb.id?` (deja de apuntar a ${s.storyboard})`:''));return out(x);}
+ if(s.storyboard===sb.id)return out(x);
+ if(ficha){const c=storyContainer(p,sb.id);errors.push(c?`Los planos del story ${sb.id} están en ${c.sequence.id}: pide esa secuencia o su ficha ${fichaId}`:`El story ${sb.id} es de la secuencia ${fichaId}: pide esa secuencia (se crea su contenedor) o una prueba`);return out(x);}
+ const linked=storyList(p).filter(b=>linkOf(b)===s.id);if(linked.length){errors.push(`La secuencia ${s.id} es la ficha de escaleta de ${linked.map(b=>b.id).join(', ')}: enlaza el story (outlineSequence) o elige otra secuencia`);return out(x);}
+ if(s.storyboard)warnings.push(`La secuencia ${s.id} deja de apuntar al story ${s.storyboard}`);
+ return out(x);}
+// Aplica storyPlansTarget y storyboardSequenceMerge sobre una copia; lanza con el primer error. warnings: los de los dos.
+export function applyStoryPlans(p,sbId,{sequence:seqId,newId=()=>crypto.randomUUID()}={}){const q=structuredClone(p),t=storyPlansTarget(q,sbId,seqId,{newId});
+ if(!t)throw Error(`El story ${sbId} no tiene secuencia de escaleta (outlineSequence): indica la secuencia`);if(t.errors.length)throw Error(t.errors[0]);
+ const {sequence,warnings}=storyboardSequenceMerge(q,storyOf(q,sbId),t.sequence,newId);t.episode.sequences.splice(t.index,t.created?0:1,sequence);
+ return {project:q,episodeId:t.episode.id,sequence,created:t.created,warnings:[...t.warnings,...warnings]};}
+export function storyPlansLabel(p,sb){return linkOf(sb)?'Crear/actualizar planos del story':'Crear capítulo';}
+// Antes de borrar un story: ninguna ficha lo deja como vigente.
+export function detachStory(p,sbId){const q=structuredClone(p);for(const {sequence:s} of seqList(q))if(s.currentStoryboard===sbId)delete s.currentStoryboard;return q;}
+// Spec sugerida para storyMigrationPlan: storys agrupados por título sin «(vN)»; la ficha es la secuencia sin storyboard del mismo título o,
+// si no la hay, una nueva desde el contenedor del primero; el vigente, el último; pruebas, las secuencias con planos cuyo título dice prueba o test.
+function suggestStorySpec(p){const base=t=>String(t||'').replace(/\s*\(v\d+\)\s*$/i,'').trim().toLowerCase(),all=seqList(p),fichas=[],enlaces={},vigentes={},groups=new Map();
+ for(const b of storyList(p)){if(linkOf(b))continue;const k=base(b.title);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(b);}
+ for(const [k,list] of groups){const same=all.find(x=>!x.sequence.storyboard&&x.sequence.test!==true&&base(x.sequence.title)===k);let fid=same?.sequence.id;
+  if(!fid){const c=list.map(b=>storyContainer(p,b.id)).find(Boolean);if(!c)continue;fid=c.sequence.id+'-escaleta';for(let n=2;all.some(x=>x.sequence.id===fid)||fichas.some(f=>f.id===fid);n++)fid=`${c.sequence.id}-escaleta-${n}`;fichas.push({id:fid,from:c.sequence.id,title:list[0].title});}
+  for(const b of list)enlaces[b.id]=fid;if(list.length>1)vigentes[fid]=list.at(-1).id;}
+ return {fichas,enlaces,vigentes,pruebas:all.filter(x=>x.sequence.test!==true&&!x.sequence.storyboard&&(x.sequence.shots||[]).length&&/\b(prueba|test)\b/i.test(x.sequence.title||'')).map(x=>x.sequence.id)};}
+// Plan de migración al modelo de #56 (scripts/migrar-storys.mjs). spec: {fichas:[{id,from,title}], enlaces:{story:ficha}, vigentes:{ficha:story}, pruebas:[id]}.
+// Orden: 1) sceneNumber fijo en las secuencias con planos que la ficha nueva desplaza; 2) ficha en la posición de from con sus campos de escaleta;
+// 3) fuera los campos de escaleta de los contenedores; 4) outlineSequence y version; 5) currentStoryboard; 6) test:true. ops vacío: nada que hacer.
+export function storyMigrationPlan(p,spec){const q=structuredClone(p),ops=[],errors=[],warnings=[],op=(kind,text)=>ops.push({kind,text}),find=id=>seqList(q).find(x=>x.sequence.id===id),suggested=suggestStorySpec(p);
+ if(!spec)return {ops,next:q,errors,warnings,suggested};
+ if(!isObj(spec))return {ops,next:q,errors:['La spec debe ser un objeto {fichas, enlaces, vigentes, pruebas}'],warnings,suggested};
+ const fichas=Array.isArray(spec.fichas)?spec.fichas:[],enlaces=isObj(spec.enlaces)?spec.enlaces:{},vigentes=isObj(spec.vigentes)?spec.vigentes:{},pruebas=Array.isArray(spec.pruebas)?spec.pruebas:[];
+ for(const [k,v] of [['fichas',Array.isArray],['enlaces',isObj],['vigentes',isObj],['pruebas',Array.isArray]])if(spec[k]!==undefined&&!v(spec[k]))errors.push(`spec.${k} no tiene el formato esperado`);
+ const nuevas=[],fichaIds=new Set(),notFicha=s=>!!s.storyboard||s.test===true||pruebas.includes(s.id);
+ for(const f of fichas){if(!isObj(f)||typeof f.id!=='string'||!f.id){errors.push('Cada ficha necesita un id');continue;}fichaIds.add(f.id);const x=find(f.id);
+  if(x){if(notFicha(x.sequence))errors.push(`El id de ficha ${f.id} ya es de una secuencia que no es ficha (${x.sequence.storyboard?'tiene los planos de '+x.sequence.storyboard:'prueba'})`);else if(f.title&&x.sequence.title!==f.title)warnings.push(`La ficha ${f.id} ya existe con otro título («${x.sequence.title}»): se deja como está`);continue;}
+  if(typeof f.from!=='string'||!find(f.from)){errors.push(`La ficha ${f.id}: from inexistente (${f.from})`);continue;}
+  if(typeof f.title!=='string'||!f.title.trim()){errors.push(`La ficha ${f.id} necesita title`);continue;}
+  nuevas.push(f);}
+ for(const [sbId,fid] of Object.entries(enlaces)){if(!storyOf(q,sbId))errors.push(`Story desconocido en enlaces: ${sbId}`);const x=typeof fid==='string'?find(fid):null;
+  if(!fichaIds.has(fid)&&!x)errors.push(`El story ${sbId} enlaza una secuencia inexistente: ${fid}`);else if(x&&notFicha(x.sequence))errors.push(`El story ${sbId} enlaza ${fid}, que no es una ficha de escaleta`);}
+ const target=sbId=>Object.hasOwn(enlaces,sbId)?enlaces[sbId]:linkOf(storyOf(q,sbId));
+ for(const [fid,sbId] of Object.entries(vigentes)){if(!storyOf(q,sbId))errors.push(`Story desconocido en vigentes: ${sbId}`);else if(target(sbId)!==fid)errors.push(`El vigente ${sbId} de ${fid} no está enlazado a ${fid}`);}
+ for(const id of pruebas)if(!find(id))errors.push(`Prueba inexistente: ${id}`);
+ if(errors.length)return {ops:[],next:structuredClone(p),errors,warnings,suggested};
+ const val=v=>JSON.stringify(v);
+ for(const f of nuevas){const x=find(f.from),E=x.episode,seqs=E.sequences;
+  for(let j=x.i;j<seqs.length;j++){const s=seqs[j];if((s.shots||[]).length&&!s.shots.some(t=>t.sourceScene)&&!posInt(s.sceneNumber)){s.sceneNumber=j+1;op('sceneNumber',`${s.id}: sceneNumber ${j+1} (conserva su escena al insertar ${f.id})`);}}
+  const moved=OUTLINE_FIELDS.filter(k=>Object.hasOwn(x.sequence,k));
+  seqs.splice(x.i,0,{id:f.id,title:f.title,silent:false,cast:[],props:[],shots:[],...Object.fromEntries(moved.map(k=>[k,structuredClone(x.sequence[k])]))});
+  op('ficha',`${f.id}: ficha nueva «${f.title}» en ${E.title||E.id}, posición ${x.i+1}${moved.length?`, con ${moved.join(', ')} de ${f.from}`:''}`);}
+ const containers=new Set();for(const b of storyList(q)){if(!target(b.id))continue;const c=seqList(q).find(x=>x.sequence.storyboard===b.id&&x.sequence.test!==true&&!pruebas.includes(x.sequence.id));if(c)containers.add(c.sequence);}
+ for(const s of containers){const gone=OUTLINE_FIELDS.filter(k=>Object.hasOwn(s,k));if(!gone.length)continue;op('campos',`${s.id}: quita ${gone.map(k=>`${k}=${val(s[k])}`).join(' · ')}`);for(const k of gone)delete s[k];}
+ for(const [sbId,fid] of Object.entries(enlaces)){const b=storyOf(q,sbId);if(b.outlineSequence!==fid){b.outlineSequence=fid;op('enlace',`${sbId} → ${fid}`);}}
+ for(const fid of new Set(storyList(q).map(linkOf).filter(Boolean)))for(const [sbId,v] of storyVersions(q,fid)){const b=storyOf(q,sbId);if(b.version!==v){b.version=v;op('version',`${sbId}: version ${v}`);}}
+ for(const [fid,sbId] of Object.entries(vigentes)){const s=find(fid).sequence;if(s.currentStoryboard!==sbId){s.currentStoryboard=sbId;op('vigente',`${fid}: vigente ${sbId}`);}}
+ for(const {sequence:s} of seqList(q)){if(s.currentStoryboard!==undefined||notFicha(s))continue;const list=storyList(q).filter(b=>linkOf(b)===s.id);if(list.length===1){s.currentStoryboard=list[0].id;op('vigente',`${s.id}: vigente ${list[0].id} (su único story)`);}}
+ for(const id of pruebas){const s=find(id).sequence;if(s.test!==true){s.test=true;op('prueba',`${id}: prueba, fuera de la escaleta`);}}
+ const r=storyModelIssues(q);return {ops,next:q,errors:r.errors,warnings:[...warnings,...r.warnings],suggested};}

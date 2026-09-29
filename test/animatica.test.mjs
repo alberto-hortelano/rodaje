@@ -66,6 +66,15 @@ test('chapterSequenceFor: storyboard propio, luego más audio, luego más planos
  assert.equal(chapterSequenceFor(p,sb,{override:'c-buena'}).sequence.id,'c-buena');assert.throws(()=>chapterSequenceFor(p,sb,{override:'nada'}),/no encontrada/);
  assert.equal(chapterSequenceFor(p,{id:'sb-z',sequences:[{id:'q',shots:[{id:'zz'}]}]}),null);});
 
+test('chapterSequenceFor (#56): excluye la secuencia de planos de otro story enlazado; una prueba va detrás de las demás',()=>{
+ let p=P(),sb=sbOf(p);delete p.episodes[0].sequences[1].storyboard;p.episodes[0].sequences[0].storyboard='sb-b';p.storyboards.push({id:'sb-b',title:'B',sequences:[]});
+ for(const t of p.episodes[0].sequences[1].shots)for(const l of t.lines)delete l.audio;p.episodes[0].sequences[1].shots=[p.episodes[0].sequences[1].shots[0]];
+ let r=chapterSequenceFor(p,sb);assert.deepEqual([r.sequence.id,r.candidates],['c-otra',2],'sin enlace: como antes');
+ p.storyboards.at(-1).outlineSequence='ficha';p.episodes[0].sequences.push({id:'ficha',shots:[]});r=chapterSequenceFor(p,sb);assert.deepEqual([r.sequence.id,r.candidates],['c-buena',1],'contenedor de sb-b fuera');
+ p=P();delete p.episodes[0].sequences[1].storyboard;p.episodes[0].sequences[1].test=true;assert.equal(chapterSequenceFor(p,sb).sequence.id,'c-otra','la prueba, aunque tenga más audio, detrás');
+ p.episodes[0].sequences[1].storyboard='sb-a';assert.equal(chapterSequenceFor(p,sb).sequence.id,'c-otra','una prueba no es el contenedor propio');
+ delete p.episodes[0].sequences[1].test;assert.equal(chapterSequenceFor(p,sb).sequence.id,'c-buena');});
+
 test('animaticTimeline 3d: fotos 3D, duraciones y texto del plano enlazado (el primero), at acumulado y falta foto-3d',()=>{
  const p=P(),sb=sbOf(p),source=chapterSequenceFor(p,sb),tl=animaticTimeline(p,sb,{step:'3d',source});
  assert.deepEqual(tl.source,{episode:'e1',sequence:'c-buena',candidates:2});assert.equal(tl.storyboard,'sb-a');

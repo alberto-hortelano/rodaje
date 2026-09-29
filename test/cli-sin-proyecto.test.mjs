@@ -1,6 +1,7 @@
 // Ningún script asume un proyecto: sin --project, posicional, RODAJE_PROJECT ni proyecto activo en la app, uso y código 2
 // sin tocar el disco; con proyecto, imprimen «Proyecto: X (fuente)» en stderr (issue #4).
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {spawnSync} from 'node:child_process';import {createHash} from 'node:crypto';
+import {storysProject,storysSpec} from './fixtures/escaleta-storys.mjs';
 const ROOT=path.resolve(import.meta.dirname,'..'),SCRIPTS=path.join(ROOT,'scripts');
 const tmp=()=>fs.mkdtempSync(path.join(os.tmpdir(),'rodaje-cli-'));
 const baseEnv=()=>{const env={...process.env,FAL_KEY:'test:dummy'};delete env.RODAJE_PROJECT;return env;};
@@ -25,6 +26,7 @@ const TABLE={
  'pendientes.mjs':[['listar']],
  'prompts-pendientes.mjs':[[]],
  'storyboard-a-secuencia.mjs':[['sb1','s1']],
+ 'migrar-storys.mjs':[['--plan']],
  'storyboard-prompts.mjs':[['sb1']],
  'storyboard-animatica.mjs':[['sb-a']],
  'storyboard-3d.mjs':[['sb1','A01','--secuencia','s1']],
@@ -111,6 +113,19 @@ test('compatibilidad: cada fuente del proyecto y su línea «Proyecto: X (fuente
   setActive(data,'p2');const before=snapshot(data);const r=run('perfil.mjs',args,{RODAJE_DATA:data,RODAJE_PROJECT:'p2'});
   expectUsage(r,args.join(' '));assert.ok(r.stderr.includes(message),r.stderr);assert.deepEqual(snapshot(data),before);
  }
+});
+
+test('migrar-storys.mjs: --plan no escribe; sin --plan escribe; la segunda vez «Sin cambios»; sin --spec ni --plan, uso',()=>{
+ const data=tmp(),dir=path.join(data,'escaleta'),spec=path.join(tmp(),'spec.json');fs.mkdirSync(dir);fs.writeFileSync(path.join(dir,'proyecto.json'),JSON.stringify(storysProject()));fs.writeFileSync(spec,JSON.stringify(storysSpec()));
+ const before=snapshot(data);let r=run('migrar-storys.mjs',['--project','escaleta','--plan'],{RODAJE_DATA:data});
+ assert.equal(r.status,0,r.stderr);assert.ok(r.stderr.split('\n').includes('Proyecto: escaleta (--project)'));assert.match(r.stdout,/Spec sugerida/);assert.match(r.stdout,/"x-v1-escaleta"/);assert.deepEqual(snapshot(data),before);
+ r=run('migrar-storys.mjs',['--project','escaleta','--spec',spec,'--plan'],{RODAJE_DATA:data});
+ assert.equal(r.status,0,r.stderr);assert.match(r.stdout,/^\[ficha\] x-colgado: ficha nueva/m);assert.match(r.stdout,/Comprobado: 8 planos con el mismo digest/);assert.match(r.stdout,/no se escribe/);assert.deepEqual(snapshot(data),before);
+ r=run('migrar-storys.mjs',['--project','escaleta'],{RODAJE_DATA:data});expectUsage(r,'sin spec');assert.deepEqual(snapshot(data),before);
+ r=run('migrar-storys.mjs',['--project','escaleta','--spec',spec],{RODAJE_DATA:data});assert.equal(r.status,0,r.stderr);assert.match(r.stdout,/Escrito: 17 operaciones · rev 4/);
+ const p=JSON.parse(fs.readFileSync(path.join(dir,'proyecto.json'),'utf8'));assert.equal(p.episodes[0].sequences[0].id,'x-colgado');assert.equal(p.storyboards[2].outlineSequence,'x-colgado');
+ const after=snapshot(data);r=run('migrar-storys.mjs',['--project','escaleta','--spec',spec],{RODAJE_DATA:data});assert.equal(r.status,0,r.stderr);assert.equal(r.stdout,'Sin cambios\n');assert.deepEqual(snapshot(data),after);
+ fs.writeFileSync(spec,JSON.stringify({...storysSpec(),pruebas:['x-nada']}));r=run('migrar-storys.mjs',['--project','escaleta','--spec',spec],{RODAJE_DATA:data});assert.equal(r.status,1);assert.match(r.stderr,/Error: Prueba inexistente: x-nada/);assert.deepEqual(snapshot(data),after);
 });
 
 test('app/, lib/, scripts/ y viewer/ no nombran proyectos concretos',()=>{

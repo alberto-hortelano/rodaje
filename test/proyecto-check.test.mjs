@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {spawnSync} from 'node:child_process';
 import {DATA} from '../lib/paths.mjs';
-import {stripCode,builderIssues,checkProject} from '../lib/proyecto-check.mjs';
+import {stripCode,builderIssues,checkProject,RULES} from '../lib/proyecto-check.mjs';
+import {storysProject,storysSpec} from './fixtures/escaleta-storys.mjs';import {storyMigrationPlan} from '../app/workflow.mjs';
 
 const mk=(manifest,fileMap)=>checkProject({manifest,files:Object.keys(fileMap),read:f=>{if(!(f in fileMap))throw Error('no leer '+f);if(fileMap[f]===null)throw Error('binario '+f);return fileMap[f];}});
 const rules=(found,rule)=>found.filter(x=>x.rule===rule);
@@ -118,3 +119,11 @@ test('CLI: --all sin carpeta de datos sale con 0 y total a cero',()=>{
 test('package.json: check:proyectos es estricto (sin --report)',()=>{
  const pkg=JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname,'../package.json'),'utf8'));
  assert.equal(pkg.scripts['check:proyectos'],'node scripts/proyecto-check.mjs --all');});
+
+test('R-storys (#56): errores de store.validate y avisos del modelo escaleta → story → planos',()=>{
+ assert.deepEqual(RULES,['R-code','R-builder','R-manifest','R-before','R-abs','R-storys']);
+ const check=manifest=>checkProject({manifest,files:['proyecto.json'],read:()=>'{}'}).filter(x=>x.rule==='R-storys');
+ assert.deepEqual(check(storysProject()),[]);const m=storyMigrationPlan(storysProject(),storysSpec()).next;assert.deepEqual(check(m),[]);
+ m.storyboards.push({id:'sb-z',title:'Z',sequences:[],outlineSequence:'nada'});delete m.episodes[0].sequences[0].currentStoryboard;
+ assert.deepEqual(check(m).map(x=>[x.level,x.file,x.detail]),[['error','proyecto.json','El story sb-z enlaza una secuencia inexistente: nada'],['aviso','proyecto.json','La secuencia x-colgado tiene 2 storys y ninguno vigente']]);
+ assert.deepEqual(check(null),[]);assert.deepEqual(check({episodes:'x'}),[]);});

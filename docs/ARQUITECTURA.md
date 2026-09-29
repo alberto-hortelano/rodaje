@@ -54,3 +54,24 @@ Visor 3D (kit, plugins, paseo, editor de plantas): `docs/visor-3d.md`.
 El proyecto de un script se resuelve con `lib/cli.mjs` (`cliProject`, sobre `resolveProject` de `lib/paths.mjs`), por este orden: `--project <id>`, el argumento posicional donde el script ya lo tenía, `RODAJE_PROJECT` y, en cuarto lugar, el proyecto activo en la app. El activo vive en `<DATA>/.activo.json` (`lib/proyecto-activo.mjs`) y solo lo escribe el servidor: `POST /api/active` (con token) al abrir un proyecto en la vista Proyectos, y al crear uno; las recargas con `?project=` y `movil.html` no lo cambian. Los scripts imprimen `Proyecto: X (fuente)` en stderr y, sin proyecto, salen con el uso y código 2 sin tocar el disco (`app/store.mjs` ya no crea `DATA` al importarse; la crea `app/jobs.mjs` al arrancar el servidor). Ningún código de la app contiene ids de proyecto.
 
 `scripts/proyecto-check.mjs` hace cumplir este contrato. A los plugins les aplica R-code (un plugin declarado no cuenta como código suelto), R-builder (contenido: mismas prohibiciones, único export `plugin`) y R-manifest (declaración: lista de rutas, dentro del proyecto, existentes y `.js`/`.mjs`).
+
+### Escaleta, storys y planos (#56)
+
+Una sola lista `episodes[].sequences[]`; el papel de cada secuencia se deduce (`sequenceRole` de `app/workflow.mjs`):
+
+- **Ficha de escaleta**: la secuencia de la escaleta (carátula, texto, minutos). Es el papel por defecto.
+- **Secuencia de planos de un story** (contenedor): la que tiene `storyboard` de un story enlazado a su ficha. Cada versión del story tiene la suya; nunca se mezclan planos de dos storys.
+- **Prueba**: `test: true`. Sale de la escaleta a un grupo propio.
+
+Campos, todos opcionales:
+
+| Campo | Dónde | Qué es |
+|---|---|---|
+| `outlineSequence` | `storyboards[]` | Id de la ficha del story. Único enlace story → secuencia. |
+| `version` | `storyboards[]` | Entero ≥ 1, único en su ficha; si falta, el primer número libre en el orden de `storyboards`. |
+| `currentStoryboard` | ficha | El story vigente; debe estar enlazado a esa ficha (así no puede haber dos vigentes). |
+| `test` | secuencia | Solo `true`. |
+| `sceneNumber` | secuencia | Número de escena del lote (`escenas/sNN.json`); lo escribe la migración para que insertar fichas no cambie la escena de un lote. |
+| `storyboard` | secuencia | El de siempre: el story cuyos planos contiene. |
+
+Un story sin `outlineSequence` funciona como antes (su secuencia con `storyboard` es a la vez ficha y planos), así que un proyecto sin migrar no cambia. `outlineTree` da actos → fichas → storys (versión, vigente, secuencia de planos), las pruebas y los storys sin ficha; `outline` son sus fichas en filas (vista Escaleta y carátulas). `storyPlansTarget` y `applyStoryPlans` deciden dónde van los planos de un story (`storyboard-a-secuencia`, `storyboard-3d` y «Crear/actualizar planos del story»). `storyModelIssues` da los errores, que rechazan `store.validate` y R-storys de `check:proyectos` (enlace a una secuencia inexistente, a una prueba o a una secuencia de planos; vigente que no es de la ficha; dos secuencias de planos de un story; planos que enlazan viñetas de otro story; versión repetida o no entera; `test` distinto de `true`), y los avisos, solo en `check:proyectos` (story inexistente, ficha con storys sin vigente, planos en otro acto que su ficha, ficha con storys y planos propios). La migración de datos existentes es `scripts/migrar-storys.mjs` (`docs/scripts.md`); no cambia ids de secuencia ni digests de planos.
