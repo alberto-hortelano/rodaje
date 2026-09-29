@@ -39,16 +39,19 @@ const pick=(o,...k)=>Object.fromEntries(k.map(x=>[x,o[x]??null]));
 const at=page=>page.evaluate(()=>[scrollX,scrollY]);
 
 test('atrás y adelante por la escaleta',{skip:SIN_CHROME},()=>session(async page=>{
- await load(page);const h0=await len(page),seen=[];const snap=async()=>seen.push({p:pick(params(page),'view','node','storyboard','scene','character'),crumbs:await crumbs(page),active:await active(page)});await snap();
+ await load(page);const h0=await len(page),seen=[];const snap=async()=>seen.push({p:pick(params(page),'view','node','storyboard','scene','panel','character'),crumbs:await crumbs(page),active:await active(page)});await snap();
  await go(page,'[data-level="act/e1"] a.level-link',/node=act\/e1/);await snap();
  await go(page,'[data-level="seq/x-colgado"] a.level-link',/node=seq\/x-colgado/);await snap();
  await go(page,'[data-level="sb/sb-v2"] a.level-link',/view=storyboard&storyboard=sb-v2/);await snap();
+ await go(page,'[data-level="scene/sb-v2/sb-v2-e1"] a.level-link',/scene=sb-v2-e1/);await snap();
+ await go(page,'[data-sb-drag="v2b"] h3 a',/panel=v2b/);await snap();
  await act(page,'nav:characters',/view=characters/);await snap();
- assert.equal(await len(page),h0+4,'una entrada por paso');
- assert.deepEqual(seen.map(s=>s.p.view),['tree','tree','tree','storyboard','characters']);assert.deepEqual(seen.map(s=>s.active),['Escaleta','Escaleta','Escaleta','Storyboards','Personajes y voces']);
- for(let i=seen.length-2;i>=0;i--){await back(page);assert.deepEqual({p:pick(params(page),'view','node','storyboard','scene','character'),crumbs:await crumbs(page),active:await active(page)},seen[i],'atrás hasta '+i);}
- for(let i=1;i<seen.length;i++){await fwd(page);assert.deepEqual({p:pick(params(page),'view','node','storyboard','scene','character'),crumbs:await crumbs(page),active:await active(page)},seen[i],'adelante hasta '+i);}
- assert.equal(await len(page),h0+4);
+ assert.equal(await len(page),h0+6,'una entrada por paso');
+ assert.deepEqual(seen.map(s=>s.p.view),['tree','tree','tree','storyboard','storyboard','storyboard','characters']);assert.deepEqual(seen.map(s=>s.active),['Escaleta','Escaleta','Escaleta','Storyboards','Storyboards','Storyboards','Personajes y voces']);
+ assert.deepEqual(seen.slice(3,6).map(s=>[s.p.scene,s.p.panel,s.crumbs.at(-1)]),[[null,null,'Story v2'],['sb-v2-e1',null,'Camino'],['sb-v2-e1','v2b','A02 · Viñeta A02']]);
+ for(let i=seen.length-2;i>=0;i--){await back(page);assert.deepEqual({p:pick(params(page),'view','node','storyboard','scene','panel','character'),crumbs:await crumbs(page),active:await active(page)},seen[i],'atrás hasta '+i);}
+ for(let i=1;i<seen.length;i++){await fwd(page);assert.deepEqual({p:pick(params(page),'view','node','storyboard','scene','panel','character'),crumbs:await crumbs(page),active:await active(page)},seen[i],'adelante hasta '+i);}
+ assert.equal(await len(page),h0+6);
  await load(page,'&view=storyboard&storyboard=sb-v1');const h1=await len(page);
  await page.evaluate(()=>window.rodaje.render());await settle(page);assert.equal(await len(page),h1,'volver a pintar la misma ruta no crea entrada');}));
 

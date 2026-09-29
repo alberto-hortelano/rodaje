@@ -33,10 +33,13 @@ test('story, escena y viñeta: líneas con enlaces a sus páginas, sin «Reparto
  await load(page,'&view=storyboard&storyboard=sb2');
  const head=await page.$$eval('.two .panel .rel-links a[data-route]',l=>l.map(a=>[a.textContent,new URL(a.href).searchParams.get('view')]));
  for(const x of [['Ana Ruiz','character'],['Beto','character'],['Nave','location']])assert.ok(head.some(h=>h[0]===x[0]&&h[1]===x[1]),x[0]);
- assert.equal(await page.$$eval('.sb-seq-head .rel-links',l=>l.length),1);
+ assert.deepEqual(await page.$$eval('.level-scene',l=>l.map(e=>[e.dataset.level,e.querySelectorAll(':scope>.rel-links').length,e.querySelectorAll('.level-link .rel-links').length])),[['scene/sb2/sc2',1,0]],'la escena, en la lista del story con su línea fuera del enlace');
+ await load(page,'&view=storyboard&storyboard=sb2&scene=sc2');assert.equal(await page.$$eval('.rel-head',l=>l.length),1);
  assert.equal(await page.$$eval('[data-sb-drag="P3"] .rel-links',l=>l.length),1);assert.ok(!(await page.textContent('[data-sb-drag="P3"]')).includes('Reparto:'));
  await page.click('[data-sb-drag="P3"] .rel-links a[href*="character=ana"]');await page.waitForFunction(()=>/view=character/.test(location.search));await page.waitForSelector('.entity-top');
- assert.ok((await page.textContent('.heading')).includes('Ana Ruiz'));}));
+ assert.ok((await page.textContent('.heading')).includes('Ana Ruiz'));
+ await load(page,'&view=storyboard&storyboard=sb2&scene=sc2&panel=P3');assert.equal(await page.$$eval('[data-sb-panel="P3"] .rel-links',l=>l.length),1);
+ assert.deepEqual(await page.$$eval('.level-section .tree-shot [data-action^="shot:"]',l=>l.map(b=>b.dataset.action)),['shot:e1:c2:t3','shot:e1:k1:t4'],'los planos de la viñeta');}));
 
 test('Planos, estudio y Animación: ambiente propio o heredado, fuera de campo y sin «P01 ·» repetido',{skip:SIN_CHROME},()=>session(async page=>{
  await load(page,'&view=shots');
@@ -57,4 +60,4 @@ test('Apariciones: con más de 40 viñetas y planos en la página, las secuencia
 test('móvil a 390 px: sin desbordamiento horizontal ni errores',{skip:SIN_CHROME},()=>session(async page=>{
  const wide=()=>page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
  await load(page,'&view=tree&node=seq/f1');assert.ok(await wide()<=0,'tree');
- for(const q of ['&view=storyboard&storyboard=sb2','&view=shots','&view=character&character=ana']){await load(page,q);assert.ok(await wide()<=0,q);}},{width:390,height:844}));
+ for(const q of ['&view=storyboard&storyboard=sb2','&view=storyboard&storyboard=sb2&scene=sc2','&view=storyboard&storyboard=sb2&scene=sc2&panel=P3','&view=shot&episode=e1&sequence=c2&shot=t3','&view=shots','&view=character&character=ana']){await load(page,q);assert.ok(await wide()<=0,q);}},{width:390,height:844}));

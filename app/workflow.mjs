@@ -268,12 +268,13 @@ export function environmentList(p){return (p?.environments||[]).map(e=>{const v=
 // Entorno con constructor cuyos datos son los de un location.modelSpace (modelSpace.model === environment.data), o null.
 export function modelSpaceEnvironment(p,modelSpace){const m=modelSpace?.model;return m?(p?.environments||[]).find(e=>e.builder&&e.data&&e.data===m)||null:null;}
 // Rutas de la app (#57): ?project=…&view=…&<parámetros de la vista>. Los alias (outline, episodes, ship) llevan a la vista que los sustituye;
-// con proyecto, una vista desconocida, library o ninguna llevan al árbol. scene y sequence de shots enfocan y no cuentan para el scroll; node es la página de la Escaleta.
+// con proyecto, una vista desconocida, library o ninguna llevan al árbol. sequence de shots enfoca y no cuenta para el scroll; node es la página de la Escaleta;
+// scene y panel del storyboard son páginas (#68): la escena y la viñeta.
 export const VIEWS=['tree','overview','ideas','characters','locations','environments','environment','character','location','storyboards','storyboard','shots','shot','rehearsal','anim','montaje','issues','jobs'];
 export const VIEW_ALIASES={outline:'tree',episodes:'shots',ship:'environments'};
-export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene'],environment:['environment'],character:['character'],location:['location'],tree:['node'],shots:['sequence','q','f'],storyboards:['q','f']};
-export const FOCUS_PARAMS={storyboard:['scene'],shots:['sequence']};
-export const ROUTE_KEYS=['episode','sequence','shot','storyboard','environment','character','location','scene','node','q','f'];
+export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene','panel'],environment:['environment'],character:['character'],location:['location'],tree:['node'],shots:['sequence','q','f'],storyboards:['q','f']};
+export const FOCUS_PARAMS={shots:['sequence']};
+export const ROUTE_KEYS=['episode','sequence','shot','storyboard','environment','character','location','scene','panel','node','q','f'];
 // Buscador y facetas (#59): q y f no cuentan para el scroll; en la URL, f conserva ':' y ',' legibles (f=act:e1,cast:ana).
 export const FILTER_PARAMS=['q','f'];
 const routeValue=(k,v)=>FILTER_PARAMS.includes(k)?encodeURIComponent(v).replace(/%3A/g,':').replace(/%2C/g,','):encodeURIComponent(v);
@@ -993,12 +994,13 @@ export function shotLabel(number,title){const code='P'+String(number).padStart(2
 export const VOICE_STATUS={'id-assigned-samples-pending':'Voz asignada · faltan muestras','id-assigned':'Voz asignada','samples-pending':'Faltan muestras','pending':'Pendiente','approved':'Aprobada'};
 export function voiceStatusLabel(status){return typeof status==='string'&&status?(Object.hasOwn(VOICE_STATUS,status)?VOICE_STATUS[status]:status):'';}
 const shotLeaves=(p,e,s)=>(Array.isArray(s?.shots)?s.shots:[]).map((t,i)=>({episode:e,sequence:s,shot:t,number:i+1,role:sequenceRole(p,s)}));
-export function treeModel(p){const index=new Map(),add=(node,parent)=>{index.set(node.key,{node,parent});return node;};
+// Viñetas y planos van fuera del índice (#68): panels y shots, con la misma forma {node,parent}; si un id se repite, gana la primera aparición.
+export function treeModel(p){const index=new Map(),panels=new Map(),shots=new Map(),add=(node,parent)=>{index.set(node.key,{node,parent});return node;};
  const bySb=new Map();for(const {episode,sequence} of seqList(p))for(const l of shotLeaves(p,episode,sequence)){const k=l.shot?.storyboardShot;if(!k)continue;if(!bySb.has(k))bySb.set(k,[]);bySb.get(k).push(l);}
  for(const list of bySb.values())list.sort((a,b)=>ROLE_ORDER[a.role]-ROLE_ORDER[b.role]);
  const storyNode=({storyboard:b,version=null,current=false,container=null},parent)=>{const key='sb/'+b.id,scenes=Array.isArray(b.sequences)?b.sequences.filter(isObj):[],panelIds=new Set(storyShotIds(b));
   const node=add({key,kind:'story',storyboard:b,version,current,container,counts:{scenes:scenes.length,panels:panelIds.size,shots:(container?.sequence?.shots||[]).length},children:[]},parent);
-  for(const s of scenes)node.children.push(add({key:`scene/${b.id}/${s.id}`,kind:'scene',storyboard:b,scene:s,panels:(Array.isArray(s.shots)?s.shots:[]).filter(isObj).map(t=>({panel:t,thumb:t.render||t.sketch||null,shots:bySb.get(t.id)||[]}))},key));
+  for(const s of scenes){const sk=`scene/${b.id}/${s.id}`;node.children.push(add({key:sk,kind:'scene',storyboard:b,scene:s,panels:(Array.isArray(s.shots)?s.shots:[]).filter(isObj).map(t=>{const pn={key:'panel/'+t.id,kind:'panel',storyboard:b,scene:s,panel:t,thumb:t.render||t.sketch||null,shots:bySb.get(t.id)||[]};if(!panels.has(pn.key))panels.set(pn.key,{node:pn,parent:sk});return pn;})},key));}
   const orphans=container?shotLeaves(p,container.episode,container.sequence).filter(l=>!panelIds.has(l.shot?.storyboardShot)):[];
   if(orphans.length)node.children.push(add({key:'orphans/'+b.id,kind:'orphans',shots:orphans},key));
   return node;};
@@ -1009,11 +1011,17 @@ export function treeModel(p){const index=new Map(),add=(node,parent)=>{index.set
  const groups=[];
  if(t.tests.length){const g=add({key:'tests',kind:'tests',children:[]},null);g.children=t.tests.map(({episode,sequence})=>add({key:'seq/'+sequence.id,kind:'test',episode,sequence,shots:shotLeaves(p,episode,sequence)},'tests'));groups.push(g);}
  if(t.unlinked.length){const g=add({key:'unlinked',kind:'unlinked',children:[]},null);g.children=t.unlinked.map(({storyboard,container})=>storyNode({storyboard,container},'unlinked'));groups.push(g);}
- return {acts,groups,index};}
+ // Padre de cada plano: su viñeta (gana siempre); si no, los planos sin viñeta de su story, su ficha (propios) o su prueba.
+ const addShot=(l,parent)=>{const key='shot/'+l.shot?.id;if(isObj(l.shot)&&!shots.has(key))shots.set(key,{node:{key,kind:'shot',...l},parent});};
+ for(const [k,{node}] of panels)for(const l of node.shots)addShot(l,k);
+ for(const {node:n} of index.values())if(['orphans','ficha','test'].includes(n.kind))for(const l of n.shots)addShot(l,n.key);
+ return {acts,groups,index,panels,shots};}
+// Entrada {node,parent} de una clave del índice, de las viñetas o de los planos.
+const levelEntry=(model,key)=>model?.index instanceof Map?model.index.get(key)??model.panels?.get(key)??model.shots?.get(key)??null:null;
 // Claves desde la raíz hasta key (incluida); [] si no existe.
-export function treePath(model,key){const out=[];let k=key;while(k!==null&&k!==undefined&&model?.index?.has(k)){out.unshift(k);k=model.index.get(k).parent;}return out;}
+export function treePath(model,key){const out=[];let k=key,e;while(k!==null&&k!==undefined&&(e=levelEntry(model,k))){out.unshift(k);k=e.parent;}return out;}
 // ---- Escaleta por niveles (#67): cada nodo de treeModel es una página (acto, ficha, prueba y grupos) o redirige a su vista (story, escena,
-// planos sin viñeta). LEVELS da la etiqueta y la ruta de cada tipo; #68 añade panel (y shot); #69 usa el prefijo de entidad.
+// planos sin viñeta). LEVELS da la etiqueta y la ruta de cada tipo; #68 añade la viñeta (su página) y el plano (su estudio); #69 usa el prefijo de entidad.
 const LEVELS={
  act:{label:n=>n.episode.title||n.episode.id,route:n=>({view:'tree',node:n.key})},
  ficha:{label:n=>n.code+' · '+(n.sequence.title||n.sequence.id),route:n=>({view:'tree',node:n.key})},
@@ -1022,32 +1030,69 @@ const LEVELS={
  unlinked:{label:()=>'Sin secuencia',route:n=>({view:'tree',node:n.key})},
  story:{label:n=>n.version?'Story v'+n.version:(n.storyboard.title||n.storyboard.id),route:n=>({view:'storyboard',storyboard:n.storyboard.id})},
  scene:{label:n=>n.scene.title||n.scene.id,route:n=>({view:'storyboard',storyboard:n.storyboard.id,scene:n.scene.id})},
- orphans:{label:()=>'Planos sin viñeta',route:n=>({view:'shots',sequence:n.shots[0].sequence.id})}};
+ orphans:{label:()=>'Planos sin viñeta',route:n=>({view:'shots',sequence:n.shots[0].sequence.id})},
+ panel:{label:n=>[n.panel.code,n.panel.title].filter(Boolean).join(' · ')||n.panel.id,route:n=>({view:'storyboard',storyboard:n.storyboard.id,scene:n.scene.id,panel:n.panel.id})},
+ shot:{label:n=>shotLabel(n.number,n.shot.title).label,route:n=>({view:'shot',episode:n.episode.id,sequence:n.sequence.id,shot:n.shot.id})}};
 export const LEVEL_ROOT={key:null,kind:'root',label:'Escaleta',route:{view:'tree'}};
-const levelNode=(model,key)=>(typeof key==='string'||typeof key==='number')&&model?.index instanceof Map?model.index.get(key)?.node||null:null;
+const levelNode=(model,key)=>(typeof key==='string'||typeof key==='number')&&levelEntry(model,key)?.node||null;
 // Ruta canónica de la página de un nodo; null si la clave no existe.
 export function levelRoute(model,key){const n=levelNode(model,key);return n&&LEVELS[n.kind]?LEVELS[n.kind].route(n):null;}
-// Página que corresponde a node: la raíz sin clave; la del nodo si existe (story, escena y huérfanos llevan a otra vista); si no, el nivel
-// existente más cercano (el story de una escena o de sus huérfanos, o la raíz) con missing.
+// Página que corresponde a node: la raíz sin clave; la del nodo si existe (story, escena, viñeta, plano y huérfanos llevan a otra vista); si no,
+// el nivel existente más cercano (el story de una escena o de sus huérfanos, o la raíz) con missing.
 export function levelResolve(model,key){if(key===null||key===undefined||key==='')return {key:null,route:{view:'tree'},missing:false};
  const route=levelRoute(model,key);if(route)return {key,route,missing:false};
  const m=typeof key==='string'&&/^(?:scene\/([^/]+)\/.*|orphans\/(.+))$/.exec(key),sb=m&&'sb/'+(m[1]??m[2]);
  if(sb&&levelRoute(model,sb))return {key:sb,route:levelRoute(model,sb),missing:true};
  return {key:null,route:{view:'tree'},missing:true};}
-// Nodo del árbol que representa una ruta: tree → node; storyboard → su escena o el story; resto → null.
+// Nodo del árbol que representa una ruta: tree → node; storyboard → su viñeta (si es de ese story), su escena o el story; shot y anim → su plano; resto → null.
 export function levelKey(p,route,model){const has=k=>!!levelNode(model,k);
  if(route?.view==='tree')return has(route.node)?route.node:null;
- if(route?.view==='storyboard'){const sc=`scene/${route.storyboard}/${route.scene}`,sb='sb/'+route.storyboard;return route.scene&&has(sc)?sc:has(sb)?sb:null;}
+ if(route?.view==='storyboard'){const pk='panel/'+route.panel,pn=route.panel&&model?.panels instanceof Map?model.panels.get(pk)?.node:null;if(pn&&pn.storyboard.id===route.storyboard)return pk;
+  const sc=`scene/${route.storyboard}/${route.scene}`,sb='sb/'+route.storyboard;return route.scene&&has(sc)?sc:has(sb)?sb:null;}
+ if(route?.view==='shot'||route?.view==='anim'){const k='shot/'+route.shot;return route.shot&&model?.shots instanceof Map&&model.shots.has(k)?k:null;}
  return null;}
-// Migas de una página: Escaleta › camino de treePath (la última sin ruta); personaje y ambiente, su lista › nombre. [] si no hay migas.
+// Plano fuera del árbol (su secuencia no cuelga de él): Planos › plano; null si no existe. Busca en la secuencia de la ruta y, si no, en todas.
+function looseShotCrumbs(p,route){const find=ok=>{for(const {episode:e,sequence:s} of seqList(p)){if(!isObj(e)||!ok(s))continue;const list=Array.isArray(s.shots)?s.shots:[],i=list.findIndex(t=>isObj(t)&&t.id===route.shot);if(i>=0)return {e,s,t:list[i],i};}return null;};
+ const x=route?.shot?find(s=>s.id===route.sequence)||find(()=>true):null;if(!x)return null;
+ return [{key:'shots',kind:'list',label:'Planos',route:{view:'shots',sequence:x.s.id}},{key:'shot/'+x.t.id,kind:'shot',label:shotLabel(x.i+1,x.t.title).label,route:{view:'shot',episode:x.e.id,sequence:x.s.id,shot:x.t.id}}];}
+// Migas de una página: Escaleta › camino de treePath (la última sin ruta); personaje y ambiente, su lista › nombre; Animación, las del estudio
+// con la del plano enlazada y «Animación» detrás. [] si no hay migas.
 export function levelCrumbs(p,route,model){const v=route?.view;
  if(v==='character'||v==='location'){const list=v==='character'?p?.characters:p?.locations,x=Array.isArray(list)?list.find(e=>e?.id===route[v]):null;if(!x)return [];
   const key=v+'/'+x.id;return [{key,kind:'list',label:v==='character'?'Personajes y voces':'Ambientes',route:{view:v+'s'}},{key,kind:v,label:x.name||x.id,route:null}];}
- if(v!=='tree'&&v!=='storyboard')return [];
- model??=treeModel(p);const key=levelKey(p,route,model);
- if(!key)return v==='tree'?[{...LEVEL_ROOT,route:null}]:[];
- const out=[{...LEVEL_ROOT},...treePath(model,key).map(k=>{const n=model.index.get(k).node;return {key:k,kind:n.kind,label:LEVELS[n.kind].label(n),route:levelRoute(model,k)};})];
+ if(!['tree','storyboard','shot','anim'].includes(v))return [];
+ model??=treeModel(p);const key=levelKey(p,route,model);let out;
+ if(key)out=[{...LEVEL_ROOT},...treePath(model,key).map(k=>{const n=levelEntry(model,k).node;return {key:k,kind:n.kind,label:LEVELS[n.kind].label(n),route:levelRoute(model,k)};})];
+ else if(v==='shot'||v==='anim')out=looseShotCrumbs(p,route);
+ else return v==='tree'?[{...LEVEL_ROOT,route:null}]:[];
+ if(!out)return [];
+ if(v==='anim')return [...out,{key:'anim/'+route.shot,kind:'anim',label:'Animación',route:null}];
  out[out.length-1]={...out.at(-1),route:null};return out;}
+// ---- Story, escena y viñeta por páginas (#68).
+const sbScenes=b=>(Array.isArray(b?.sequences)?b.sequences:[]).filter(isObj),sbPanels=s=>(Array.isArray(s?.shots)?s.shots:[]).filter(isObj);
+const given=v=>v!==null&&v!==undefined&&v!=='';
+// Página del storyboard (#68): story, escena o viñeta. La viñeta manda: su escena se deriva y corrige la de la ruta.
+// No muta; no lanza con p o route raros.
+export function storyboardPage(p,route){const b=given(route?.storyboard)?storyOf(p,route.storyboard):null;
+ if(!b)return {page:null,storyboard:null,scene:null,panel:null,route:{view:'storyboards'},missing:null};
+ const out=(page,scene=null,panel=null,missing=null)=>({page,storyboard:b,scene,panel,route:{view:'storyboard',storyboard:b.id,scene:scene?scene.id:null,panel:panel?panel.id:null},missing});
+ let missing=null;
+ if(given(route.panel)){for(const s of sbScenes(b)){const t=sbPanels(s).find(t=>t.id===route.panel);if(t)return out('panel',s,t);}missing='No existe la viñeta: '+route.panel;}
+ if(given(route.scene)){const s=sbScenes(b).find(s=>s.id===route.scene);if(s)return out('scene',s,null,missing);missing??='No existe la escena: '+route.scene;}
+ return out('story',null,null,missing);}
+// Escenas de un story para su página (#68), en orden: miniatura = render o, si no, boceto de la primera viñeta que tenga alguno.
+export function storyScenes(b){return sbScenes(b).map((s,i)=>{const list=sbPanels(s),t=list.find(t=>t.render||t.sketch);
+ return {id:s.id,title:s.title||s.id,number:i+1,scene:s,panels:list.length,seconds:list.reduce((n,t)=>n+(Number(t.duration)||0),0),thumb:t?t.render||t.sketch:null};});}
+// Mueve una viñeta dentro de su story (#68): delante de otra (before) o al final de una escena (scene). Muta p (como moveIssue).
+// true si cambia el orden; false si el destino no es del mismo story, no existe o la viñeta ya está ahí. Lanza si la viñeta no existe.
+export function movePanel(p,panelId,{scene=null,before=null}={}){const {storyboard:b,sequence:from,shot:t}=storyboardShot(p,panelId),scenes=sbScenes(b);let to,anchor=null;
+ if(given(before)){if(before===panelId)return false;to=scenes.find(s=>sbPanels(s).some(x=>x.id===before));if(!to)return false;anchor=to.shots.find(x=>isObj(x)&&x.id===before);}
+ else if(given(scene)){to=scenes.find(s=>s.id===scene);if(!to)return false;}else return false;
+ const i=from.shots.indexOf(t);if(to===from&&(anchor?from.shots[i+1]===anchor:i===from.shots.length-1))return false;
+ if(!Array.isArray(to.shots))to.shots=[];from.shots.splice(i,1);to.shots.splice(anchor?to.shots.indexOf(anchor):to.shots.length,0,t);return true;}
+// Otras escenas del story de la viñeta, en orden, para «Mover a escena…»: [] si solo hay una o la viñeta no existe.
+export function panelSceneOptions(p,panelId){let r;try{r=storyboardShot(p,panelId);}catch{return [];}
+ return sbScenes(r.storyboard).filter(s=>s!==r.sequence).map(s=>{const n=sbPanels(s).length;return {id:s.id,label:(s.title||s.id)+' · '+n+' '+(n===1?'viñeta':'viñetas')};});}
 // Selector de versión del story: las de su ficha por número; [] sin ficha.
 export function storyVersionOptions(p,sbId){const b=storyOf(p,sbId),fid=linkOf(b);if(!fid)return [];const f=seqList(p).find(x=>x.sequence.id===fid)?.sequence,cur=f?.currentStoryboard;
  return [...storyVersions(p,fid)].sort((a,b)=>a[1]-b[1]).map(([id,version])=>({id,version,label:'v'+version+(id===cur?' · vigente':''),current:id===cur,selected:id===sbId}));}
@@ -1171,7 +1216,7 @@ function apNode(index,n){const d=n.data||{},title=d.title||n.id;let label=title,
  else if(n.kind==='sequence')route=n.role==='container'?{view:'shots',sequence:n.id}:{view:'tree',node:n.key};
  else if(n.kind==='story'){label=n.version?'v'+n.version+' · '+title:title;route={view:'storyboard',storyboard:n.id};}
  else if(n.kind==='scene')route=apSceneRoute(index,n.key);
- else if(n.kind==='panel'){label=d.code?d.code+' · '+(d.title||''):title;route=apSceneRoute(index,n.parent);}
+ else if(n.kind==='panel'){label=d.code?d.code+' · '+(d.title||''):title;route={...apSceneRoute(index,n.parent),panel:n.id};}
  else if(n.kind==='shot'){const seq=index.nodes.get(n.sequence),pos=(index.sequenceShots.get(n.sequence)||[]).indexOf(n.key)+1;label=shotLabel(pos,d.title).label;route={view:'shot',episode:n.episode,sequence:seq?.id??null,shot:n.id};}
  return {key:n.key,kind:n.kind,id:n.id,label,order:n.order,route,...(n.role?{role:n.role}:{}),...(n.version!==undefined?{version:n.version}:{}),...(n.current!==undefined?{current:n.current}:{}),...(offCurrent(index,n)?{stale:true}:{}),marks:[],counts:{panels:0,shots:0},children:[]};}
 function apMark(index,l){const d=index.nodes.get(l.from)?.data||{},m={rel:l.rel,via:l.via};if(l.inherited)m.inherited=true;
@@ -1265,7 +1310,7 @@ export function storyboardItems(p){const model=treeModel(p),idx=relationIndexFor
   for(const sn of n.children.filter(c=>c.kind==='scene')){const s=sn.scene,sl=relIds(idx,relKey('scene',b.id,s.id),['location']);loc.push(...sl);
    subs.push({key:sn.key,kind:'scene',scene:s.id,label:s.title||s.id,text:searchText(s.title||s.id),facets:{loc:sl}});
    for(const {panel:t} of sn.panels){if(typeof t.id!=='string')continue;const k=relKey('panel',t.id),c=relIds(idx,k,['appears','speaks']),l=relIds(idx,k,['location']),z=[zoneOf(p,t.zone).id];cast.push(...c);loc.push(...l);zone.push(...z);
-    subs.push({key:k,kind:'panel',scene:s.id,label:(s.title||s.id)+' · '+[t.code,t.title].filter(Boolean).join(' '),text:searchText([t.code,t.title].filter(Boolean).join(' ')),facets:{cast:c,loc:l,zone:z}});}}
+    subs.push({key:k,kind:'panel',scene:s.id,panel:t.id,label:(s.title||s.id)+' · '+[t.code,t.title].filter(Boolean).join(' '),text:searchText([t.code,t.title].filter(Boolean).join(' ')),facets:{cast:c,loc:l,zone:z}});}}
   items.push({key:n.key,kind:'story',id:b.id,text:searchText([b.title,b.subtitle,...extra].filter(Boolean).join(' ')),facets:{...group.facets,cast:uniq(cast),loc:uniq(loc),zone:uniq(zone)},group:group.group,subs,ref:{storyboard:b,version:n.version,current:n.current}});};
  for(const a of model.acts){const e=a.episode;for(const f of a.children){const ficha={id:f.sequence.id,code:f.code,title:f.sequence.title||f.sequence.id};fichas.push(ficha);
   for(const n of f.children)story(n,{group:{section:'acts',episode:e,ficha},facets:{act:[e.id],sequence:[ficha.id],kind:[n.current?'current':'other'],...(n.version?{version:['v'+n.version]}:{})}},[e.title,f.code+' '+ficha.title]);}}

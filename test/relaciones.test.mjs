@@ -239,7 +239,7 @@ test('appearanceTree: cada ruta es una ruta de la app hacia su vista',()=>{
   assert.equal(view,want[a.kind]??(a.role==='container'?'shots':'tree'),a.key);
   for(const [k,v] of Object.entries(a.route))if(k!=='view')assert.equal(rest[k],v,a.key+' '+k);}
  assert.deepEqual(flat(appearanceTree(I,'character/ana',{current:false}).roots).find(a=>a.key==='seq/c1').route,{view:'shots',sequence:'c1'});
- assert.deepEqual(flat(appearanceTree(I,'location/plaza',{current:false}).roots).find(a=>a.key==='panel/P1').route,{view:'storyboard',storyboard:'sb1',scene:'sc1'});});
+ assert.deepEqual(flat(appearanceTree(I,'location/plaza',{current:false}).roots).find(a=>a.key==='panel/P1').route,{view:'storyboard',storyboard:'sb1',scene:'sc1',panel:'P1'},'la viñeta abre su página (#68)');});
 
 test('appearanceTree y appearanceEnvironments: vacío, entornos por las dos vías y sin mutar',()=>{
  const p=relProject();p.characters.push({id:'solo',name:'Solo',kind:'person'});const before=structuredClone(p),digests=shotIds(p).map(id=>digest(p,id)),I=relationIndex(p);

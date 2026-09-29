@@ -79,6 +79,7 @@ test('storyboardItems: orden del árbol, grupos, estado y versión, subs de esce
  assert.deepEqual([by('sb/sb-v1').facets.kind,by('sb/sb-v1').facets.version,by('sb/sb-v2').facets.kind,by('sb/sb-v2').facets.version],[['other'],['v1'],['current'],['v2']]);
  assert.deepEqual([by('sb/sb-v2').ref.version,by('sb/sb-v2').ref.current],[2,true]);assert.deepEqual(by('sb/sb-suelto').facets,{kind:['unlinked'],cast:[],loc:['otro'],zone:['other']});
  const v2=by('sb/sb-v2');assert.deepEqual(v2.subs.map(s=>[s.key,s.kind,s.scene,s.label]),[['scene/sb-v2/sb-v2-e1','scene','sb-v2-e1','Camino'],['panel/v2a','panel','sb-v2-e1','Camino · A01 Viñeta A01'],['panel/v2b','panel','sb-v2-e1','Camino · A02 Viñeta A02'],['panel/v2c','panel','sb-v2-e1','Camino · A03 Viñeta A03']]);
+ assert.deepEqual(v2.subs.map(s=>s.panel??null),[null,'v2a','v2b','v2c'],'las subs de viñeta llevan su id (#68)');
  assert.deepEqual(v2.subs[2].facets,{cast:['ana','bea'],loc:['loc'],zone:['norte']},'bea habla; ambiente heredado de la escena');assert.deepEqual(v2.subs[1].facets.zone,['other'],'sin zona: la base');
  assert.deepEqual(v2.facets,{act:['e1'],sequence:['x-colgado'],kind:['current'],version:['v2'],cast:['ana','bea'],loc:['loc'],zone:['other','norte']});
  assert.ok(v2.text.includes('acto i')&&v2.text.includes('01 prologo · el colgado'),'título del acto y de la ficha');

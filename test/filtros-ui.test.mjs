@@ -62,16 +62,18 @@ test('navegación: el menú no arrastra filtros, la memoria vuelve por vista y u
  await load(page,'&view=shots');assert.equal(params(page).f,'panel:no','la memoria de Planos sigue ahí');
  await load(page,'&view=storyboards&q=suelto');assert.deepEqual([params(page).q,params(page).f],['suelto',undefined],'la URL manda sobre la memoria');}));
 
-test('Storyboards: acto › ficha, Pruebas y Sin secuencia; el código de una viñeta enlaza a su escena',{skip:SIN_CHROME},()=>session(async page=>{
+test('Storyboards: acto › ficha, Pruebas y Sin secuencia; una viñeta enlaza a su página y una escena a la suya',{skip:SIN_CHROME},()=>session(async page=>{
  await load(page,'&view=storyboards');const r0=await revision(page);
  const t=await page.evaluate(()=>({acts:[...document.querySelectorAll('.sbs-act>h2')].map(e=>e.textContent),fichas:[...document.querySelectorAll('.sbs-ficha>h3 a')].map(a=>[a.textContent,new URL(a.href).searchParams.get('node')]),groups:[...document.querySelectorAll('.sbs-group>.eyebrow')].map(e=>e.textContent),pills:[...document.querySelectorAll('.sbs-ficha article .pill')].map(e=>e.textContent),actions:[...document.querySelectorAll('.heading [data-action]')].map(b=>b.dataset.action),zone:!!document.querySelector('[data-facet="zone"]')}));
  assert.deepEqual(t.acts,['Acto I']);assert.deepEqual(t.fichas,[['01 · Prólogo · El Colgado','seq/x-colgado'],['02 · Prólogo · La carga','seq/x-prologo']]);assert.deepEqual(t.groups,['Pruebas','Sin secuencia']);
  assert.deepEqual(t.pills,['v1','v2','vigente','v1','vigente']);assert.deepEqual(t.actions,['import-storyboard','new-storyboard']);assert.equal(t.zone,true);
  await page.click('[data-filter-q]');await page.keyboard.type('Z09');await page.waitForFunction(()=>new URLSearchParams(location.search).get('q')==='Z09');
  const hits=await page.$$eval('.filter-hits a',l=>l.map(a=>[a.textContent,new URL(a.href).search]));
- assert.deepEqual(hits.map(h=>h[0]),['Patio · Z09 Mirada']);assert.match(hits[0][1],/view=storyboard&storyboard=sb-suelto&scene=su-e1/);
- await page.click('.filter-hits a');await page.waitForFunction(()=>/view=storyboard&/.test(location.search));await page.waitForSelector('.sb-seq.target');
- assert.equal(await page.$eval('.sb-seq.target',s=>s.dataset.sbScene),'su-e1');
+ assert.deepEqual(hits.map(h=>h[0]),['Patio · Z09 Mirada']);assert.match(hits[0][1],/view=storyboard&storyboard=sb-suelto&scene=su-e1&panel=su1$/);
+ await page.click('.filter-hits a');await page.waitForFunction(()=>/view=storyboard&/.test(location.search));await page.waitForSelector('[data-sb-panel="su1"]');
+ await load(page,'&view=storyboards&q=Patio');const sc=await page.$$eval('.filter-hits a',l=>l.map(a=>[a.textContent,new URL(a.href).search]));
+ assert.deepEqual(sc.map(h=>h[0]),['Patio']);assert.match(sc[0][1],/view=storyboard&storyboard=sb-suelto&scene=su-e1$/,'la escena, sin viñeta');
+ await page.click('.filter-hits a');await page.waitForFunction(()=>/scene=su-e1/.test(location.search));await page.waitForSelector('[data-sb-grid="su-e1"]');
  await load(page,'&view=storyboards&f=cast:bea');assert.deepEqual(await page.$$eval('.filter-hits a',l=>l.map(a=>a.textContent)),['Camino · A02 Viñeta A02']);
  assert.deepEqual(await page.$$eval('.sbs-group .card h2',l=>l.map(h=>h.textContent)),['El fuego','Prueba 3D · El cruce'],'pruebas con visibleCast y con reparto propio');
  assert.equal(await revision(page),r0);}));

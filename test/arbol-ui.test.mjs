@@ -1,5 +1,5 @@
 // Escaleta por niveles en el navegador (#67): raíz, acto, ficha, prueba, Pruebas y Sin secuencia como páginas con migas; alias y claves que no
-// son páginas; migas del story hasta la ficha; scroll por página; limpieza de rodaje-tree-; migas en una línea a 390 px. Servidor con RODAJE_DATA temporal.
+// son páginas; migas del story hasta la ficha; scroll por página; limpieza de rodaje-tree-; migas en varias líneas a 390 px (#68). Servidor con RODAJE_DATA temporal.
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import {spawnServer} from './fixtures/hijos.mjs';
 import {withChrome,newRenderContext,chromePath,VIEWPORTS} from '../lib/chrome.mjs';
 import {storyMigrationPlan} from '../app/workflow.mjs';
@@ -37,7 +37,8 @@ test('raíz: actos con recuento, Pruebas y Sin secuencia; sin details ni relacio
  assert.equal(await counter(page),0);assert.equal(await page.$$eval('.rel-links',l=>l.length),0);
  assert.equal(await page.textContent('.sidebar button.active'),'Escaleta');assert.equal(await page.$$eval('[data-action="tree-fold"]',l=>l.length),0);
  assert.deepEqual(await page.$$eval('[data-level="act/e1"] .level-meta .pill',l=>l.map(e=>e.textContent)),['9 min','3 secuencias','3 storys']);
- assert.match(await page.textContent('[data-level="tests"]'),/Pruebas.*2 secuencias/);assert.match(await page.textContent('[data-level="unlinked"]'),/Sin secuencia.*1 story/);}));
+ assert.match(await page.textContent('[data-level="tests"]'),/Pruebas.*2 secuencias/);assert.match(await page.textContent('[data-level="unlinked"]'),/Sin secuencia.*1 story/);
+ assert.deepEqual(await page.$$eval('.level-group',l=>l.map(e=>[e.querySelector('.level-link b')?.textContent,e.querySelector('.level-sub')?.textContent])),[['Pruebas','Secuencias de prueba con sus planos.'],['Sin secuencia','Storys que aún no cuelgan de una ficha.']],'título y descripción (#68)');}));
 
 test('acto: fichas con miniatura perezosa y enlaces; relaciones ≤ 1 + fichas',{skip:SIN_CHROME},()=>session(async page=>{
  await load(page);await go(page,'[data-level="act/e1"] a.level-link',/node=act\/e1/);
@@ -53,7 +54,8 @@ test('story: migas desde la Escaleta y vuelta a la ficha',{skip:SIN_CHROME},()=>
  await load(page);const r0=(await project(page)).revision;
  await load(page,'&view=storyboard&storyboard=sb-v1&scene=sb-v1-e1');
  assert.deepEqual(await crumbs(page),[['Escaleta',true],['Acto I',true],['01 · Prólogo · El Colgado',true],['Story v1',true],['Cruce',false]]);
- assert.deepEqual(await page.$$eval('.sb-seq.target',l=>l.map(s=>s.dataset.sbScene)),['sb-v1-e1']);
+ assert.deepEqual(await page.$$eval('[data-sb-grid]',l=>l.map(s=>s.dataset.sbGrid)),['sb-v1-e1'],'la escena es su página (#68)');assert.equal(await page.textContent('#workspace h1'),'Cruce');
+ await go(page,'.crumbs a[href$="storyboard=sb-v1"]',/storyboard=sb-v1$/);assert.equal(await page.$$eval('.sb-card',l=>l.length),0,'el story lista escenas, no viñetas');
  assert.deepEqual(await page.$$eval('[data-sb-version] option',l=>l.map(o=>[o.textContent,o.selected])),[['v1',true],['v2 · vigente',false]]);
  await page.selectOption('[data-sb-version]','sb-v2');await page.waitForFunction(()=>/storyboard=sb-v2/.test(location.search));
  assert.ok(!/scene=/.test(new URL(page.url()).search));assert.equal(colgado(await project(page)).currentStoryboard,'sb-v2');
@@ -86,20 +88,28 @@ test('alias y claves que no son páginas',{skip:SIN_CHROME},()=>session(async pa
  await load(page,'&view=outline&node=act/e1');assert.deepEqual([params(page).view,params(page).node],['tree','act/e1']);
  await load(page,'&view=tree&node=sb/sb-v1');assert.deepEqual(params(page),{project:id,view:'storyboard',storyboard:'sb-v1'});
  await load(page,'&view=tree&node=scene/sb-v2/sb-v2-e1');assert.deepEqual(params(page),{project:id,view:'storyboard',storyboard:'sb-v2',scene:'sb-v2-e1'});
- assert.deepEqual(await page.$$eval('.sb-seq.target',l=>l.map(s=>s.dataset.sbScene)),['sb-v2-e1']);
+ assert.deepEqual(await page.$$eval('[data-sb-grid]',l=>l.map(s=>s.dataset.sbGrid)),['sb-v2-e1'],'abre la página de la escena');assert.equal(await page.$$eval('.target',l=>l.length),0);
+ await load(page,'&view=tree&node=panel/v2a');assert.deepEqual(params(page),{project:id,view:'storyboard',storyboard:'sb-v2',scene:'sb-v2-e1',panel:'v2a'});assert.ok(await page.$('[data-sb-panel="v2a"]'));
+ await load(page,'&view=tree&node=shot/p3');assert.deepEqual(params(page),{project:id,view:'shot',episode:'e1',sequence:'x-v2',shot:'p3'});
  await load(page,'&view=tree&node=orphans/sb-v2');assert.deepEqual(params(page),{project:id,view:'shots'},'el foco de Planos se consume');assert.deepEqual(await page.$$eval('.shots-seq.target',l=>l.map(s=>s.dataset.shotsSeq)),['x-v2']);
  await load(page,'&view=tree&node=nada');assert.deepEqual(params(page),{project:id,view:'tree'});assert.equal(await toast(page),'No existe en la escaleta: nada');
  await load(page,'&view=tree&node=scene/sb-v2/nada');assert.deepEqual(params(page),{project:id,view:'storyboard',storyboard:'sb-v2'});assert.equal(await toast(page),'No existe en la escaleta: scene/sb-v2/nada');}));
 
 test('scroll por página: cada nivel recuerda el suyo',{skip:SIN_CHROME},()=>session(async page=>{
  await load(page);await page.evaluate(()=>scrollTo(0,300));await page.waitForTimeout(100);const y0=await page.evaluate(()=>scrollY);assert.ok(y0>100,'la raíz da para bajar: '+y0);
- await go(page,'[data-level="unlinked"] a.level-link',/node=unlinked/);assert.equal(await page.evaluate(()=>scrollY),0,'el nivel empieza arriba');
- await go(page,'.crumbs a[data-route]',/view=tree$/);await page.waitForTimeout(200);assert.equal(await page.evaluate(()=>scrollY),y0);},{width:1280,height:360}));
+ await go(page,'[data-level="unlinked"] a.level-link',/node=unlinked/);
+ // Con la máquina cargada (npm test en paralelo), la posición se aplica tras decodificar imágenes y un frame: se espera a ella.
+ const settled=y=>page.waitForFunction(y=>scrollY===y,y,{timeout:5000}).then(()=>true,()=>false);
+ assert.ok(await settled(0),'el nivel empieza arriba: '+await page.evaluate(()=>scrollY));
+ await go(page,'.crumbs a[data-route]',/view=tree$/);assert.ok(await settled(y0),'la raíz recupera su scroll: '+await page.evaluate(()=>scrollY)+' ≠ '+y0);},{width:1280,height:360}));
 
-test('móvil a 390 px: migas en una línea sin desbordar',{skip:SIN_CHROME},()=>session(async page=>{
- for(const q of ['&view=tree&node=seq/y-uno','&view=storyboard&storyboard=sb-v1&scene=sb-v1-e1','&view=tree&node=seq/x-colgado','&view=tree']){await load(page,q);
+test('móvil a 390 px: migas en varias líneas sin desbordar, la primera y la actual enteras',{skip:SIN_CHROME},()=>session(async page=>{
+ for(const q of ['&view=tree&node=seq/y-uno','&view=storyboard&storyboard=sb-v1&scene=sb-v1-e1','&view=storyboard&storyboard=sb-v2&scene=sb-v2-e1&panel=v2b','&view=tree&node=seq/x-colgado','&view=tree']){await load(page,q);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)<=0,q);
   const m=await page.evaluate(()=>{const ol=document.querySelector('.crumbs ol');if(!ol)return null;const r=ol.getBoundingClientRect(),cur=ol.querySelector('[aria-current]').getBoundingClientRect(),lis=[...ol.children];
-   return {right:r.right,inner:innerWidth,cur:cur.right,olRight:r.right,rows:new Set(lis.map(li=>Math.round(li.getBoundingClientRect().top))).size,clipped:[...ol.querySelectorAll('a,span')].filter(e=>e.scrollWidth>e.clientWidth).map(e=>e.title)};});
-  if(!m)continue;assert.ok(m.right<=m.inner,q);assert.ok(m.cur<=m.olRight+1,'la miga actual se ve: '+q);assert.equal(m.rows,1,'una línea: '+q);
-  if(q.includes('y-uno'))assert.deepEqual(m.clipped,['04 · '+LARGO],'elipsis con el texto completo en title');}},{width:390,height:844}));
+   const first=ol.querySelector('li>*'),curEl=ol.querySelector('[aria-current]');
+   return {right:r.right,inner:innerWidth,cur:cur.right,olRight:r.right,olScroll:ol.scrollWidth-ol.clientWidth,first:first.scrollWidth<=first.clientWidth,current:curEl.scrollWidth<=curEl.clientWidth&&curEl.textContent===curEl.title,
+    clipped:[...ol.querySelectorAll('a')].filter(e=>e.scrollWidth>e.clientWidth).every(e=>e.title)};});
+  if(!m)continue;assert.ok(m.right<=m.inner,q);assert.ok(m.cur<=m.olRight+1,'la miga actual se ve: '+q);assert.ok(m.olScroll<=0,'sin scroll horizontal en las migas: '+q);
+  assert.ok(m.first,'la primera miga entera: '+q);assert.ok(m.current,'la actual entera: '+q);assert.ok(m.clipped,'las recortadas llevan su texto en title: '+q);}
+ await load(page,'&view=tree');assert.ok(await page.evaluate(()=>{const e=document.querySelector('[data-level="tests"] .level-sub');return !!e&&e.getBoundingClientRect().height>0;}),'la descripción de Pruebas se ve');},{width:390,height:844}));
