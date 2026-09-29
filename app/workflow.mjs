@@ -13,10 +13,55 @@ export function storyboardPrompt(p,sb,s,t){if(t.prompt?.trim())return t.prompt.t
 // Inicios del diálogo de una viñeta sin plano: n líneas repartidas desde 0,5 s en la duración menos 1 s, a décimas, sin pasar de duración−0,5.
 export function spreadDialogue(n,duration){const step=n?Math.max(0,duration-1)/n:0;return Array.from({length:n},(_,i)=>Math.min(duration-.5,Math.round((.5+i*step)*10)/10));}
 // Convierte un storyboard en un capítulo editable: cada viñeta es un plano; el diálogo se reparte en el tiempo del plano; todas las voces quedan fuera de campo hasta colocar el reparto 3D.
-export function storyboardToEpisode(p,sb,newId=()=>crypto.randomUUID()){const speaker=l=>{if(l.character&&p.characters.some(c=>c.id===l.character))return l.character;const who=String(l.who||'').trim().toLowerCase();return p.characters.find(c=>c.id.toLowerCase()===who||c.name.toLowerCase().split(/\s+/)[0]===who||c.name.toLowerCase()===who)?.id;};const cam=()=>({position:[4,2.5,7],target:[0,1,0],fov:45});
-return {id:newId(),title:sb.title||'Capítulo desde storyboard',synopsis:sb.description||'',storyboard:sb.id,sequences:(sb.sequences||[]).map(s=>{const shots=(s.shots||[]);return {id:newId(),title:s.title||'Secuencia',location:p.locations.some(l=>l.id===s.location)?s.location:(p.locations[0]?.id||''),variant:zoneVariant(p,shots[0]?.zone),ambiencePrompt:shots.map(t=>t.sound).filter(Boolean)[0]||'',ambienceGain:.18,silent:false,cast:[],props:[],storyboardSequence:s.id,shots:shots.map(t=>{const duration=Math.max(1,Math.min(15,Number(t.duration)||5));const lines=(t.dialogue||[]).map(l=>({...l,character:speaker(l)})).filter(l=>l.character);const starts=spreadDialogue(lines.length,duration);return {id:newId(),title:[t.code,t.title].filter(Boolean).join(' · ')||'Plano',description:[t.action,t.camera?`Cámara: ${t.camera}`:''].filter(Boolean).join('\n'),duration,camera:cam(),cameraEnd:cam(),lines:lines.map((l,i)=>({id:newId(),character:l.character,text:String(l.text||''),start:starts[i],offscreen:true,...(l.channel?{channel:l.channel}:{})})),history:[],storyboardShot:t.id,...(t.render?{storyboardRender:t.render}:{})};})};})};}
-// Rellena una secuencia ya existente con todas las viñetas de un storyboard (un plano por viñeta, en orden). Conserva el id de los planos que ya venían de la misma viñeta; el reparto se coloca en semicírculo y los hablantes que están en él dejan de ir fuera de campo.
-export function storyboardToSequence(p,sb,seq,newId=()=>crypto.randomUUID()){const physical=id=>p.characters.some(c=>c.id===id&&c.kind!=='voice');const shots=(sb.sequences||[]).flatMap(s=>s.shots||[]);const ids=[...new Set(shots.flatMap(t=>t.cast||[]))].filter(physical);const cast=ids.map((character,i)=>{const a=Math.PI*(i+.5)/ids.length;return {character,x:Math.round(Math.cos(a)*300)/100,z:Math.round(-Math.sin(a)*200)/100,yaw:0};});const draft=storyboardToEpisode(p,{...sb,sequences:[{id:sb.id,title:seq.title,location:(sb.sequences||[]).find(s=>s.location)?.location,shots}]},newId).sequences[0];const old=new Map((seq.shots||[]).filter(t=>t.storyboardShot).map(t=>[t.storyboardShot,t]));return {...seq,location:draft.location,cast,storyboard:sb.id,shots:draft.shots.map(t=>{const prev=old.get(t.storyboardShot);const lines=t.lines.map(l=>({...l,offscreen:!ids.includes(l.character)}));return prev?{...t,id:prev.id,history:prev.history||[],lines:lines.map((l,k)=>({...l,id:prev.lines?.[k]?.id||l.id}))}:{...t,lines};})};}
+export function storyboardToEpisode(p,sb,newId=()=>crypto.randomUUID()){
+return {id:newId(),title:sb.title||'Capítulo desde storyboard',synopsis:sb.description||'',storyboard:sb.id,sequences:(sb.sequences||[]).map(s=>{const shots=(s.shots||[]);return {id:newId(),title:s.title||'Secuencia',location:p.locations.some(l=>l.id===s.location)?s.location:(p.locations[0]?.id||''),variant:zoneVariant(p,shots[0]?.zone),ambiencePrompt:shots.map(t=>t.sound).filter(Boolean)[0]||'',ambienceGain:.18,silent:false,cast:[],props:[],storyboardSequence:s.id,shots:shots.map(t=>{const {cast,staging,...rest}=storyboardShotDraft(p,t,{newId});return rest;})};})};}
+// Plano nuevo de una viñeta (#51): duración 1–15, hablante por id o nombre, diálogo repartido; cada línea va fuera de campo si su personaje no está en castIds.
+// cast: los personajes físicos de la viñeta; staging vacío.
+export function storyboardShotDraft(p,t,{newId=()=>crypto.randomUUID(),castIds=[]}={}){const speaker=l=>{if(l.character&&p.characters.some(c=>c.id===l.character))return l.character;const who=String(l.who||'').trim().toLowerCase();return p.characters.find(c=>c.id.toLowerCase()===who||c.name.toLowerCase().split(/\s+/)[0]===who||c.name.toLowerCase()===who)?.id;};const cam=()=>({position:[4,2.5,7],target:[0,1,0],fov:45});
+ const duration=Math.max(1,Math.min(15,Number(t.duration)||5));const lines=(t.dialogue||[]).map(l=>({...l,character:speaker(l)})).filter(l=>l.character);const starts=spreadDialogue(lines.length,duration);
+ return {id:newId(),title:[t.code,t.title].filter(Boolean).join(' · ')||'Plano',description:[t.action,t.camera?`Cámara: ${t.camera}`:''].filter(Boolean).join('\n'),duration,camera:cam(),cameraEnd:cam(),lines:lines.map((l,i)=>({id:newId(),character:l.character,text:String(l.text||''),start:starts[i],offscreen:!castIds.includes(l.character),...(l.channel?{channel:l.channel}:{})})),history:[],storyboardShot:t.id,...(t.render?{storyboardRender:t.render}:{}),cast:uniq((t.cast||[]).filter(id=>p.characters.some(c=>c.id===id&&c.kind!=='voice'))),staging:{}};}
+// Diálogo al reaplicar una viñeta: cada línea nueva se empareja con la primera anterior sin usar del mismo personaje y texto, que se conserva entera
+// (id, audio, start, offscreen); las demás entran nuevas con el inicio dentro del plano y las anteriores sin pareja se descartan.
+export function mergeStoryboardLines(prev,next,duration=Infinity){const used=new Set();return (next||[]).map(n=>{const i=(prev||[]).findIndex((l,k)=>!used.has(k)&&l?.character===n.character&&l?.text===n.text);if(i>=0){used.add(i);return structuredClone(prev[i]);}return {...n,start:Math.max(0,Math.min(n.start,duration-.5))};});}
+// Fusión de un plano con su viñeta (storyboard-3d y storyboard-a-secuencia). Sin prev, el borrador (con cámara fija y preset si llegan).
+// Con prev, la viñeta manda en título, descripción, duración, enlace, fotograma y texto del diálogo; lo demás se conserva. La cámara solo entra si
+// el plano no tiene cameraRig, o con force; el preset, si falta o con force. changed: claves de primer nivel que cambian.
+export function mergeStoryboardShot(prev,draft,{camera=null,preset=null,force=false}={}){
+ const setCamera=t=>{t.camera=camCopy(camera);t.cameraEnd=camCopy(camera);t.cameraRig={type:'fixed',start:camCopy(camera)};},setPreset=t=>{const st=isObj(t.staging)?t.staging:{},env=isObj(st.environment)?st.environment:{};if(force||env.preset===undefined)t.staging={...st,environment:{...env,preset}};};
+ if(!prev){const shot=structuredClone(draft);if(camera)setCamera(shot);if(preset)setPreset(shot);return {shot,changed:Object.keys(shot)};}
+ const shot={...structuredClone(prev),title:draft.title,description:draft.description,duration:draft.duration,storyboardShot:draft.storyboardShot,lines:mergeStoryboardLines(prev.lines,draft.lines,draft.duration)};
+ if(draft.storyboardRender)shot.storyboardRender=draft.storyboardRender;else delete shot.storyboardRender;
+ if(!Array.isArray(prev.cast)&&Array.isArray(draft.cast))shot.cast=[...draft.cast];
+ if(camera&&(force||!isObj(prev.cameraRig)))setCamera(shot);if(preset)setPreset(shot);
+ return {shot,changed:uniq([...Object.keys(prev),...Object.keys(shot)]).filter(k=>JSON.stringify(prev[k])!==JSON.stringify(shot[k]))};}
+// Reparto de la secuencia: conserva las colocaciones que ya hay y coloca en semicírculo (radio 3 × 2 m) los ids que faltan.
+export function castPlacements(existing,ids){const out=(existing||[]).map(a=>({...a})),have=new Set(out.map(a=>a.character));ids.forEach((character,i)=>{if(have.has(character))return;const a=Math.PI*(i+.5)/ids.length;out.push({character,x:Math.round(Math.cos(a)*300)/100,z:Math.round(-Math.sin(a)*200)/100,yaw:0});});return out;}
+// Rellena (o vuelve a aplicar) una secuencia con todas las viñetas de un storyboard, en orden: un plano por viñeta con mergeStoryboardShot.
+// Los planos sin viñeta, de viñetas que ya no están o repetidos se conservan detrás del plano que tenían delante, con un aviso.
+export function storyboardSequenceMerge(p,sb,seq,newId=()=>crypto.randomUUID()){const physical=id=>p.characters.some(c=>c.id===id&&c.kind!=='voice');const shots=(sb.sequences||[]).flatMap(s=>s.shots||[]);const ids=[...new Set(shots.flatMap(t=>t.cast||[]))].filter(physical);
+ const loc=(sb.sequences||[]).find(s=>s.location)?.location,location=p.locations.some(l=>l.id===loc)?loc:(p.locations[0]?.id||''),old=seq.shots||[],used=new Set(),warnings=[],sbIds=new Set(shots.map(t=>t.id));
+ const out=shots.map(v=>{const k=old.findIndex((t,i)=>!used.has(i)&&t.storyboardShot===v.id);if(k>=0)used.add(k);return {k:k>=0?k:null,shot:mergeStoryboardShot(k>=0?old[k]:null,storyboardShotDraft(p,v,{newId,castIds:ids})).shot};});
+ old.forEach((t,k)=>{if(used.has(k))return;const name=`«${t.title||t.id}» (${t.id})`;warnings.push(!t.storyboardShot?`${name} no viene del storyboard: se conserva en su sitio`:sbIds.has(t.storyboardShot)?`${name} repite la viñeta ${t.storyboardShot}: se conserva aparte`:`${name}: su viñeta ${t.storyboardShot} ya no está en el storyboard; se conserva en su sitio`);
+  let at=0,best=-1;out.forEach((x,i)=>{if(x.k!==null&&x.k<k&&x.k>best){best=x.k;at=i+1;}});out.splice(at,0,{k,shot:structuredClone(t)});});
+ return {sequence:{...seq,location,cast:castPlacements(seq.cast,ids),storyboard:sb.id,shots:out.map(x=>x.shot)},warnings};}
+// Compatible con la versión anterior: la secuencia de storyboardSequenceMerge, sin los avisos.
+export function storyboardToSequence(p,sb,seq,newId=()=>crypto.randomUUID()){return storyboardSequenceMerge(p,sb,seq,newId).sequence;}
+// Posición de un plano nuevo de la viñeta sbShotId: justo después del último plano cuya viñeta va antes en order (ids de viñeta); si no hay, 0.
+export function storyboardInsertIndex(shots,order,sbShotId){const pos=order.indexOf(sbShotId);let at=0;(shots||[]).forEach((t,i)=>{const k=order.indexOf(t?.storyboardShot);if(k>=0&&k<pos)at=i+1;});return at;}
+// Viñeta de un storyboard por id o por código; un código repetido es un error con los ids.
+export function findStoryboardShot(sb,key){const all=(sb?.sequences||[]).flatMap(s=>(s.shots||[]).map(shot=>({sequence:s,shot})));const byId=all.find(x=>x.shot.id===key);if(byId)return byId;const byCode=all.filter(x=>x.shot.code===key);
+ if(byCode.length>1)throw Error(`El código ${key} se repite en el storyboard (${byCode.map(x=>x.shot.id).join(', ')}): usa el id de la viñeta`);if(!byCode.length)throw Error('Viñeta no encontrada en el storyboard: '+key);return byCode[0];}
+// Fichero de cámaras del story (docs/scripts.md): {version, storyboard, entorno?, planos:[{code, camera:{position, target, fov}, momento?}]}; ignora el resto de campos.
+export function parseShotCameras(json){const errors=[],byCode=new Map();if(!isObj(json)||!Array.isArray(json.planos))return {entorno:null,storyboard:null,byCode,errors:['El fichero de cámaras necesita una lista «planos»']};
+ json.planos.forEach((x,i)=>{const at=`planos[${i}]`;if(!isObj(x)||typeof x.code!=='string'||!x.code)return errors.push(at+': falta code');if(byCode.has(x.code))return errors.push(`${at}: code ${x.code} repetido`);const c=x.camera;let camera=null;
+  if(c!==undefined){if(!isObj(c)||!vec3(c.position)||!vec3(c.target)||!(Number.isFinite(c.fov)&&c.fov>=CAMERA_FOV[0]&&c.fov<=CAMERA_FOV[1]))return errors.push(`${x.code}: camera necesita position y target de 3 números y fov entre ${CAMERA_FOV[0]} y ${CAMERA_FOV[1]}`);camera=camCopy(c);}
+  if(x.momento!==undefined&&(typeof x.momento!=='string'||!x.momento))return errors.push(`${x.code}: momento debe ser el id de un preset`);byCode.set(x.code,{camera,momento:x.momento||null});});
+ return {entorno:typeof json.entorno==='string'&&json.entorno?json.entorno:null,storyboard:typeof json.storyboard==='string'?json.storyboard:null,byCode,errors};}
+// Avisos de aplicar una cámara del fichero: sus coordenadas son del modelo, así que solo cuadran sin spot ni rotation en el entorno efectivo del plano.
+export function cameraFileWarnings({envCfg,environmentId,fileEnv,momento,presetIds}={}){const w=[];if(!environmentId)w.push('El ambiente del plano no tiene entorno 3D: la cámara del fichero no tiene decorado de referencia');
+ if(fileEnv&&environmentId&&fileEnv!==environmentId)w.push(`El fichero es del entorno ${fileEnv} y el plano usa ${environmentId}`);
+ if(isObj(envCfg)&&(envCfg.spot||Number(envCfg.rotation)))w.push(`El entorno del plano tiene ${[envCfg.spot?'spot '+envCfg.spot:'',Number(envCfg.rotation)?'rotation '+envCfg.rotation:''].filter(Boolean).join(' y ')}: las coordenadas del fichero (respecto al origen del modelo) no cuadran`);
+ if(momento&&Array.isArray(presetIds)&&!presetIds.includes(momento))w.push(`El momento ${momento} no es un preset del entorno (${presetIds.join(', ')||'ninguno'})`);return w;}
 
 // ---- Producción por bloques (docs/PROCESO.md). Funciones puras, sin dependencias de Node: también se cargan en el navegador.
 // Escalera de óptica por FOV horizontal (grados) con su equivalente en mm de paso completo y una frase observable, no metadatos de lente.
@@ -413,6 +458,8 @@ export function patchShotField(project,field,map){const p=structuredClone(projec
  for(const e of p.episodes||[])for(const s of e.sequences||[])for(const t of s.shots||[]){if(!Object.hasOwn(m,t.id))continue;seen.add(t.id);const before=JSON.stringify(t[field]);if(m[t.id]===null)delete t[field];else t[field]=structuredClone(m[t.id]);if(JSON.stringify(t[field])!==before)changed.push(t.id);}
  return {project:p,changed,unknown:Object.keys(m).filter(id=>!seen.has(id))};}
 // ---- Cámara del plano (t.cameraRig, #49; docs/ensayo-3d.md). Todo es función del tiempo, nunca del fotograma anterior: la vista en vivo y el render headless coinciden.
+// fov vertical admitido en grados (cámaras del plano y del rig): de teleobjetivos largos (≈1°) a gran angular (100°).
+export const CAMERA_FOV=[1,100];
 export const CAMERA_RIG_TYPES=['fixed','move','follow','track','handheld'],CAMERA_EASINGS=['linear','smooth','ease-in','ease-out'];
 const CAMERA_RIG_KEYS=['type','start','end','easing','hold','follow','track','trackSmoothing','shake','seed'];
 const clamp01=v=>Math.min(1,Math.max(0,v));
@@ -456,7 +503,7 @@ export function rigOpticsLine(rig,duration,from=0,to=duration,fov=cameraAt(rig,f
  return `${a.h}° to ${b.h}° horizontal field of view (about ${a.mm} mm to ${b.mm} mm full-frame equivalent): one slow continuous zoom ${z.end<z.start?'in':'out'} from the first frame to the last, exactly as in Video 1; perspective and depth of field change smoothly with it.`;}
 // Errores y avisos de un cameraRig, en español y sin prefijo. duration, cast (reparto del plano) y positioned (ids con colocación) solo se comprueban si llegan.
 export function cameraRigIssues(rig,{duration,cast,positioned}={}){const errors=[],warnings=[];if(!isObj(rig))return {errors:['debe ser un objeto'],warnings};
- const cam=(c,at)=>{if(!isObj(c))return errors.push(at+' debe ser una cámara {position, target, fov}');for(const k of ['position','target'])if(!vec3(c[k]))errors.push(`${at}.${k} debe tener 3 números`);if(!(Number.isFinite(c.fov)&&c.fov>=15&&c.fov<=100))errors.push(at+'.fov debe estar entre 15 y 100');};
+ const cam=(c,at)=>{if(!isObj(c))return errors.push(at+' debe ser una cámara {position, target, fov}');for(const k of ['position','target'])if(!vec3(c[k]))errors.push(`${at}.${k} debe tener 3 números`);if(!(Number.isFinite(c.fov)&&c.fov>=CAMERA_FOV[0]&&c.fov<=CAMERA_FOV[1]))errors.push(`${at}.fov debe estar entre ${CAMERA_FOV[0]} y ${CAMERA_FOV[1]}`);};
  const range=(k,max)=>{if(rig[k]!==undefined&&!(Number.isFinite(rig[k])&&rig[k]>=0&&rig[k]<=max))errors.push(`${k} debe estar entre 0 y ${String(max).replace('.',',')}`);};
  if(!CAMERA_RIG_TYPES.includes(rig.type))errors.push(`type debe ser ${CAMERA_RIG_TYPES.join(', ')}`);
  if(rig.start===undefined)errors.push('falta start');else cam(rig.start,'start');if(rig.end!==undefined)cam(rig.end,'end');else if(rig.type==='move')errors.push('move necesita end');
@@ -468,7 +515,7 @@ export function cameraRigIssues(rig,{duration,cast,positioned}={}){const errors=
   for(const k of Object.keys(f))if(!['character','mode','offset','smoothing'].includes(k))warnings.push(`follow.${k}: clave desconocida`);}
  if(rig.track===undefined){if(rig.type==='track')errors.push('track necesita al menos una muestra');}else if(!Array.isArray(rig.track)||!rig.track.length)errors.push('track debe ser una lista con al menos una muestra');else{let prev=-Infinity;rig.track.forEach((s,i)=>{const at=`track[${i}]`;if(!isObj(s))return errors.push(at+' debe ser un objeto');
   if(!(Number.isFinite(s.t)&&s.t>=0))errors.push(at+'.t debe ser un número ≥ 0');else{if(s.t<=prev)errors.push(at+'.t debe ser mayor que el de la muestra anterior');if(Number.isFinite(duration)&&s.t>duration+1e-6)errors.push(`${at}.t pasa de la duración del plano (${duration} s)`);prev=s.t;}
-  for(const k of ['position','target'])if(!vec3(s[k]))errors.push(`${at}.${k} debe tener 3 números`);if(s.fov!==undefined&&!(Number.isFinite(s.fov)&&s.fov>=15&&s.fov<=100))errors.push(at+'.fov debe estar entre 15 y 100');});}
+  for(const k of ['position','target'])if(!vec3(s[k]))errors.push(`${at}.${k} debe tener 3 números`);if(s.fov!==undefined&&!(Number.isFinite(s.fov)&&s.fov>=CAMERA_FOV[0]&&s.fov<=CAMERA_FOV[1]))errors.push(`${at}.fov debe estar entre ${CAMERA_FOV[0]} y ${CAMERA_FOV[1]}`);});}
  range('trackSmoothing',1);range('shake',.5);if(rig.seed!==undefined&&!(Number.isInteger(rig.seed)&&rig.seed>=0))errors.push('seed debe ser un entero ≥ 0');
  for(const k of Object.keys(rig))if(!CAMERA_RIG_KEYS.includes(k))warnings.push(`${k}: clave desconocida`);
  return {errors,warnings};}
@@ -534,6 +581,37 @@ export function applyShotCamera(shot,which,camera){const t=structuredClone(shot)
  const r=rigWithCamera(t.cameraRig,which,camera);if(r.error)return {error:r.error,anim:true};t.cameraRig=r.rig;t[key]=camCopy(camera);return {shot:t};}
 // Planos de capítulo enlazados a una viñeta del storyboard (t.storyboardShot).
 export function storyboardAnimTargets(project,storyboardShotId){const out=[];for(const e of project?.episodes||[])for(const s of e.sequences||[])for(const t of s.shots||[])if(t.storyboardShot===storyboardShotId)out.push({episode:e.id,sequence:s.id,shot:t.id});return out;}
+// ---- Animación 3D de una viñeta (#51): el trabajo anim3d renderiza el plano enlazado a storyboards/<sb>/animacion-3d/<nombre>-vNN.mp4 (lib/animacion3d.mjs).
+// Secuencia que ve el ensayo de un plano: su location, si la trae, manda sobre la de la secuencia (render-data y vista Animación).
+export function stageSequence(s,t){return t?.location?{...s,location:t.location}:s;}
+// Errores y avisos de la cámara del plano (su cameraRig o la fija de camera) con el reparto y las colocaciones de la vista Animación.
+export function shotRigIssues(s,t){return cameraRigIssues(rigFromShot(t),{duration:t.duration,cast:shotCast(t,s),positioned:uniq([...(s?.cast||[]).map(a=>a.character),...Object.keys(proxiesOf(t))])});}
+// ¿Se puede renderizar el plano? Errores: no existe, sin viñeta enlazada o inexistente, duración no positiva o cámara con errores.
+export function anim3dReady(p,shotId){const out={errors:[],warnings:[],storyboard:null,storyboardShot:null,episode:null,sequence:null,shot:null};
+ for(const e of p?.episodes||[])for(const s of e.sequences||[]){const t=(s.shots||[]).find(t=>t.id===shotId);if(t&&!out.shot)Object.assign(out,{episode:e,sequence:s,shot:t});}
+ const t=out.shot;if(!t){out.errors.push('Plano no encontrado');return out;}
+ if(!t.storyboardShot)out.errors.push('El plano no está enlazado a una viñeta del storyboard');
+ else{for(const sb of p.storyboards||[]){const v=(sb.sequences||[]).flatMap(s=>s.shots||[]).find(v=>v.id===t.storyboardShot);if(v){out.storyboard=sb;out.storyboardShot=v;break;}}if(!out.storyboard)out.errors.push(`La viñeta ${t.storyboardShot} no está en ningún storyboard`);}
+ if(!(Number.isFinite(t.duration)&&t.duration>0))out.errors.push('La duración del plano debe ser positiva');
+ else{const r=shotRigIssues(out.sequence,t);out.errors.push(...r.errors.map(x=>'Cámara: '+x));out.warnings.push(...r.warnings.map(x=>'Cámara: '+x));}
+ return out;}
+// Nombre de los ficheros de una viñeta: su código si es único en el storyboard; si no, su id. Solo [A-Za-z0-9_-].
+export function anim3dName(sb,v){const clean=x=>String(x).replace(/[^A-Za-z0-9_-]/g,'_'),n=(sb?.sequences||[]).flatMap(s=>s.shots||[]).filter(t=>t.code===v?.code).length;return v?.code&&n===1?clean(v.code):clean(v?.id);}
+// Siguiente versión de un nombre: la mayor vNN del índice (de ese nombre) y de los ficheros <nombre>-vNN[.part].mp4, +1.
+export function nextAnim3dVersion(entries,files,name){return nextAnimaticVersion((entries||[]).filter(e=>e?.name===name).map(e=>({step:name,version:e.version})),files,name);}
+// Eventos de voz del plano para el ensayo y la mezcla: con audio (audioSeconds[id] = duración), fin recortado al plano y su clip; sin audio o si
+// falta el fichero, fin por estimatedDuration o 3 s y silencio. Avisa de lo que recorta o falta; nunca lanza.
+export function anim3dEvents(lines,duration,audioSeconds={},channels=projectChannels(null)){const events=[],clips=[],warnings=[],D=Number(duration)||0;
+ for(const l of lines||[]){if(!isObj(l)||!Number.isFinite(l.start))continue;const start=Math.max(0,l.start),name=`«${clip(l.text)}»`;let end=null;
+  if(l.audio){const s=audioSeconds?.[l.id];if(Number.isFinite(s)&&s>0){end=Math.min(D,start+s);if(start+s>D+.01)warnings.push(`El audio de ${name} termina a ${secs(start+s)}, fuera del plano (${secs(D)}): se recorta`);if(start<D)clips.push({audio:l.audio,start});}else warnings.push(`Falta el audio de ${name} (${l.audio}): ese tramo queda en silencio`);}
+  if(end===null)end=Math.min(D,start+(l.estimatedDuration||3));if(end>start)events.push({...l,start,end,offscreen:lineOffscreen(channels,l)});}
+ events.sort((a,b)=>a.start-b.start);return {events,clips,warnings};}
+// Vídeos 3D del índice por viñeta para la tarjeta: {storyboard, shots:{viñeta:{current,list}}}; list de mayor a menor versión, sin ficheros ausentes.
+export function anim3dGroups(index,sb,has=()=>true){const ids=new Set((sb?.sequences||[]).flatMap(s=>(s.shots||[]).map(t=>t.id))),shots={};
+ for(const e of index?.entries||[]){if(!e?.file||!ids.has(e.storyboardShot)||!has(e.file))continue;(shots[e.storyboardShot]??={current:null,list:[]}).list.push(e);}
+ for(const g of Object.values(shots)){g.list.sort((a,b)=>(b.version||0)-(a.version||0)||String(b.at||'').localeCompare(String(a.at||'')));g.current=g.list[0];}return {storyboard:sb?.id??null,shots};}
+// Botón «Renderizar vídeo» de la vista Animación: con un trabajo en cola o en marcha, su progreso; desactivado con errores o trabajo activo.
+export function anim3dButton(job,errors=[]){const busy=['queued','running'].includes(job?.status);return {label:busy?`Renderizando… ${Number.isFinite(job.progress)?job.progress:0} %`:'Renderizar vídeo',disabled:busy||(errors||[]).length>0};}
 // Errores y avisos del staging y de la cámara (cameraRig) de un plano frente al reparto de su secuencia y la configuración del ensayo.
 export function stagingIssues(shot,sequence,R,{characters}={}){const errors=[],warnings=[],st=shot?.staging;
  if(shot?.cameraRig!==undefined){const w=shot.id+': cameraRig: ',r=cameraRigIssues(shot.cameraRig,{duration:shot.duration,cast:shotCast(shot,sequence),positioned:uniq([...(sequence?.cast||[]).map(a=>a.character),...Object.keys(proxiesOf(shot))])});errors.push(...r.errors.map(e=>w+e));warnings.push(...r.warnings.map(e=>w+e));if(!r.errors.length){const z=rigFovSpan(shot.cameraRig,shot.duration);if(z.zoom)warnings.push(`${w}la cámara hace zum (fov vertical de ${z.start.toFixed(1)}° a ${z.end.toFixed(1)}°): OPTICS lo describe como un zum continuo`);}

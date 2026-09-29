@@ -1,8 +1,9 @@
 // Rellena una secuencia existente de un capítulo con las viñetas de un storyboard: un plano por viñeta, con su fotograma
-// (storyboardRender), su duración y su diálogo. Repetirlo tras cambiar el storyboard conserva el id de los planos.
+// (storyboardRender), su duración y su diálogo. Repetirlo tras cambiar el storyboard (storyboardSequenceMerge) conserva de cada plano su id, cámara,
+// staging, reparto y el audio de las líneas que no cambian; las colocaciones del reparto de la secuencia, y los planos sin viñeta (con aviso en stderr).
 // Uso: node scripts/storyboard-a-secuencia.mjs [proyecto] <storyboard> <secuencia> [--project id] [--ambiente texto]
 import {load, save} from '../app/store.mjs';
-import {storyboardToSequence} from '../app/workflow.mjs';
+import {storyboardSequenceMerge} from '../app/workflow.mjs';
 import {takeOption} from '../lib/args.mjs';
 import {cliProject, usageExit} from '../lib/cli.mjs';
 
@@ -19,7 +20,8 @@ if (!sb) throw Error('Storyboard no encontrado: ' + sbId);
 const episode = p.episodes.find(e => e.sequences.some(s => s.id === seqId));
 if (!episode) throw Error('Secuencia no encontrada: ' + seqId);
 const i = episode.sequences.findIndex(s => s.id === seqId);
-const seq = storyboardToSequence(p, sb, episode.sequences[i]);
+const {sequence: seq, warnings} = storyboardSequenceMerge(p, sb, episode.sequences[i]);
+for (const w of warnings) console.error('Aviso: ' + w);
 if (amb) seq.ambiencePrompt = amb;
 episode.sequences[i] = seq;
 save(p, p.revision);

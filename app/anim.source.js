@@ -1,23 +1,24 @@
 // Vista Animación (#50): un plano con su cámara (t.cameraRig), reloj propio, diálogo con la voz del navegador y grabación de la cámara a 24 Hz.
+// «Renderizar vídeo» (#51): guarda si hay cambios y lanza el trabajo anim3d del plano (renderVideo); renderJob da su último trabajo para el progreso.
 import {createStage} from './stage.js';
-import {rehearsalConfig,projectChannels,cameraAt,cameraContext,cameraPresets,cameraRigIssues,shotCast,CAMERA_RIG_TYPES,CAMERA_EASINGS,episodeSpeakers,ttsVoiceURI,ttsParams,TIMELINE_FPS,TRACK_SMOOTHING_DEFAULT,snapTime,clockTick,lineSchedule,lineToLaunch,activeLineAt,timelineMarks,recordSamples,trimTrack,recordedRig,rigFromShot,rigWithCamera,rigWithType,rigControls} from './workflow.mjs';
+import {rehearsalConfig,projectChannels,cameraAt,cameraContext,cameraPresets,shotCast,CAMERA_RIG_TYPES,CAMERA_EASINGS,episodeSpeakers,ttsVoiceURI,ttsParams,TIMELINE_FPS,TRACK_SMOOTHING_DEFAULT,snapTime,clockTick,lineSchedule,lineToLaunch,activeLineAt,timelineMarks,recordSamples,trimTrack,recordedRig,rigFromShot,rigWithCamera,rigWithType,rigControls,stageSequence,shotRigIssues,anim3dReady,anim3dButton} from './workflow.mjs';
 import {loadVoicePrefs,saveVoicePrefs,speakLine} from './tts.source.js';
 const TYPE_LABELS={fixed:'Fija',move:'Movimiento (inicio → fin)',follow:'Seguimiento de un personaje',track:'Pista grabada',handheld:'Cámara en mano'},EASING_LABELS={linear:'Lineal',smooth:'Suave','ease-in':'Arranque lento','ease-out':'Frenada lenta'};
-export async function mountAnim(root,{getProject,ids,save,markDirty,toast}){
+export async function mountAnim(root,{getProject,ids,save,markDirty,toast,isDirty=()=>false,renderVideo=null,renderJob=()=>null}){
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const find=()=>{const p=getProject(),e=p?.episodes.find(e=>e.id===ids.episodeId),s=e?.sequences.find(s=>s.id===ids.sequenceId),t=s?.shots.find(t=>t.id===ids.shotId);return {p,e,s,t};};
  let {p,e,s,t}=find();if(!t)throw Error('Plano no encontrado');
  const R=rehearsalConfig(p,t),speech=R.speech,CH=projectChannels(p),synth=window.speechSynthesis,saved=loadVoicePrefs(p.id),speakerIds=episodeSpeakers(e),nameOf=id=>p.characters.find(c=>c.id===id)?.name||id;
  const cast=shotCast(t,s),positioned=[...new Set([...(s.cast||[]).map(a=>a.character),...Object.keys(t.staging?.proxies||{})])],followable=positioned.filter(id=>cast.includes(id));
  let ctx=cameraContext({shot:t,sequence:s,R}),draft=rigFromShot(t),rawTrack=draft.type==='track'?structuredClone(draft.track):null,stage=null,disposed=false;
- let time=0,playing=false,loop=false,mode='result',raf=0,last=0,launchFrom=0,voice=null,voices=[],speaker=null,recording=false,samples=[],countdown=null;
+ let time=0,playing=false,loop=false,mode='result',raf=0,last=0,launchFrom=0,voice=null,voices=[],speaker=null,recording=false,samples=[],countdown=null,renderTimer=0;
  const D=()=>t.duration,schedule=()=>lineSchedule(t.lines,D(),CH),lineOf=id=>t.lines.find(l=>l.id===id);
  root.innerHTML=`<div class="anim"><div class="anim-stage"><div class="stagebox"><div class="anim-view"><div data-viewport class="anim-viewport" style="aspect-ratio:16/9"></div><div data-countdown class="anim-countdown" hidden></div></div><div data-subtitle class="rehearsal-subtitle" aria-live="polite"></div><div class="stagefoot anim-transport"><button data-play aria-label="Reproducir">▶</button><button data-pause aria-label="Pausa">⏸</button><button data-stop aria-label="Parar">■</button><button data-loop aria-pressed="false" title="Repetir en bucle">⟳ Bucle</button><label class="anim-check"><input data-silent type="checkbox"> Solo subtítulos</label><output data-time>0,00 s</output></div></div>
  <div class="anim-timeline"><input data-scrub type="range" min="0" max="${D()}" step="${1/TIMELINE_FPS}" value="0" aria-label="Tiempo del plano"><div class="anim-marks" data-marks></div></div>
  <p data-status role="status" class="tiny"></p><details class="panel"><summary>Voces del navegador por personaje</summary><div class="grid" data-voices></div></details></div>
- <aside class="panel anim-side"><div class="row"><button data-mode="free" aria-pressed="false">Libre</button><button data-mode="result" aria-pressed="true">Ver resultado</button></div><p class="tiny">Libre: arrastra para orbitar y rueda (o pellizca) para acercar. Ver resultado: la cámara del plano en cada instante.</p><div data-controls></div></aside></div>`;
+ <aside class="panel anim-side"><div class="row"><button data-mode="free" aria-pressed="false">Libre</button><button data-mode="result" aria-pressed="true">Ver resultado</button></div><p class="tiny">Libre: arrastra para orbitar y rueda (o pellizca) para acercar. Ver resultado: la cámara del plano en cada instante.</p><div data-controls></div><div class="actions"><button data-render class="primary">Renderizar vídeo</button></div><p class="tiny">Renderizar vídeo: el plano guardado, con su cámara y las voces que tengan audio, a un vídeo de la viñeta con versión nueva (se ve en su tarjeta del storyboard).</p></aside></div>`;
  const $=q=>root.querySelector(q),status=x=>$('[data-status]').textContent=x;
- stage=await createStage($('[data-viewport]'),{project:p,sequence:{...s,location:t.location||s.location},shot:t});
+ stage=await createStage($('[data-viewport]'),{project:p,sequence:stageSequence(s,t),shot:t});
  if(disposed){stage.dispose();return {dispose(){}};}
  // Voz del navegador: mismas preferencias y voces por defecto que el Ensayo.
  const lineSpeakers=[...new Set(t.lines.map(l=>l.character))];
@@ -38,7 +39,7 @@ export async function mountAnim(root,{getProject,ids,save,markDirty,toast}){
  function setMode(m){mode=m;stage.orbit(m==='free');root.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===m)));update();}
  // Cada edición confirmada escribe el borrador en el plano y marca el proyecto como modificado (sin guardar).
  function commit(rig){draft=rig;t.cameraRig=structuredClone(draft);markDirty();controls();update();}
- function issues(){return cameraRigIssues(draft,{duration:D(),cast,positioned});}
+ function issues(){return shotRigIssues(s,{...t,cameraRig:draft});}
  // Grabación: cuenta atrás de 3 s, modo libre, reloj desde 0 con la voz y una muestra de stage.camera() por fotograma de 1/24 s.
  function record(){if(recording||countdown)return;pause();let n=3;const box=$('[data-countdown]');box.hidden=false;$('.anim-view').scrollIntoView?.({block:'nearest'});box.textContent=n;countdown=setInterval(()=>{n--;if(n>0){box.textContent=n;return;}clearInterval(countdown);countdown=null;box.hidden=true;setMode('free');time=0;samples=recordSamples([],0,stage.camera(),{duration:D()});recording=true;transport();play();},1000);transport();}
  function finishRecording(){recording=false;hush();rawTrack=samples;samples=[];commit(recordedRig(rawTrack,{smoothing:TRACK_SMOOTHING_DEFAULT}));setMode('result');transport();status(`Grabadas ${rawTrack.length} muestras. Ajusta el suavizado o recorta y guarda.`);}
@@ -71,15 +72,19 @@ export async function mountAnim(root,{getProject,ids,save,markDirty,toast}){
   on('[data-shake]','oninput',el=>{box.querySelector('[data-out="shake"]').textContent=num(el.value);draft={...draft,shake:Number(el.value)};update();});on('[data-shake]','onchange',el=>commit({...draft,shake:Number(el.value)}));
   on('[data-smoothing]','oninput',el=>{box.querySelector('[data-out="ts"]').textContent=num(el.value);draft={...draft,trackSmoothing:Number(el.value)};update();});on('[data-smoothing]','onchange',el=>commit({...draft,trackSmoothing:Number(el.value)}));
   on('[data-trim-apply]','onclick',()=>{const [a,b]=['from','to'].map(k=>snapTime(box.querySelector(`[data-trim="${k}"]`).value,D()));try{commit(recordedRig(trimTrack(rawTrack,a,b,{duration:D()}),{smoothing:draft.trackSmoothing}));}catch(err){toast(err.message);}});
-  on('[data-record]','onclick',record);on('[data-save]','onclick',doSave);}
+  on('[data-record]','onclick',record);on('[data-save]','onclick',doSave);renderButton();}
  // Guardar con el save() de la app (control de revisión). Si falla, el proyecto sigue en local con la pista.
- async function doSave(){const b=$('[data-save]');if(b)b.disabled=true;try{t.cameraRig=structuredClone(draft);await save();({p,e,s,t}=find());if(!t)throw Error('El plano ya no existe en el proyecto guardado');ctx=cameraContext({shot:t,sequence:s,R});stage.updateShot(t);speaker=undefined;update();}catch(err){toast(err.message);}finally{if(!disposed)controls();}}
+ async function doSave(){const b=$('[data-save]');if(b)b.disabled=true;try{t.cameraRig=structuredClone(draft);await save();({p,e,s,t}=find());if(!t)throw Error('El plano ya no existe en el proyecto guardado');ctx=cameraContext({shot:t,sequence:s,R});stage.updateShot(t);speaker=undefined;update();return true;}catch(err){toast(err.message);return false;}finally{if(!disposed)controls();}}
+ // Botón «Renderizar vídeo»: etiqueta y estado de anim3dButton con los errores del plano (anim3dReady) y su último trabajo.
+ function renderButton(){const b=$('[data-render]');if(!b)return;const errors=renderVideo?anim3dReady(getProject(),ids.shotId).errors:['Esta vista no puede lanzar trabajos'],x=anim3dButton(renderJob(),errors);b.textContent=x.label;b.disabled=x.disabled;b.title=errors.join('\n');}
+ async function renderClick(){const b=$('[data-render]');b.disabled=true;try{if(isDirty()&&!await doSave())return;await renderVideo();status('Vídeo en cola: el progreso sale en el botón y el resultado en la tarjeta de la viñeta.');}catch(err){toast(err.message);}finally{if(!disposed)renderButton();}}
  $('[data-play]').onclick=play;$('[data-pause]').onclick=()=>recording||countdown?abortRecording('Grabación cancelada con la pausa. La cámara anterior se conserva.'):pause();$('[data-stop]').onclick=stopAll;$('[data-loop]').onclick=()=>{loop=!loop;transport();};
  $('[data-silent]').onchange=()=>{if($('[data-silent]').checked)hush();};
  $('[data-scrub]').oninput=ev=>{pause();time=snapTime(ev.target.value,D());update();};
  root.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
  const CHM=Object.fromEntries(schedule().map(l=>[l.id,l]));$('[data-marks]').innerHTML=timelineMarks(schedule(),D()).map(m=>`<button type="button" class="anim-mark" style="left:${m.pct}%" data-at="${m.at}" title="${esc(nameOf(CHM[m.id]?.character)+': '+m.label)}" aria-label="Ir a ${esc(nameOf(CHM[m.id]?.character))} en ${m.at} s"></button>`).join('');
  root.querySelectorAll('.anim-mark').forEach(b=>b.onclick=()=>{if(recording||countdown)return;pause();time=snapTime(b.dataset.at,D());update();});
+ $('[data-render]').onclick=renderClick;renderTimer=setInterval(renderButton,2000);
  stage.setCamera(cameraAt(draft,0,D(),ctx));setMode('result');controls();last=performance.now();raf=requestAnimationFrame(frame);
- return {dispose(){disposed=true;cancelAnimationFrame(raf);if(countdown)clearInterval(countdown);voice?.cancel();synth?.cancel();synth?.removeEventListener('voiceschanged',refreshVoices);document.removeEventListener('visibilitychange',onVisibility);stage?.dispose();},get draft(){return draft;},get stage(){return stage;},get time(){return time;}};
+ return {dispose(){disposed=true;cancelAnimationFrame(raf);clearInterval(renderTimer);if(countdown)clearInterval(countdown);voice?.cancel();synth?.cancel();synth?.removeEventListener('voiceschanged',refreshVoices);document.removeEventListener('visibilitychange',onVisibility);stage?.dispose();},get draft(){return draft;},get stage(){return stage;},get time(){return time;}};
 }

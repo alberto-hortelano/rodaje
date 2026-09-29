@@ -24,7 +24,17 @@
 
 ## Storyboards e imágenes (`GENERAR-IMAGENES.md`)
 
-- `scripts/storyboard-a-secuencia.mjs`: rellena una secuencia con las viñetas de un storyboard, para el modo fotograma.
+- `scripts/storyboard-a-secuencia.mjs`: rellena una secuencia con las viñetas de un storyboard, para el modo fotograma. Repetirlo no destruye: cada plano conserva su id, cámara (`cameraRig`, `camera`, `cameraEnd`), `staging`, `cast` y el audio de las líneas cuyo personaje y texto no cambian; la viñeta manda en título, descripción, duración, fotograma y texto del diálogo. Las colocaciones del reparto de la secuencia se conservan (solo se añaden en semicírculo los personajes nuevos) y los planos sin viñeta o de viñetas borradas se quedan en su sitio con un aviso en stderr. El ambiente (`location`) sigue viniendo del storyboard.
+- `scripts/storyboard-3d.mjs` (`<storyboard> <viñeta> --secuencia <id> [--camaras fichero] [--force] [--plan] [--project id]`): crea o actualiza en esa secuencia del capítulo el plano enlazado a una viñeta (por código o id): duración, diálogo, `cast` con su reparto, `staging` y, si el fichero de cámaras trae la viñeta, un `cameraRig` `fixed` con esa cámara y su `momento` en `staging.environment.preset`. Un plano nuevo entra detrás del último plano cuya viñeta va antes en el storyboard. Reejecutarlo es idempotente con la misma fusión que `storyboard-a-secuencia.mjs`: no toca la cámara de un plano que ya tiene `cameraRig` (ni el preset que ya tenga) salvo con `--force`, que los sustituye por los del fichero. Sin entrada en el fichero, avisa y conserva la cámara. `--plan` imprime el plano resultante sin escribir. Avisos por stderr (entorno con `spot` o `rotation`, momento que no es un preset del entorno, entorno distinto del fichero, reparto sin colocación, cámara con errores); la última línea resume: `A02 · creado · plano <id> · posición 2/56 · cámara fichero · preset camino`. El vídeo se renderiza desde la vista Animación («Renderizar vídeo», `docs/PROCESO.md`, «Animación 3D de una viñeta»).
+
+  Fichero de cámaras (`--camaras`), uno por storyboard:
+
+  ```json
+  {"version":1,"storyboard":"<storyboard>","entorno":"<entorno 3D, opcional>",
+   "planos":[{"code":"A01","camera":{"position":[x,y,z],"target":[x,y,z],"fov":14},"momento":"<preset, opcional>"}]}
+  ```
+
+  `position` y `target` en metros del entorno respecto al origen del modelo (solo cuadran si la secuencia y el plano no le ponen `spot` ni `rotation`); `fov` vertical en grados para 16:9, entre 1 y 100; `momento` es el id de un preset del entorno y va a `staging.environment.preset`. Se ignoran los demás campos de cada plano (título, óptica, acción…), así que vale un fichero de planificación con más datos.
 - `scripts/storyboard-prompts.mjs`: exporta las viñetas de un storyboard a `.prompt.txt` para ChatGPT y, con `--enlazar`, enlaza los fotogramas generados.
 - `scripts/storyboard-animatica.mjs` (`[proyecto] <storyboard> [--paso 3d|fotogramas|voces] [--secuencia id] [--capitulo-secuencia id] [--plan] [--importar fichero --paso paso [--subtitulos es] [--nota texto]]`): animáticas del storyboard por paso (ensayo 3D, fotogramas y fotogramas con voces), por secuencia y entera, con rótulo de plano y subtítulos; ffmpeg local, sin coste. Deja `storyboards/<id>/animaticas/<paso>[.<secuencia>]-vNN.mp4` y su `index.json` sin sobrescribir nada; `--plan` imprime la línea de tiempo y lo que falta sin escribir; `--importar` incorpora una hecha a mano como la siguiente versión. Reglas en `docs/PROCESO.md`, «Animáticas». La vista Storyboards lo lanza con «Generar animáticas».
 - `scripts/prompts-pendientes.mjs`: lista los `.prompt.txt` de imagen cuya imagen aún no existe, con sus adjuntos.

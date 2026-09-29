@@ -77,6 +77,17 @@ Para escenas que el visor 3D no puede representar, como exteriores a caballo, ca
 - **Incompleta:** un paso con datos que faltan se genera igual y queda marcado con la lista de lo que falta (`missing`): viñeta sin foto 3D o sin fotograma (placa negra con el rótulo y «SIN FOTO 3D» o «SIN FOTOGRAMA»), viñeta con diálogo sin plano enlazado y línea sin audio (silencio; el subtítulo sigue), en el paso con voces. El audio que se sale del plano se recorta y queda en `warnings`.
 - `--plan` imprime la línea de tiempo y lo que falta sin codificar; `--paso` y `--secuencia` limitan lo que se genera; `--importar <fichero> --paso <paso> [--subtitulos es] [--nota texto]` mueve una animática hecha a mano de `storyboards/<id>/` a la siguiente versión entera de ese paso.
 
+### Animación 3D de una viñeta
+
+Un vídeo del ensayo 3D de una sola viñeta, con la cámara del plano y sus voces, para revisar el encuadre y el ritmo sin coste.
+
+1. `node scripts/storyboard-3d.mjs <storyboard> <viñeta> --secuencia <id> --camaras <fichero> --project <id>` crea (o actualiza) el plano enlazado a la viñeta en esa secuencia del capítulo, con su duración, su diálogo, su reparto (`cast`) y la cámara fija del fichero de cámaras (formato en `docs/scripts.md`). Primero con `--plan` para leer los avisos sin escribir. Reejecutarlo no pisa una cámara ya editada salvo con `--force`.
+2. En la vista Animación del plano se ajusta la cámara (tipo, movimiento, grabación) y se guarda.
+3. «Renderizar vídeo» lanza el trabajo `anim3d`: guarda antes si hay cambios, renderiza el plano guardado a 1280×720 y 24 fps, sin rótulos ni subtítulos, con las voces de las líneas que tienen audio (el resto, silencio, y sin ambiente) y deja `storyboards/<id>/animacion-3d/<código>-vNN.mp4` con su entrada en `index.json`. Cada render es una versión nueva; nunca sobrescribe. El audio que falta o que se sale del plano no lo detiene: queda en los avisos del índice.
+4. El vídeo aparece en la tarjeta de la viñeta, en «Animación 3D», con sus versiones; si la vista Storyboard está abierta y sin cambios, se actualiza sola al terminar.
+
+El reparto se coloca con el de la secuencia (`cast`) o con `staging.proxies`: si las colocaciones quedan lejos de la cámara, el vídeo sale sin actores en cuadro. Las coordenadas del fichero de cámaras son del modelo del entorno: con `spot` o `rotation` en la secuencia o en el plano no cuadran (el script lo avisa).
+
 ## Qué controla cada referencia
 
 | Referencia | Controla | No controla |
