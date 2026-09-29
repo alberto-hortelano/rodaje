@@ -55,6 +55,10 @@ dialog .two label{margin:12px 0}
 
 /* Buscador y facetas (#59): barra pegada arriba (debajo de la barra lateral en móvil, --sticky-top) y fichas de faceta. */
 .filter-bar{position:sticky;top:var(--sticky-top,0);z-index:4;background:#f2f3ef;border-bottom:1px solid var(--line);padding:10px 0;margin-bottom:18px}.filter-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.filter-row input{flex:1 1 220px;min-width:0;font-size:16px}.filter-count{font-size:12px;color:var(--muted)}.filter-facets>summary{cursor:pointer;font-size:12px;font-weight:600;margin-top:8px;color:var(--ink)}.facet{border:0;padding:0;margin:8px 0;display:flex;flex-wrap:wrap;gap:6px;min-width:0}.facet legend{font-size:11px;color:#809078;padding:0;margin-bottom:4px;float:left;width:100%}.chip{border-radius:20px;padding:5px 10px;font-size:12px;font-weight:500}.chip small{color:var(--muted);margin-left:2px}.chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#f2f3ef}.chip[aria-pressed=true] small{color:#c9d3c6}.filter-hits{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:4px;font-size:12px;overflow-wrap:anywhere}.filter-hits li{line-height:1.4}.filter-facets [data-filter-chips]{max-height:45vh;overflow:auto;overscroll-behavior:contain}.sbs-ficha h3{margin:18px 0 10px}.sbs-act,.sbs-group{margin-bottom:22px}.filter-hidden{margin-bottom:14px}
+/* Enlaces de relaciones (#61): una línea compacta de personajes, ambientes y entornos 3D bajo cada nodo. */
+.rel-links{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:11px;line-height:1.5;color:var(--muted);margin:6px 0 0;min-width:0;overflow-wrap:anywhere}.rel-g{min-width:0}
+.rel-k{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-right:4px}.rel-note{font-style:italic}.rel-off{color:#90611f}.rel-inh{opacity:.85}.rel-more{border-bottom:1px dotted currentColor;cursor:help}
+.tree-shot .rel-links,.tree-panel .rel-links{flex-basis:100%;margin:0 0 2px}.card .rel-links{margin:-8px 0 12px}.rel-head{margin:-14px 0 20px}
 
 /* Tema oscuro por defecto. Sobrescribe los colores claros definidos arriba. */
 :root{color:#dfe4dc;background:#101514;--accent:#c9e37a;--ink:#e6efe4;--muted:#9aa89f;--line:#2a3532}
@@ -68,7 +72,7 @@ label{color:#9aa89f}p{color:#a9b5ad}a{color:#9fd0b6}
 .topbar{background:#131a19;border-color:var(--line)}.topbar span{color:#8f9d95}
 .card,.panel,.line,.stepper,.sb-card{background:#171f1d;border-color:var(--line)}.card img{background:#0f1413}
 .step{border-color:var(--line)}.step.active{background:#22302b}.step b{color:#7d8f85}
-.pill{background:#243029;color:#b9cfa4}.pill.ok{background:#2c4a24;color:#c9efb0}.pill.warn{background:#4a3a1c;color:#f3d8a0}
+.pill{background:#243029;color:#b9cfa4}.pill.ok{background:#2c4a24;color:#c9efb0}.pill.warn{background:#4a3a1c;color:#f3d8a0}.rel-off{color:#f3d8a0}
 .cover{background:linear-gradient(135deg,#1d2f2b,#2d3f37)}
 .empty{background:#141b19;border-color:#33413c}.note{background:#1c2622;color:#b7c4b3}
 .job{border-color:var(--line)}.job small{color:#8a978e}td,th{border-color:var(--line)}th{color:#8f9d95}
