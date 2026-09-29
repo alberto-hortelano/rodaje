@@ -1,7 +1,7 @@
 // Navegación (#57): rutas con alias, árbol de la escaleta hasta los planos, migas y versión del story, vista Planos y cifras del proyecto.
 // Puro sobre el fixture de #56, más comprobaciones de fuente (menú, vistas, renombrados) y estilo.
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
-import {VIEWS,VIEW_ALIASES,ROUTE_PARAMS,ROUTE_KEYS,routeView,parseRoute,routeQuery,routeKey,navActive,treeModel,treePath,treeOpenKeys,storyCrumbs,storyVersionOptions,setCurrentStory,shotGroups,projectStats,storyMigrationPlan} from '../app/workflow.mjs';
+import {VIEWS,VIEW_ALIASES,ROUTE_PARAMS,ROUTE_KEYS,FILTER_PARAMS,hasFilters,routeView,parseRoute,routeQuery,routeKey,navActive,treeModel,treePath,treeOpenKeys,storyCrumbs,storyVersionOptions,setCurrentStory,shotGroups,projectStats,storyMigrationPlan} from '../app/workflow.mjs';
 import {validate} from '../app/store.mjs';
 import {storysProject,storysSpec,planShot} from './fixtures/escaleta-storys.mjs';
 
@@ -27,9 +27,9 @@ test('rutas: sin vista, library o desconocida → árbol; sin proyecto, library 
 
 test('rutas: solo los parámetros de la vista; el resto null',()=>{
  const all='&episode=e&sequence=s&shot=t&storyboard=b&environment=n&character=h&location=l&scene=c&node=k';
- assert.deepEqual(parseRoute('?project=x&view=storyboard'+all),{project:'x',view:'storyboard',episode:null,sequence:null,shot:null,storyboard:'b',environment:null,character:null,location:null,scene:'c',node:null});
- assert.deepEqual(parseRoute('?project=x&view=shot'+all),{project:'x',view:'shot',episode:'e',sequence:'s',shot:'t',storyboard:null,environment:null,character:null,location:null,scene:null,node:null});
- assert.deepEqual(parseRoute('?project=x&view=shots'+all),{project:'x',view:'shots',episode:null,sequence:'s',shot:null,storyboard:null,environment:null,character:null,location:null,scene:null,node:null});
+ assert.deepEqual(parseRoute('?project=x&view=storyboard'+all),{project:'x',view:'storyboard',episode:null,sequence:null,shot:null,storyboard:'b',environment:null,character:null,location:null,scene:'c',node:null,q:null,f:null});
+ assert.deepEqual(parseRoute('?project=x&view=shot'+all),{project:'x',view:'shot',episode:'e',sequence:'s',shot:'t',storyboard:null,environment:null,character:null,location:null,scene:null,node:null,q:null,f:null});
+ assert.deepEqual(parseRoute('?project=x&view=shots'+all),{project:'x',view:'shots',episode:null,sequence:'s',shot:null,storyboard:null,environment:null,character:null,location:null,scene:null,node:null,q:null,f:null});
  assert.equal(parseRoute('?project=x&view=tree'+all).node,'k');assert.equal(parseRoute('?project=x&view=environment'+all).environment,'n');assert.equal(parseRoute('?project=x&view=rehearsal'+all).episode,'e');
  assert.deepEqual(Object.values(parseRoute('?project=x&view=overview'+all)).filter(Boolean),['x','overview']);
  assert.equal(parseRoute('?project=x&view=storyboard&storyboard=b&scene=').scene,null);});
@@ -58,8 +58,8 @@ test('navActive: vistas de detalle marcan su lista',()=>{
 
 test('rutas: páginas de personaje y de ambiente (#60)',()=>{
  const all='&episode=e&sequence=s&shot=t&storyboard=b&environment=n&character=h&location=l&scene=c&node=k';
- assert.deepEqual(parseRoute('?project=x&view=character'+all),{project:'x',view:'character',episode:null,sequence:null,shot:null,storyboard:null,environment:null,character:'h',location:null,scene:null,node:null});
- assert.deepEqual(parseRoute('?project=x&view=location'+all),{project:'x',view:'location',episode:null,sequence:null,shot:null,storyboard:null,environment:null,character:null,location:'l',scene:null,node:null});
+ assert.deepEqual(parseRoute('?project=x&view=character'+all),{project:'x',view:'character',episode:null,sequence:null,shot:null,storyboard:null,environment:null,character:'h',location:null,scene:null,node:null,q:null,f:null});
+ assert.deepEqual(parseRoute('?project=x&view=location'+all),{project:'x',view:'location',episode:null,sequence:null,shot:null,storyboard:null,environment:null,character:null,location:'l',scene:null,node:null,q:null,f:null});
  for(const v of ['tree','storyboard','shot','characters','locations','environment'])assert.deepEqual([parseRoute('?project=x&view='+v+all).character,parseRoute('?project=x&view='+v+all).location],[null,null],v);
  assert.equal(parseRoute('?project=x&view=character&character=').character,null);assert.equal(parseRoute('?view=character&character=h').view,'library');
  for(const q of ['?project=x&view=character&character=ana','?project=x&view=location&location=plaza%20mayor','?project=x&view=character'])assert.equal(routeQuery(parseRoute(q)),q);
@@ -67,6 +67,26 @@ test('rutas: páginas de personaje y de ambiente (#60)',()=>{
  const k=q=>routeKey(parseRoute(q));assert.notEqual(k('?project=x&view=character&character=a'),k('?project=x&view=character&character=b'));
  assert.notEqual(k('?project=x&view=location&location=a'),k('?project=x&view=location&location=b'));assert.equal(k('?project=x&view=location&location=a'),JSON.stringify(['x','location','a']));
  assert.deepEqual(ROUTE_KEYS.filter(x=>!Object.values(ROUTE_PARAMS).flat().includes(x)),[]);});
+
+test('rutas: q y f del buscador (#59) solo en Storyboards y Planos, fuera del scroll',()=>{
+ const f='act:e1,cast:ana';
+ for(const q of ['?project=x&view=storyboards&q=luna%20roja&f='+f,'?project=x&view=shots&sequence=s&q=caf%C3%A9&f='+f,'?project=x&view=storyboards&f=cast:a%253Ab'])assert.equal(routeQuery(parseRoute(q)),q);
+ assert.deepEqual([parseRoute('?project=x&view=storyboards&q=luna&f='+f).q,parseRoute('?project=x&view=storyboards&q=luna&f='+f).f],['luna',f]);
+ for(const v of ['tree','storyboard','characters','shot','overview'])assert.deepEqual([parseRoute('?project=x&view='+v+'&q=a&f='+f).q,parseRoute('?project=x&view='+v+'&q=a&f='+f).f],[null,null],v);
+ assert.equal(routeQuery({project:'x',view:'shots',q:'a b',f}),'?project=x&view=shots&q=a%20b&f=act:e1,cast:ana');assert.equal(routeQuery({project:'x',view:'tree',q:'a',f}),'?project=x&view=tree');
+ assert.equal(routeQuery({project:'x',view:'storyboards',q:'',f:null}),'?project=x&view=storyboards');
+ const k=q=>routeKey(parseRoute(q));assert.equal(k('?project=x&view=storyboards&q=a&f='+f),k('?project=x&view=storyboards'));assert.equal(k('?project=x&view=shots&sequence=s&q=a'),JSON.stringify(['x','shots']));
+ assert.deepEqual(FILTER_PARAMS,['q','f']);assert.deepEqual(Object.keys(ROUTE_PARAMS).filter(hasFilters).sort(),['shots','storyboards']);
+ assert.deepEqual(Object.values(ROUTE_PARAMS).flat().filter(x=>!ROUTE_KEYS.includes(x)),[],'todo parámetro de vista está en ROUTE_KEYS');});
+
+test('fuente: buscador de Storyboards y Planos (#59)',()=>{
+ const filt=fs.readFileSync(new URL('../app/filtros.source.js',import.meta.url),'utf8');
+ assert.match(src,/import \{filterBarHTML,mountFilters,loadFilters,saveFilters\} from '\.\/filtros\.source\.js'/);
+ for(const x of ['filterMount?.dispose();filterMount=null;','data-filter-results','storyboardItems(p)','shotItems(p)','filterShotGroups(shotGroups(p),','La secuencia enfocada queda oculta por los filtros',"btn('+ Storyboard','new-storyboard','primary')","btn('Importar JSON','import-storyboard')"])assert.ok(src.includes(x),'falta '+x);
+ for(const x of ["'rodaje-filtros-'",'role="search"','data-filter-q','aria-pressed','aria-live="polite"','e.isComposing','setTimeout(','data-filter-clear'])assert.ok(filt.includes(x),'falta '+x);
+ assert.ok(!/\brender\(|\bsave\(|\bdirty\b|\bapi\(/.test(filt.replace(/^\/\/.*$/gm,'')),'filtrar no repinta la vista ni escribe');
+ const rule=sel=>new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\{([^}]*)\\}').exec(css)?.[1]||'';
+ assert.match(rule('.filter-bar'),/position:sticky/);assert.match(rule('.filter-bar'),/top:var\(--sticky-top,0\)/);assert.match(rule('.filter-row input'),/font-size:16px/);assert.match(rule('.chip'),/border-radius:20px/);});
 
 test('treeModel sin migrar: todas son fichas; los storys van a Sin secuencia con su secuencia de planos',()=>{
  const p=storysProject(),before=structuredClone(p),m=treeModel(p);assert.deepEqual(p,before);

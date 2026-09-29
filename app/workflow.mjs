@@ -271,17 +271,20 @@ export function modelSpaceEnvironment(p,modelSpace){const m=modelSpace?.model;re
 // con proyecto, una vista desconocida, library o ninguna llevan al árbol. scene, node y sequence de shots enfocan y no cuentan para el scroll.
 export const VIEWS=['tree','overview','ideas','characters','locations','environments','environment','character','location','storyboards','storyboard','shots','shot','rehearsal','anim','montaje','issues','jobs'];
 export const VIEW_ALIASES={outline:'tree',episodes:'shots',ship:'environments'};
-export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene'],environment:['environment'],character:['character'],location:['location'],tree:['node'],shots:['sequence']};
+export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene'],environment:['environment'],character:['character'],location:['location'],tree:['node'],shots:['sequence','q','f'],storyboards:['q','f']};
 export const FOCUS_PARAMS={storyboard:['scene'],tree:['node'],shots:['sequence']};
-export const ROUTE_KEYS=['episode','sequence','shot','storyboard','environment','character','location','scene','node'];
+export const ROUTE_KEYS=['episode','sequence','shot','storyboard','environment','character','location','scene','node','q','f'];
+// Buscador y facetas (#59): q y f no cuentan para el scroll; en la URL, f conserva ':' y ',' legibles (f=act:e1,cast:ana).
+export const FILTER_PARAMS=['q','f'];
+const routeValue=(k,v)=>FILTER_PARAMS.includes(k)?encodeURIComponent(v).replace(/%3A/g,':').replace(/%2C/g,','):encodeURIComponent(v);
 export const routeView=v=>typeof v==='string'&&Object.hasOwn(VIEW_ALIASES,v)?VIEW_ALIASES[v]:v;
 export function parseRoute(search){const q=search instanceof URLSearchParams?search:new URLSearchParams(search||''),project=q.get('project')||null,v=routeView(q.get('view'));
  const view=project?(VIEWS.includes(v)?v:'tree'):(v==='jobs'?'jobs':'library'),own=ROUTE_PARAMS[view]||[];
  return {project,view,...Object.fromEntries(ROUTE_KEYS.map(k=>[k,own.includes(k)?q.get(k)||null:null]))};}
 export function routeQuery(r){const parts=[];if(r?.project)parts.push(['project',r.project]);parts.push(['view',r?.view||'library']);
  for(const k of ROUTE_PARAMS[r?.view]||[])if(r[k]!==null&&r[k]!==undefined&&r[k]!=='')parts.push([k,r[k]]);
- return '?'+parts.map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');}
-export function routeKey(r){const focus=FOCUS_PARAMS[r?.view]||[];return JSON.stringify([r?.project||'',r?.view,...(ROUTE_PARAMS[r?.view]||[]).filter(k=>!focus.includes(k)).map(k=>r[k])].map(x=>x??''));}
+ return '?'+parts.map(([k,v])=>k+'='+routeValue(k,v)).join('&');}
+export function routeKey(r){const focus=[...FOCUS_PARAMS[r?.view]||[],...FILTER_PARAMS];return JSON.stringify([r?.project||'',r?.view,...(ROUTE_PARAMS[r?.view]||[]).filter(k=>!focus.includes(k)).map(k=>r[k])].map(x=>x??''));}
 // Botón del menú que se marca en cada vista.
 export function navActive(view){return view==='environment'?'environments':view==='character'?'characters':view==='location'?'locations':view==='storyboard'?'storyboards':['shot','anim','rehearsal'].includes(view)?'shots':view;}
 // Entorno 3D enlazado a un ambiente (location.environment), o null.
@@ -1145,6 +1148,84 @@ export function appearanceEnvironments(index,key,{current=true}={}){const n=inde
  if(n.kind==='character'){for(const from of new Set(linksTo(index,key,{rel:['appears','speaks'],current}).map(l=>l.from)))for(const l of index.from.get(from)||[])if(l.rel==='environment')add(l.to,l.envVia,from);}
  else if(n.kind==='location')for(const ek of index.locationEnvironments.get(key)||[]){add(ek,n.data?.environment===index.nodes.get(ek).id?'environment':'modelSpace');for(const l of linksTo(index,ek,{current,where:l=>l.through===key}))add(ek,null,l.from);}
  return [...out.values()].sort((a,b)=>index.nodes.get(a.key).order-index.nodes.get(b.key).order).map(({from,...x})=>({...x,nodes:from.size}));}
+// ---- Buscador y facetas (#59): lógica de la barra de búsqueda de las vistas transversales (docs/ARQUITECTURA.md). Puras; el estado va en la URL
+// (q, f) y en localStorage, nunca en proyecto.json. Ítem {key, kind, id, text, facets:{faceta:[valores]}, group, subs?, ref}; sub {key, kind, scene,
+// label, text, facets}. Definición de faceta {id, label, sub?, values:[{value, label}]}; sub: también se exige a las subs para marcar coincidencias.
+export function searchText(s){return String(s??'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/\s+/g,' ').trim();}
+export function queryTerms(q){return searchText(q).split(' ').filter(Boolean);}
+const activeFilters=filters=>Object.entries(isObj(filters)?filters:{}).filter(([,v])=>Array.isArray(v)&&v.length);
+const facetOk=(facets,active)=>active.every(([id,vals])=>(Array.isArray(facets?.[id])?facets[id]:[]).some(v=>vals.includes(v)));
+const hasAll=(text,terms)=>{const t=searchText(text);return terms.every(x=>t.includes(x));};
+const restTerms=(item,terms)=>{const t=searchText(item?.text);return terms.filter(x=>!t.includes(x));};
+// Todo término en el texto del ítem o, los que falten, todos juntos en una misma sub; cada faceta activa, algún valor (OR dentro, AND entre facetas).
+export function filterItems(items,query,filters){const terms=queryTerms(query),active=activeFilters(filters);
+ return (Array.isArray(items)?items:[]).filter(item=>{if(!facetOk(item.facets,active))return false;const rest=restTerms(item,terms);return !rest.length||(item.subs||[]).some(s=>hasAll(s.text,rest));});}
+// Subs que explican la coincidencia: las que tienen los términos que faltan en el ítem y cumplen las facetas activas marcadas sub.
+export function itemHits(item,query,filters,defs){const rest=restTerms(item,queryTerms(query)),subIds=new Set((defs||[]).filter(d=>d.sub).map(d=>d.id)),active=activeFilters(filters).filter(([id])=>subIds.has(id));
+ if(!rest.length&&!active.length)return [];return (item?.subs||[]).filter(s=>hasAll(s.text,rest)&&facetOk(s.facets,active));}
+// Facetas con recuento: cada una sobre los ítems que pasan los demás filtros. Se ocultan las de un solo valor en todo el conjunto (salvo activas)
+// y los valores sin ítems (salvo activos); orden de la definición y después los desconocidos, con su valor por etiqueta.
+export function facets(items,query,filters,defs){const list=Array.isArray(items)?items:[],f=isObj(filters)?filters:{};
+ return (defs||[]).flatMap(d=>{const active=Array.isArray(f[d.id])?f[d.id]:[],all=new Set(list.flatMap(i=>i.facets?.[d.id]||[]));if(all.size<=1&&!active.length)return [];
+  const count=new Map();for(const i of filterItems(list,query,{...f,[d.id]:[]}))for(const v of new Set(i.facets?.[d.id]||[]))count.set(v,(count.get(v)||0)+1);
+  const known=(d.values||[]).map(x=>x.value),vals=[...(d.values||[]).filter(x=>all.has(x.value)||active.includes(x.value)),...[...new Set([...all,...active])].filter(v=>!known.includes(v)).map(v=>({value:v,label:String(v)}))];
+  const values=vals.map(x=>({value:x.value,label:x.label,count:count.get(x.value)||0,active:active.includes(x.value)})).filter(x=>x.count||x.active);
+  return values.length?[{id:d.id,label:d.label,active:active.length>0,values}]:[];});}
+// Modelo de la barra: filtros sin facetas desconocidas, facetas, cifras y resultados con sus coincidencias.
+export function filterView(items,defs,query,filters){const ids=new Set((defs||[]).map(d=>d.id)),clean=Object.fromEntries(activeFilters(filters).filter(([id])=>ids.has(id)));
+ const results=filterItems(items,query,clean).map(item=>({item,hits:itemHits(item,query,clean,defs)}));
+ return {total:(Array.isArray(items)?items:[]).length,shown:results.length,active:activeCount(query,clean),filters:clean,facets:facets(items,query,clean,defs),results};}
+// f de la URL: «faceta:valor,…» con cada parte codificada; se ignoran los trozos mal formados y los repetidos.
+export function parseFilters(s){const out={};for(const piece of String(s??'').split(',')){const i=piece.indexOf(':');if(i<1||i===piece.length-1)continue;let k,v;try{k=decodeURIComponent(piece.slice(0,i));v=decodeURIComponent(piece.slice(i+1));}catch{continue;}
+ if(!k||!v||k==='__proto__')continue;if(!Object.hasOwn(out,k))out[k]=[];if(!out[k].includes(v))out[k].push(v);}return out;}
+export function filtersParam(filters){return activeFilters(filters).flatMap(([k,vs])=>vs.map(v=>encodeURIComponent(k)+':'+encodeURIComponent(v))).join(',');}
+export function toggleFilter(filters,id,value){const out={...(isObj(filters)?filters:{})},cur=Array.isArray(out[id])?out[id]:[],next=cur.includes(value)?cur.filter(v=>v!==value):[...cur,value];if(next.length)out[id]=next;else delete out[id];return out;}
+export function activeCount(query,filters){return (String(query??'').trim()?1:0)+activeFilters(filters).reduce((n,[,v])=>n+v.length,0);}
+export function hasFilters(view){return !!ROUTE_PARAMS[view]?.includes('q');}
+const relIds=(index,key,rels)=>[...new Set((index.from.get(key)||[]).filter(l=>rels.includes(l.rel)).map(l=>l.to.split('/').slice(1).join('/')))];
+const actLabel=p=>p?.type==='serie'?'Capítulo':'Acto';
+const entityValues=list=>(Array.isArray(list)?list:[]).filter(x=>isObj(x)&&typeof x.id==='string').map(x=>({value:x.id,label:x.name||x.id}));
+const episodeValues=p=>(Array.isArray(p?.episodes)?p.episodes:[]).filter(isObj).map(e=>({value:e.id,label:e.title||e.id}));
+// Storyboards: un ítem por story en el orden del árbol (actos › fichas › storys, pruebas, sin secuencia), con sus escenas y viñetas como subs,
+// y uno por prueba (sin subs). En el story, cast, loc y zone son la unión de sus viñetas (loc también de sus escenas).
+export function storyboardItems(p){const model=treeModel(p),idx=relationIndexFor(p),items=[],fichas=[];
+ const story=(n,group,extra)=>{const b=n.storyboard,subs=[],cast=[],loc=[],zone=[];
+  for(const sn of n.children.filter(c=>c.kind==='scene')){const s=sn.scene,sl=relIds(idx,relKey('scene',b.id,s.id),['location']);loc.push(...sl);
+   subs.push({key:sn.key,kind:'scene',scene:s.id,label:s.title||s.id,text:searchText(s.title||s.id),facets:{loc:sl}});
+   for(const {panel:t} of sn.panels){if(typeof t.id!=='string')continue;const k=relKey('panel',t.id),c=relIds(idx,k,['appears','speaks']),l=relIds(idx,k,['location']),z=[zoneOf(p,t.zone).id];cast.push(...c);loc.push(...l);zone.push(...z);
+    subs.push({key:k,kind:'panel',scene:s.id,label:(s.title||s.id)+' · '+[t.code,t.title].filter(Boolean).join(' '),text:searchText([t.code,t.title].filter(Boolean).join(' ')),facets:{cast:c,loc:l,zone:z}});}}
+  items.push({key:n.key,kind:'story',id:b.id,text:searchText([b.title,b.subtitle,...extra].filter(Boolean).join(' ')),facets:{...group.facets,cast:uniq(cast),loc:uniq(loc),zone:uniq(zone)},group:group.group,subs,ref:{storyboard:b,version:n.version,current:n.current}});};
+ for(const a of model.acts){const e=a.episode;for(const f of a.children){const ficha={id:f.sequence.id,code:f.code,title:f.sequence.title||f.sequence.id};fichas.push(ficha);
+  for(const n of f.children)story(n,{group:{section:'acts',episode:e,ficha},facets:{act:[e.id],sequence:[ficha.id],kind:[n.current?'current':'other'],...(n.version?{version:['v'+n.version]}:{})}},[e.title,f.code+' '+ficha.title]);}}
+ for(const g of model.groups){if(g.kind==='tests')for(const n of g.children){const s=n.sequence,k=relKey('sequence',s.id),rel=r=>[...relatedTo(idx,k,{rel:r}).keys()].map(x=>x.split('/').slice(1).join('/'));
+   items.push({key:n.key,kind:'test',id:s.id,text:searchText([s.title||s.id,n.episode.title].filter(Boolean).join(' ')),facets:{act:[n.episode.id],kind:['test'],cast:rel(['appears','speaks']),loc:rel(['location'])},group:{section:'tests',episode:n.episode,ficha:null},ref:{episode:n.episode,sequence:s,shots:n.shots.length}});}
+  if(g.kind==='unlinked')for(const n of g.children)story(n,{group:{section:'unlinked',episode:null,ficha:null},facets:{kind:['unlinked']}},[]);}
+ const versions=uniq(items.flatMap(i=>i.facets.version||[])).sort((a,b)=>Number(a.slice(1))-Number(b.slice(1)));
+ const defs=[{id:'act',label:actLabel(p),values:episodeValues(p)},{id:'sequence',label:'Secuencia',values:fichas.map(f=>({value:f.id,label:f.code+' · '+f.title}))},
+  {id:'kind',label:'Estado',values:[{value:'current',label:'Vigente'},{value:'other',label:'No vigente'},{value:'unlinked',label:'Sin secuencia'},{value:'test',label:'Prueba'}]},
+  {id:'version',label:'Versión',values:versions.map(v=>({value:v,label:v}))},{id:'cast',label:'Personaje',sub:true,values:entityValues(p?.characters)},
+  {id:'loc',label:'Ambiente',sub:true,values:entityValues(p?.locations)},{id:'zone',label:'Zona',sub:true,values:projectZones(p).map(z=>({value:z.id,label:z.label}))}];
+ return {items,defs};}
+// Resultados de Storyboards agrupados (storyboardSections es la de los montajes): actos › fichas (en orden de los ítems), pruebas y sin secuencia; sin grupos vacíos.
+export function storyboardResultSections(results){const acts=new Map(),tests=[],unlinked=[];
+ for(const r of results||[]){const g=r.item.group||{};if(g.section==='tests'){tests.push(r);continue;}if(g.section!=='acts'){unlinked.push(r);continue;}
+  if(!acts.has(g.episode.id))acts.set(g.episode.id,{kind:'act',episode:g.episode,fichas:[]});const a=acts.get(g.episode.id);let f=a.fichas.find(x=>x.ficha.id===g.ficha.id);
+  if(!f){f={ficha:g.ficha,code:g.ficha.code,results:[]};a.fichas.push(f);}f.results.push(r);}
+ return [...acts.values(),...(tests.length?[{kind:'tests',results:tests}]:[]),...(unlinked.length?[{kind:'unlinked',results:unlinked}]:[])];}
+// Planos: un ítem por plano (actos › secuencias › planos) con texto de título, descripción, líneas y secuencia; cast y loc del índice de relaciones.
+export function shotItems(p){const idx=relationIndexFor(p),items=[],seqs=[];
+ for(const {episode:e,sequence:s} of seqList(p)){if(!isObj(e))continue;const role=sequenceRole(p,s);seqs.push({value:s.id,label:s.title||s.id});
+  (Array.isArray(s.shots)?s.shots:[]).forEach((t,index)=>{if(!isObj(t))return;const k=relKey('shot',t.id);
+   items.push({key:k,kind:'shot',id:t.id,text:searchText([t.title,t.description,...(Array.isArray(t.lines)?t.lines:[]).map(l=>l?.text),s.title].filter(x=>typeof x==='string').join(' ')),
+    facets:{act:[e.id],role:[role],sequence:[s.id],loc:relIds(idx,k,['location']),cast:relIds(idx,k,['appears','speaks']),panel:[idx.shotPanel.has(k)?'yes':'no']},group:{episode:e.id,sequence:s.id,role},ref:{episode:e,sequence:s,shot:t,index}});});}
+ const defs=[{id:'act',label:actLabel(p),values:episodeValues(p)},{id:'role',label:'Tipo',values:[{value:'container',label:'De storys'},{value:'outline',label:'Propios'},{value:'test',label:'Pruebas'}]},
+  {id:'sequence',label:'Secuencia',values:seqs},{id:'loc',label:'Ambiente',values:entityValues(p?.locations)},{id:'cast',label:'Personaje',values:entityValues(p?.characters)},
+  {id:'panel',label:'Viñeta',values:[{value:'yes',label:'Con viñeta'},{value:'no',label:'Sin viñeta'}]}];
+ return {items,defs};}
+// shotGroups con los planos que quedan ({shot, index} con su posición original). keep null: todos; un Set de ids: sin secuencias, grupos ni actos vacíos.
+export function filterShotGroups(groups,keep){return (groups||[]).map(({episode,groups:gs,empty})=>{
+ const out=gs.map(g=>({role:g.role,sequences:g.sequences.map(x=>({...x,shots:(x.sequence.shots||[]).map((shot,index)=>({shot,index})).filter(y=>!keep||keep.has(y.shot?.id))})).filter(x=>!keep||x.shots.length)})).filter(g=>g.sequences.length);
+ return {episode,groups:out,empty:keep?[]:empty};}).filter(x=>!keep||x.groups.length);}
 // Ambiente de las secuencias sin planos a partir de environments[].sequences (scripts/ambientes-secuencias.mjs). choose: {entorno: ambiente} cuando el
 // entorno es de varios ambientes. Solo propone location en secuencias sin planos (ningún digest cambia); lo demás, con aviso.
 export function sequenceLocationPlan(p,{choose={}}={}){const warnings=[],errors=[],ops=[],envs=(Array.isArray(p?.environments)?p.environments:[]).filter(isObj),locs=(Array.isArray(p?.locations)?p.locations:[]).filter(isObj);

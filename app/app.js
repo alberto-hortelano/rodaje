@@ -45,14 +45,14 @@ function speakLine(synth, params, voices, { onstart, onend } = {}) {
 
 // app/rehearsal.source.js
 async function mountRehearsal(root, { project, episode }) {
-  const esc2 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const esc3 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const shots = episode.sequences.flatMap((s, si) => s.shots.map((t2, ti) => ({ s, t: t2, si, ti })));
   let index = 0, stage2, disposed = false, playing = false, token = 0, raf, abortWait, loadVersion = 0, stageKey = null;
   const cfg = rehearsalConfig(project), speech = cfg.speech;
   const synth = window.speechSynthesis;
   let voices = [];
   const saved = loadVoicePrefs(project.id);
-  root.innerHTML = `<div class="panel"><div class="row"><label>Secuencia<select data-scene>${episode.sequences.map((s, i2) => `<option value="${i2}">${esc2(s.title)}</option>`).join("")}</select></label><label>Plano<select data-shot></select></label></div><div class="stagebox"><div data-viewport style="aspect-ratio:16/9"></div><div data-subtitle class="rehearsal-subtitle" aria-live="polite"></div></div><div class="actions"><button data-prev>\u2190 Anterior</button><button data-play class="primary">\u25B6 Ensayar cap\xEDtulo</button><button data-stop>\u25A0 Parar</button><button data-next>Siguiente \u2192</button><label>Velocidad <select data-rate><option value=".9">0,9\xD7</option><option value="1">1\xD7</option><option value="1.1" selected>1,1\xD7</option></select></label><label><input data-silent type="checkbox" style="width:auto"> Solo subt\xEDtulos</label></div><p data-status role="status"></p><details><summary>Voces del navegador por personaje</summary><div class="grid" data-voices></div></details><h3 style="margin-top:20px" data-title></h3><div data-script class="rehearsal-script"></div></div>`;
+  root.innerHTML = `<div class="panel"><div class="row"><label>Secuencia<select data-scene>${episode.sequences.map((s, i2) => `<option value="${i2}">${esc3(s.title)}</option>`).join("")}</select></label><label>Plano<select data-shot></select></label></div><div class="stagebox"><div data-viewport style="aspect-ratio:16/9"></div><div data-subtitle class="rehearsal-subtitle" aria-live="polite"></div></div><div class="actions"><button data-prev>\u2190 Anterior</button><button data-play class="primary">\u25B6 Ensayar cap\xEDtulo</button><button data-stop>\u25A0 Parar</button><button data-next>Siguiente \u2192</button><label>Velocidad <select data-rate><option value=".9">0,9\xD7</option><option value="1">1\xD7</option><option value="1.1" selected>1,1\xD7</option></select></label><label><input data-silent type="checkbox" style="width:auto"> Solo subt\xEDtulos</label></div><p data-status role="status"></p><details><summary>Voces del navegador por personaje</summary><div class="grid" data-voices></div></details><h3 style="margin-top:20px" data-title></h3><div data-script class="rehearsal-script"></div></div>`;
   const $3 = (s) => root.querySelector(s), status2 = (t2) => $3("[data-status]").textContent = t2;
   const speakerIds = episodeSpeakers(episode);
   function refreshVoices() {
@@ -60,7 +60,7 @@ async function mountRehearsal(root, { project, episode }) {
     $3("[data-voices]").innerHTML = speakerIds.map((id3) => {
       const c = project.characters.find((c2) => c2.id === id3);
       const selected = ttsVoiceURI({ voices, speakerIds, id: id3, saved, base: speech.base });
-      return `<label>${esc2(c.name)}<select data-person="${id3}"><option value="">Voz predeterminada</option>${voices.map((v2) => `<option value="${esc2(v2.voiceURI)}" ${selected === v2.voiceURI ? "selected" : ""}>${esc2(v2.name)} \xB7 ${esc2(v2.lang)}</option>`).join("")}</select></label>`;
+      return `<label>${esc3(c.name)}<select data-person="${id3}"><option value="">Voz predeterminada</option>${voices.map((v2) => `<option value="${esc3(v2.voiceURI)}" ${selected === v2.voiceURI ? "selected" : ""}>${esc3(v2.name)} \xB7 ${esc3(v2.lang)}</option>`).join("")}</select></label>`;
     }).join("");
     root.querySelectorAll("[data-person]").forEach((el) => el.onchange = () => {
       saved[el.dataset.person] = el.value;
@@ -89,7 +89,7 @@ async function mountRehearsal(root, { project, episode }) {
     index = Math.max(0, Math.min(shots.length - 1, i2));
     const { s, t: t2, si, ti } = shots[index];
     $3("[data-scene]").value = si;
-    $3("[data-shot]").innerHTML = s.shots.map((shot, j) => `<option value="${j}" ${j === ti ? "selected" : ""}>${j + 1} \xB7 ${esc2(shot.title)}</option>`).join("");
+    $3("[data-shot]").innerHTML = s.shots.map((shot, j) => `<option value="${j}" ${j === ti ? "selected" : ""}>${j + 1} \xB7 ${esc3(shot.title)}</option>`).join("");
     $3("[data-title]").textContent = `${si + 1}/${episode.sequences.length} \xB7 Plano ${ti + 1}/${s.shots.length} \xB7 ${s.title}`;
     $3("[data-script]").textContent = t2.description;
     $3("[data-subtitle]").textContent = t2.lines.length ? "Pulsa Ensayar para escuchar el di\xE1logo." : "ACCI\xD3N \xB7 " + t2.description;
@@ -248,7 +248,7 @@ ${l3.spokenText || l3.text}`;
 // app/montaje.source.js
 import { storyboardShot, chosenAttempt, blockAt } from "./workflow.mjs";
 async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus = null }) {
-  const esc2 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const esc3 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const media2 = (f2) => "/api/asset?project=" + p2.id + "&file=" + encodeURIComponent(f2);
   const fmt = (s) => Number.isFinite(s) ? `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0")}` : "\u2013";
   const store = (k, v2) => {
@@ -300,7 +300,7 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus
     timeline = cut?.blocks || [];
   }
   root.innerHTML = `<div class="mt">
-  <div class="mt-bar"><label>Lote<select data-mt="lote">${lotes.map((l3) => `<option value="${esc2(l3.id)}">${esc2(l3.id)} \xB7 ${l3.blocks} bloques</option>`).join("")}</select></label><label>Corte<select data-mt="cut"></select></label><div class="mt-bar-info"></div><button data-mt="montar" class="primary">Volver a montar</button></div>
+  <div class="mt-bar"><label>Lote<select data-mt="lote">${lotes.map((l3) => `<option value="${esc3(l3.id)}">${esc3(l3.id)} \xB7 ${l3.blocks} bloques</option>`).join("")}</select></label><label>Corte<select data-mt="cut"></select></label><div class="mt-bar-info"></div><button data-mt="montar" class="primary">Volver a montar</button></div>
   <div class="mt-main"><div class="mt-player"><video data-mt="video" controls preload="metadata"></video><div class="mt-timeline" data-mt="timeline"></div><div class="mt-legend"><span class="mt-dot accepted"></span>Aceptada <span class="mt-dot pending"></span>Sin revisar <span class="mt-dot missing"></span>Sin toma <span class="mt-dot stale"></span>Cambiada desde el montaje \xB7 <kbd>Espacio</kbd> reproducir \xB7 <kbd>\u2190</kbd><kbd>\u2192</kbd> plano anterior/siguiente \xB7 <kbd>E</kbd> editar el plano actual</div></div>
   <aside class="mt-side" data-mt="side"></aside></div>
   <section class="mt-editor panel" data-mt="editor"></section></div>`;
@@ -308,16 +308,16 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus
   const lastLote = lotes.some((l3) => l3.id === focus?.lote) ? focus.lote : store("lote");
   $3("lote").value = lotes.some((l3) => l3.id === lastLote) ? lastLote : lotes[0].id;
   function renderBar() {
-    $3("cut").innerHTML = lote.cuts.length ? lote.cuts.map((c) => `<option value="${esc2(c.name)}" ${c === cut ? "selected" : ""}>${esc2(c.name)} \xB7 ${fmt(c.duration)}</option>`).join("") : "<option>Sin montar</option>";
+    $3("cut").innerHTML = lote.cuts.length ? lote.cuts.map((c) => `<option value="${esc3(c.name)}" ${c === cut ? "selected" : ""}>${esc3(c.name)} \xB7 ${fmt(c.duration)}</option>`).join("") : "<option>Sin montar</option>";
     const changed = lote.blocks.filter(stale).length, counts = lote.blocks.reduce((n, b2) => (n[stateOf(b2)]++, n), { accepted: 0, pending: 0, missing: 0 }), m2 = lote.montando;
-    root.querySelector(".mt-bar-info").innerHTML = `<span class="pill ok">${counts.accepted} aceptados</span> <span class="pill warn">${counts.pending} sin revisar</span>${counts.missing ? ` <span class="pill">${counts.missing} sin toma</span>` : ""}${changed ? ` <span class="pill mt-stale-pill">${changed} cambiados desde este corte</span>` : ""}${m2?.state === "running" ? ' <span class="pill">Montando\u2026</span>' : m2?.state === "failed" ? ` <span class="pill warn" title="${esc2(m2.error)}">El montaje fall\xF3</span>` : ""}`;
+    root.querySelector(".mt-bar-info").innerHTML = `<span class="pill ok">${counts.accepted} aceptados</span> <span class="pill warn">${counts.pending} sin revisar</span>${counts.missing ? ` <span class="pill">${counts.missing} sin toma</span>` : ""}${changed ? ` <span class="pill mt-stale-pill">${changed} cambiados desde este corte</span>` : ""}${m2?.state === "running" ? ' <span class="pill">Montando\u2026</span>' : m2?.state === "failed" ? ` <span class="pill warn" title="${esc3(m2.error)}">El montaje fall\xF3</span>` : ""}`;
     $3("montar").disabled = m2?.state === "running";
   }
   function renderTimeline() {
     const total = cut?.duration || timeline.at(-1)?.end || 1;
     $3("timeline").innerHTML = timeline.map((c) => {
       const b2 = blockById(c.block), sb = b2 && sbOf(b2);
-      return `<button class="mt-seg ${b2 ? stateOf(b2) : "missing"} ${b2 && stale(b2) ? "stale" : ""} ${selected === c.block ? "selected" : ""}" style="width:${(c.end - c.start) / total * 100}%" data-seg="${esc2(c.block)}" title="${esc2(c.block)}${sb ? " \xB7 " + esc2(sb.code + " " + sb.title) : ""} \xB7 ${fmt(c.start)}\u2013${fmt(c.end)}"><span>${esc2(sb?.code || c.block)}</span></button>`;
+      return `<button class="mt-seg ${b2 ? stateOf(b2) : "missing"} ${b2 && stale(b2) ? "stale" : ""} ${selected === c.block ? "selected" : ""}" style="width:${(c.end - c.start) / total * 100}%" data-seg="${esc3(c.block)}" title="${esc3(c.block)}${sb ? " \xB7 " + esc3(sb.code + " " + sb.title) : ""} \xB7 ${fmt(c.start)}\u2013${fmt(c.end)}"><span>${esc3(sb?.code || c.block)}</span></button>`;
     }).join("") + '<i class="mt-head"></i>';
     root.querySelectorAll("[data-seg]").forEach((el) => el.onclick = (e) => {
       const c = timeline.find((x2) => x2.block === el.dataset.seg), r = el.getBoundingClientRect();
@@ -338,16 +338,16 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus
       return;
     }
     const b2 = blockById(current2.block), t2 = b2 && shotOf(b2), sb = b2 && sbOf(b2), s = seqOf(), e = episodeOf(), a = b2 && b2.attempts.find((x2) => x2.n === current2.attempt), f2 = b2 && frameOf(b2);
-    el.innerHTML = `<div class="mt-now"><div class="row between"><h2>${esc2(sb?.code || current2.block)} \xB7 ${esc2(sb?.title || t2?.title || "")}</h2><span class="pill ${b2 ? { accepted: "ok", pending: "warn" }[stateOf(b2)] || "" : ""}">${b2 ? label[stateOf(b2)] : ""}</span></div>
-   <p class="tiny">Bloque ${esc2(current2.block)} \xB7 ${fmt(video.currentTime - current2.start)} de ${fmt(current2.end - current2.start)} \xB7 montaje ${fmt(video.currentTime)}</p>
-   ${f2 ? `<figure class="mt-frame"><img src="${media2(f2)}" alt="Vi\xF1eta ${esc2(sb?.code || "")}"><figcaption>Vi\xF1eta del storyboard \xB7 primer fotograma</figcaption></figure>` : ""}
+    el.innerHTML = `<div class="mt-now"><div class="row between"><h2>${esc3(sb?.code || current2.block)} \xB7 ${esc3(sb?.title || t2?.title || "")}</h2><span class="pill ${b2 ? { accepted: "ok", pending: "warn" }[stateOf(b2)] || "" : ""}">${b2 ? label[stateOf(b2)] : ""}</span></div>
+   <p class="tiny">Bloque ${esc3(current2.block)} \xB7 ${fmt(video.currentTime - current2.start)} de ${fmt(current2.end - current2.start)} \xB7 montaje ${fmt(video.currentTime)}</p>
+   ${f2 ? `<figure class="mt-frame"><img src="${media2(f2)}" alt="Vi\xF1eta ${esc3(sb?.code || "")}"><figcaption>Vi\xF1eta del storyboard \xB7 primer fotograma</figcaption></figure>` : ""}
    <dl class="mt-facts">
-    <dt>Toma</dt><dd>${current2.source === "generated" ? `v${current2.attempt} \xB7 ${esc2(model(a?.endpoint))}${current2.usedRange ? ` \xB7 tramo ${current2.usedRange.map(([x2, y2]) => `${x2}\u2013${y2} s`).join(", ")}` : ""}${current2.pending ? " \xB7 <b>sin revisar</b>" : ""}` : current2.source === "guide" ? "Gu\xEDa 3D" : "Sin toma"}${b2 && stale(b2) ? '<br><span class="mt-stale-text">Ha cambiado desde este corte</span>' : ""}</dd>
-    ${sb?.camera ? `<dt>C\xE1mara</dt><dd>${esc2(sb.camera)}</dd>` : ""}
-    <dt>Acci\xF3n</dt><dd>${esc2(sb?.action || t2?.description || "")}</dd>
-    ${sb?.sound ? `<dt>Sonido</dt><dd>${esc2(sb.sound)}</dd>` : ""}
-    ${(sb?.dialogue || []).length ? `<dt>Di\xE1logo</dt><dd>${sb.dialogue.map((d2) => `<b>${esc2(p2.characters.find((c) => c.id === d2.character)?.name || d2.character || "")}</b> ${esc2(d2.text || d2)}`).join("<br>")}</dd>` : ""}
-    <dt>Secuencia</dt><dd>${esc2(e?.title || "")} / ${esc2(s?.title || lote.meta.sequence)}</dd>
+    <dt>Toma</dt><dd>${current2.source === "generated" ? `v${current2.attempt} \xB7 ${esc3(model(a?.endpoint))}${current2.usedRange ? ` \xB7 tramo ${current2.usedRange.map(([x2, y2]) => `${x2}\u2013${y2} s`).join(", ")}` : ""}${current2.pending ? " \xB7 <b>sin revisar</b>" : ""}` : current2.source === "guide" ? "Gu\xEDa 3D" : "Sin toma"}${b2 && stale(b2) ? '<br><span class="mt-stale-text">Ha cambiado desde este corte</span>' : ""}</dd>
+    ${sb?.camera ? `<dt>C\xE1mara</dt><dd>${esc3(sb.camera)}</dd>` : ""}
+    <dt>Acci\xF3n</dt><dd>${esc3(sb?.action || t2?.description || "")}</dd>
+    ${sb?.sound ? `<dt>Sonido</dt><dd>${esc3(sb.sound)}</dd>` : ""}
+    ${(sb?.dialogue || []).length ? `<dt>Di\xE1logo</dt><dd>${sb.dialogue.map((d2) => `<b>${esc3(p2.characters.find((c) => c.id === d2.character)?.name || d2.character || "")}</b> ${esc3(d2.text || d2)}`).join("<br>")}</dd>` : ""}
+    <dt>Secuencia</dt><dd>${esc3(e?.title || "")} / ${esc3(s?.title || lote.meta.sequence)}</dd>
    </dl><button data-mt="edit-current">Editar este plano \u2193</button></div>`;
     el.querySelector('[data-mt="edit-current"]').onclick = () => {
       select2(current2.block);
@@ -381,17 +381,17 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus
     }
     const sb = sbOf(b2), a = b2.attempts.find((x2) => x2.n === take), f2 = frameOf(b2), dirOf = b2.direccion;
     const range = rangeDraft || a?.usedRange || null, dur = a?.durationReturned || a?.durationRequested || b2.length;
-    el.innerHTML = `<div class="row between"><div><div class="eyebrow">Editar plano</div><h2>${esc2(sb?.code || b2.id)} \xB7 ${esc2(sb?.title || "")} <span class="tiny">bloque ${esc2(b2.id)} \xB7 ${b2.length} s en el plan</span></h2></div><div class="row"><button data-ed="prev">\u2190 Anterior</button><button data-ed="next">Siguiente \u2192</button></div></div>
-   <div class="mt-takes">${b2.attempts.map((x2) => `<button class="mt-take ${x2.verdict || (x2.video ? "pending" : "none")} ${x2.n === take ? "active" : ""}" data-take="${x2.n}" ${x2.video ? "" : "disabled"} title="${esc2(x2.changedLine || "Primer intento")}">v${x2.n} \xB7 ${esc2(model(x2.endpoint))} ${x2.verdict === "accepted" ? "\u2713" : x2.verdict === "rejected" ? "\u2715" : x2.video ? "\xB7" : "(sin v\xEDdeo)"}</button>`).join("") || '<span class="tiny">Sin intentos enviados.</span>'}</div>
+    el.innerHTML = `<div class="row between"><div><div class="eyebrow">Editar plano</div><h2>${esc3(sb?.code || b2.id)} \xB7 ${esc3(sb?.title || "")} <span class="tiny">bloque ${esc3(b2.id)} \xB7 ${b2.length} s en el plan</span></h2></div><div class="row"><button data-ed="prev">\u2190 Anterior</button><button data-ed="next">Siguiente \u2192</button></div></div>
+   <div class="mt-takes">${b2.attempts.map((x2) => `<button class="mt-take ${x2.verdict || (x2.video ? "pending" : "none")} ${x2.n === take ? "active" : ""}" data-take="${x2.n}" ${x2.video ? "" : "disabled"} title="${esc3(x2.changedLine || "Primer intento")}">v${x2.n} \xB7 ${esc3(model(x2.endpoint))} ${x2.verdict === "accepted" ? "\u2713" : x2.verdict === "rejected" ? "\u2715" : x2.video ? "\xB7" : "(sin v\xEDdeo)"}</button>`).join("") || '<span class="tiny">Sin intentos enviados.</span>'}</div>
    ${a ? `<div class="mt-compare"><div><video data-ed="take" controls preload="metadata" src="${media2(`assets/${lote.id}/${b2.id}/${a.video}`)}"></video><div class="mt-range" data-ed="range"></div>
     <div class="row mt-range-tools"><button data-ed="in">[ Entrada aqu\xED</button><button data-ed="out">Salida aqu\xED ]</button><button data-ed="full">Tramo del plan</button><span class="tiny">Tramo: <b data-ed="range-text">${range ? range.map(([x2, y2]) => `${x2.toFixed(2)}\u2013${y2.toFixed(2)} s`).join(", ") : `0\u2013${Math.min(dur, b2.length)} s (por defecto)`}</b> \xB7 v\xEDdeo ${fmt(dur)}</span></div></div>
     <div>${f2 ? `<figure class="mt-frame"><img src="${media2(f2)}" alt="Vi\xF1eta"><figcaption>Primer fotograma pedido</figcaption></figure>` : ""}
-     <dl class="mt-facts"><dt>Modelo</dt><dd>${esc2(a.endpoint)}</dd><dt>Duraci\xF3n</dt><dd>pedida ${a.durationRequested} s \xB7 devuelta ${a.durationReturned?.toFixed?.(2) ?? "\u2013"} s</dd><dt>Cambio</dt><dd>${esc2(a.changedLine || "Primer intento")}</dd>${a.verdict ? `<dt>Veredicto</dt><dd>${a.verdict === "accepted" ? "Aceptada" : "Rechazada"}${a.failedRules?.length ? " \xB7 " + esc2(a.failedRules.join(", ")) : ""}${a.notes ? " \xB7 " + esc2(a.notes) : ""}</dd>` : ""}</dl></div></div>
-   <div class="mt-review"><div class="mt-rules">${lote.rules.map((r) => `<label class="mt-rule" title="${esc2(r.title)}"><input type="checkbox" value="${esc2(r.id)}" ${a.failedRules?.includes(r.id) ? "checked" : ""}>${esc2(r.id)} ${esc2(r.title)}</label>`).join("")}</div>
-    <label>Notas<textarea data-ed="notes" rows="2">${esc2(a.notes || "")}</textarea></label>
+     <dl class="mt-facts"><dt>Modelo</dt><dd>${esc3(a.endpoint)}</dd><dt>Duraci\xF3n</dt><dd>pedida ${a.durationRequested} s \xB7 devuelta ${a.durationReturned?.toFixed?.(2) ?? "\u2013"} s</dd><dt>Cambio</dt><dd>${esc3(a.changedLine || "Primer intento")}</dd>${a.verdict ? `<dt>Veredicto</dt><dd>${a.verdict === "accepted" ? "Aceptada" : "Rechazada"}${a.failedRules?.length ? " \xB7 " + esc3(a.failedRules.join(", ")) : ""}${a.notes ? " \xB7 " + esc3(a.notes) : ""}</dd>` : ""}</dl></div></div>
+   <div class="mt-review"><div class="mt-rules">${lote.rules.map((r) => `<label class="mt-rule" title="${esc3(r.title)}"><input type="checkbox" value="${esc3(r.id)}" ${a.failedRules?.includes(r.id) ? "checked" : ""}>${esc3(r.id)} ${esc3(r.title)}</label>`).join("")}</div>
+    <label>Notas<textarea data-ed="notes" rows="2">${esc3(a.notes || "")}</textarea></label>
     <div class="row"><button class="primary" data-ed="accept">\u2713 Aceptar y usar esta toma</button><button data-ed="reject">\u2715 Rechazar (marca las reglas que falla)</button>${a.verdict ? '<button data-ed="clear">Quitar veredicto</button>' : ""}</div></div>
-    <details data-ed="prompt"><summary>Prompt enviado (${esc2(a.prompt || "prompt.txt")})</summary><pre class="mt-pre">Cargando\u2026</pre></details>` : ""}
-   ${dirOf ? `<details><summary>Direcci\xF3n del bloque</summary><dl class="mt-facts">${["camera", "action", "acting", "local"].filter((k) => dirOf[k]).map((k) => `<dt>${{ camera: "C\xE1mara", action: "Acci\xF3n", acting: "Actuaci\xF3n", local: "Restricciones" }[k]}</dt><dd>${esc2(typeof dirOf[k] === "string" ? dirOf[k] : JSON.stringify(dirOf[k], null, 1))}</dd>`).join("")}</dl></details>` : ""}`;
+    <details data-ed="prompt"><summary>Prompt enviado (${esc3(a.prompt || "prompt.txt")})</summary><pre class="mt-pre">Cargando\u2026</pre></details>` : ""}
+   ${dirOf ? `<details><summary>Direcci\xF3n del bloque</summary><dl class="mt-facts">${["camera", "action", "acting", "local"].filter((k) => dirOf[k]).map((k) => `<dt>${{ camera: "C\xE1mara", action: "Acci\xF3n", acting: "Actuaci\xF3n", local: "Restricciones" }[k]}</dt><dd>${esc3(typeof dirOf[k] === "string" ? dirOf[k] : JSON.stringify(dirOf[k], null, 1))}</dd>`).join("")}</dl></details>` : ""}`;
     const q = (s) => el.querySelector(`[data-ed="${s}"]`);
     q("prev").onclick = () => step(-1);
     q("next").onclick = () => step(1);
@@ -571,7 +571,7 @@ var CAM_PREFS = "rodaje-anim-camera";
 var TYPE_LABELS = { fixed: "Fija", move: "Movimiento (inicio \u2192 fin)", follow: "Seguimiento de un personaje", track: "Pista grabada", handheld: "C\xE1mara en mano" };
 var EASING_LABELS = { linear: "Lineal", smooth: "Suave", "ease-in": "Arranque lento", "ease-out": "Frenada lenta" };
 async function mountAnim(root, { getProject, ids, save: save2, markDirty, toast: toast2, isDirty = () => false, renderVideo = null, renderJob = () => null }) {
-  const esc2 = (s2) => String(s2 ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const esc3 = (s2) => String(s2 ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const find2 = () => {
     const p3 = getProject(), e2 = p3?.episodes.find((e3) => e3.id === ids.episodeId), s2 = e2?.sequences.find((s3) => s3.id === ids.sequenceId), t3 = s2?.shots.find((t4) => t4.id === ids.shotId);
     return { p: p3, e: e2, s: s2, t: t3 };
@@ -609,7 +609,7 @@ async function mountAnim(root, { getProject, ids, save: save2, markDirty, toast:
     voices = synth?.getVoices() || [];
     $3("[data-voices]").innerHTML = lineSpeakers.map((id3) => {
       const sel = ttsVoiceURI2({ voices, speakerIds, id: id3, saved, base: speech.base });
-      return `<label>${esc2(nameOf(id3))}<select data-person="${esc2(id3)}"><option value="">Voz predeterminada</option>${voices.map((v2) => `<option value="${esc2(v2.voiceURI)}" ${sel === v2.voiceURI ? "selected" : ""}>${esc2(v2.name)} \xB7 ${esc2(v2.lang)}</option>`).join("")}</select></label>`;
+      return `<label>${esc3(nameOf(id3))}<select data-person="${esc3(id3)}"><option value="">Voz predeterminada</option>${voices.map((v2) => `<option value="${esc3(v2.voiceURI)}" ${sel === v2.voiceURI ? "selected" : ""}>${esc3(v2.name)} \xB7 ${esc3(v2.lang)}</option>`).join("")}</select></label>`;
     }).join("") || '<p class="tiny">Este plano no tiene di\xE1logo.</p>';
     root.querySelectorAll("[data-person]").forEach((el) => el.onchange = () => {
       saved[el.dataset.person] = el.value;
@@ -827,15 +827,15 @@ ${a.text}` : t2.lines.length ? "" : "ACCI\xD3N \xB7 " + (t2.description || "");
     const presets = cameraPresets(stage2.camera(), { characters: followable.map((id3) => ({ id: id3, name: nameOf(id3) })) });
     box.innerHTML = `<div class="row"><button data-set="start" ${draft.type === "track" ? "disabled" : ""}>Fijar inicio</button><button data-set="end" ${["fixed", "move", "handheld"].includes(draft.type) ? "" : "disabled"}>Fijar fin</button></div>
   <label>Tipo de c\xE1mara<select data-type>${CAMERA_RIG_TYPES.map((k) => `<option value="${k}" ${k === draft.type ? "selected" : ""}>${TYPE_LABELS[k]}</option>`).join("")}</select></label>
-  <label>Partir de un tipo de grabaci\xF3n (desde la c\xE1mara actual)<select data-preset><option value="">Elige\u2026</option>${presets.map((x2) => `<option value="${esc2(x2.id)}">${esc2(x2.label)}</option>`).join("")}</select></label>
+  <label>Partir de un tipo de grabaci\xF3n (desde la c\xE1mara actual)<select data-preset><option value="">Elige\u2026</option>${presets.map((x2) => `<option value="${esc3(x2.id)}">${esc3(x2.label)}</option>`).join("")}</select></label>
   ${c.easing ? `<label>Curva<select data-easing>${CAMERA_EASINGS.map((k) => `<option value="${k}" ${k === (draft.easing || "smooth") ? "selected" : ""}>${EASING_LABELS[k]}</option>`).join("")}</select></label>` : ""}
   ${c.hold ? `<div class="two anim-two"><label>Empieza a moverse (fracci\xF3n)<input data-hold="0" type="number" min="0" max="1" step="0.05" value="${hold[0]}"></label><label>Termina (fracci\xF3n)<input data-hold="1" type="number" min="0" max="1" step="0.05" value="${hold[1]}"></label></div>` : ""}
-  ${c.follow ? `<label>Personaje<select data-follow="character">${followable.map((id3) => `<option value="${esc2(id3)}" ${id3 === draft.follow?.character ? "selected" : ""}>${esc2(nameOf(id3))}</option>`).join("")}</select></label><label>Modo<select data-follow="mode">${[["look", "Panor\xE1mica (la c\xE1mara no se desplaza)"], ["track", "Acompa\xF1ar (se desplaza con \xE9l)"]].map(([k, l3]) => `<option value="${k}" ${k === (draft.follow?.mode || "look") ? "selected" : ""}>${l3}</option>`).join("")}</select></label><label>Suavizado del seguimiento \xB7 <span data-out="fs">${num(draft.follow?.smoothing ?? 0.5)}</span><input data-follow="smoothing" type="range" min="0" max="1" step="0.05" value="${draft.follow?.smoothing ?? 0.5}"></label>` : ""}
+  ${c.follow ? `<label>Personaje<select data-follow="character">${followable.map((id3) => `<option value="${esc3(id3)}" ${id3 === draft.follow?.character ? "selected" : ""}>${esc3(nameOf(id3))}</option>`).join("")}</select></label><label>Modo<select data-follow="mode">${[["look", "Panor\xE1mica (la c\xE1mara no se desplaza)"], ["track", "Acompa\xF1ar (se desplaza con \xE9l)"]].map(([k, l3]) => `<option value="${k}" ${k === (draft.follow?.mode || "look") ? "selected" : ""}>${l3}</option>`).join("")}</select></label><label>Suavizado del seguimiento \xB7 <span data-out="fs">${num(draft.follow?.smoothing ?? 0.5)}</span><input data-follow="smoothing" type="range" min="0" max="1" step="0.05" value="${draft.follow?.smoothing ?? 0.5}"></label>` : ""}
   ${c.shake ? `<label>Temblor \xB7 <span data-out="shake">${num(draft.shake ?? 0.03)}</span> m<input data-shake type="range" min="0" max="0.5" step="0.01" value="${draft.shake ?? 0.03}"></label>` : ""}
   ${c.trackSmoothing ? `<label>Suavizado \xB7 <span data-out="ts">${num(draft.trackSmoothing ?? 0)}</span><input data-smoothing type="range" min="0" max="1" step="0.05" value="${draft.trackSmoothing ?? 0}"></label>` : ""}
   ${c.trim && rawTrack?.length > 1 ? `<div class="two anim-two"><label>Recortar desde \xB7 s<input data-trim="from" type="number" min="0" max="${D2()}" step="${1 / TIMELINE_FPS}" value="${num(draft.track[0].t, 3)}"></label><label>hasta \xB7 s<input data-trim="to" type="number" min="0" max="${D2()}" step="${1 / TIMELINE_FPS}" value="${num(draft.track.at(-1).t, 3)}"></label></div><button data-trim-apply>Aplicar recorte</button><p class="tiny">El recorte parte de la \xFAltima grabaci\xF3n (${rawTrack.length} muestras); fuera del tramo la c\xE1mara queda quieta.</p>` : ""}
   <div class="actions"><button data-record class="lime">${draft.type === "track" && rawTrack?.length > 1 ? "\u25CF Regrabar" : "\u25CF Grabar"}</button><button data-save class="primary" ${iss.errors.length ? "disabled" : ""}>Guardar</button></div>
-  ${iss.errors.length ? `<p class="error">${iss.errors.map(esc2).join("\n")}</p>` : ""}${iss.warnings.length ? `<p class="tiny">${iss.warnings.map(esc2).join("<br>")}</p>` : ""}<p class="tiny">Grabar: cuenta atr\xE1s de 3 s y el plano suena desde 0; mueve la c\xE1mara con el rat\xF3n o el dedo, o volando con el teclado (Libre \xB7 Vuelo), hasta el final. Guardar crea una versi\xF3n del proyecto y cambia la huella del plano (la previsualizaci\xF3n aprobada queda pendiente).</p>`;
+  ${iss.errors.length ? `<p class="error">${iss.errors.map(esc3).join("\n")}</p>` : ""}${iss.warnings.length ? `<p class="tiny">${iss.warnings.map(esc3).join("<br>")}</p>` : ""}<p class="tiny">Grabar: cuenta atr\xE1s de 3 s y el plano suena desde 0; mueve la c\xE1mara con el rat\xF3n o el dedo, o volando con el teclado (Libre \xB7 Vuelo), hasta el final. Guardar crea una versi\xF3n del proyecto y cambia la huella del plano (la previsualizaci\xF3n aprobada queda pendiente).</p>`;
     const on = (q, ev, fn) => box.querySelectorAll(q).forEach((el) => el[ev] = () => fn(el));
     const apply2 = (r) => {
       if (r.error) {
@@ -947,7 +947,7 @@ ${a.text}` : t2.lines.length ? "" : "ACCI\xD3N \xB7 " + (t2.description || "");
   };
   root.querySelectorAll("[data-mode]").forEach((b2) => b2.onclick = () => setMode(b2.dataset.mode));
   const CHM = Object.fromEntries(schedule().map((l3) => [l3.id, l3]));
-  $3("[data-marks]").innerHTML = timelineMarks(schedule(), D2()).map((m2) => `<button type="button" class="anim-mark" style="left:${m2.pct}%" data-at="${m2.at}" title="${esc2(nameOf(CHM[m2.id]?.character) + ": " + m2.label)}" aria-label="Ir a ${esc2(nameOf(CHM[m2.id]?.character))} en ${m2.at} s"></button>`).join("");
+  $3("[data-marks]").innerHTML = timelineMarks(schedule(), D2()).map((m2) => `<button type="button" class="anim-mark" style="left:${m2.pct}%" data-at="${m2.at}" title="${esc3(nameOf(CHM[m2.id]?.character) + ": " + m2.label)}" aria-label="Ir a ${esc3(nameOf(CHM[m2.id]?.character))} en ${m2.at} s"></button>`).join("");
   root.querySelectorAll(".anim-mark").forEach((b2) => b2.onclick = () => {
     if (recording || countdown) return;
     pause();
@@ -21332,13 +21332,13 @@ var Strikethrough = {
   }]
 };
 function parseRow(cx, line, startI = 0, elts, offset = 0) {
-  let count2 = 0, first = true, cellStart = -1, cellEnd = -1, esc2 = false;
+  let count2 = 0, first = true, cellStart = -1, cellEnd = -1, esc3 = false;
   let parseCell = () => {
     elts.push(cx.elt("TableCell", offset + cellStart, offset + cellEnd, cx.parser.parseInline(line.slice(cellStart, cellEnd), offset + cellStart)));
   };
   for (let i2 = startI; i2 < line.length; i2++) {
     let next = line.charCodeAt(i2);
-    if (next == 124 && !esc2) {
+    if (next == 124 && !esc3) {
       if (!first || cellStart > -1)
         count2++;
       first = false;
@@ -21348,12 +21348,12 @@ function parseRow(cx, line, startI = 0, elts, offset = 0) {
         elts.push(cx.elt("TableDelimiter", i2 + offset, i2 + offset + 1));
       }
       cellStart = cellEnd = -1;
-    } else if (esc2 || next != 32 && next != 9) {
+    } else if (esc3 || next != 32 && next != 9) {
       if (cellStart < 0)
         cellStart = i2;
       cellEnd = i2 + 1;
     }
-    esc2 = !esc2 && next == 92;
+    esc3 = !esc3 && next == 92;
   }
   if (cellStart > -1) {
     count2++;
@@ -28090,7 +28090,7 @@ function createDOMPurify() {
     }
   }
   let trustedTypesPolicy;
-  let emptyHTML = "";
+  let emptyHTML2 = "";
   let defaultTrustedTypesPolicy;
   let defaultTrustedTypesPolicyResolved = false;
   let IN_TRUSTED_TYPES_POLICY = 0;
@@ -28410,20 +28410,20 @@ function createDOMPurify() {
       const previousTrustedTypesPolicy = trustedTypesPolicy;
       trustedTypesPolicy = cfg.TRUSTED_TYPES_POLICY;
       try {
-        emptyHTML = _createTrustedHTML("");
+        emptyHTML2 = _createTrustedHTML("");
       } catch (error) {
         trustedTypesPolicy = previousTrustedTypesPolicy;
         throw error;
       }
     } else if (cfg.TRUSTED_TYPES_POLICY === null) {
       trustedTypesPolicy = void 0;
-      emptyHTML = "";
+      emptyHTML2 = "";
     } else {
       if (trustedTypesPolicy === void 0) {
         trustedTypesPolicy = _getDefaultTrustedTypesPolicy();
       }
-      if (trustedTypesPolicy && typeof emptyHTML === "string") {
-        emptyHTML = _createTrustedHTML("");
+      if (trustedTypesPolicy && typeof emptyHTML2 === "string") {
+        emptyHTML2 = _createTrustedHTML("");
       }
     }
     if (freeze) {
@@ -28671,7 +28671,7 @@ function createDOMPurify() {
     if (!doc2 || !doc2.documentElement) {
       doc2 = implementation.createDocument(NAMESPACE, "template", null);
       try {
-        doc2.documentElement.innerHTML = IS_EMPTY_INPUT ? emptyHTML : dirtyPayload;
+        doc2.documentElement.innerHTML = IS_EMPTY_INPUT ? emptyHTML2 : dirtyPayload;
       } catch (_2) {
       }
     }
@@ -29192,7 +29192,7 @@ function createDOMPurify() {
       }
       body = _initDocument(dirty2);
       if (!body) {
-        return RETURN_DOM ? null : RETURN_TRUSTED_TYPE ? emptyHTML : "";
+        return RETURN_DOM ? null : RETURN_TRUSTED_TYPE ? emptyHTML2 : "";
       }
     }
     if (body && FORCE_BODY) {
@@ -29269,7 +29269,7 @@ function createDOMPurify() {
     SET_CONFIG_ALLOWED_TAGS = null;
     SET_CONFIG_ALLOWED_ATTR = null;
     trustedTypesPolicy = defaultTrustedTypesPolicy;
-    emptyHTML = "";
+    emptyHTML2 = "";
   };
   DOMPurify.isValidAttribute = function(tag, attr, value) {
     if (!CONFIG) {
@@ -29393,7 +29393,109 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, navActive, sequenceRole, treeModel, treePath, treeOpenKeys, storyCrumbs, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, appearanceTree, appearanceEnvironments } from "./workflow.mjs";
+import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, navActive, sequenceRole, treeModel, treePath, treeOpenKeys, storyCrumbs, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, appearanceTree, appearanceEnvironments, storyboardItems, storyboardResultSections, shotItems, filterShotGroups, filterView as filterView2, hasFilters, parseFilters, filtersParam } from "./workflow.mjs";
+
+// app/filtros.source.js
+import { filterView, toggleFilter } from "./workflow.mjs";
+var esc = (v2) => String(v2 ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+var filterStorageKey = (projectId, view2) => "rodaje-filtros-" + projectId + "-" + view2;
+function loadFilters(projectId, view2) {
+  try {
+    const x2 = JSON.parse(localStorage.getItem(filterStorageKey(projectId, view2)));
+    if (!x2 || typeof x2 !== "object") return null;
+    const q = typeof x2.q === "string" ? x2.q : "", f2 = Object.fromEntries(Object.entries(x2.f && typeof x2.f === "object" && !Array.isArray(x2.f) ? x2.f : {}).map(([k, v2]) => [k, Array.isArray(v2) ? v2.filter((s) => typeof s === "string") : []]).filter(([, v2]) => v2.length));
+    return q.trim() || Object.keys(f2).length ? { q, f: f2 } : null;
+  } catch {
+    return null;
+  }
+}
+function saveFilters(projectId, view2, { q, f: f2 }) {
+  try {
+    const k = filterStorageKey(projectId, view2);
+    if (String(q || "").trim() || Object.values(f2 || {}).some((v2) => v2?.length)) localStorage.setItem(k, JSON.stringify({ q: q || "", f: f2 || {} }));
+    else localStorage.removeItem(k);
+  } catch {
+  }
+}
+var filterBarHTML = ({ view: view2, query, placeholder, open }) => `<div class="filter-bar" role="search" data-filter-bar="${esc(view2)}"><div class="filter-row"><input type="search" data-filter-q aria-label="Buscar" placeholder="${esc(placeholder)}" value="${esc(query)}" autocomplete="off"><span class="filter-count" data-filter-count aria-live="polite"></span><button type="button" data-filter-clear hidden>Limpiar</button></div><details class="filter-facets" data-filter-facets${open ? " open" : ""}><summary>Filtros</summary><div data-filter-chips></div></details></div>`;
+var chipsHTML = (list) => list.map((f2) => `<fieldset class="facet"><legend>${esc(f2.label)}</legend>${f2.values.map((v2) => `<button type="button" class="chip" data-facet="${esc(f2.id)}" data-value="${esc(v2.value)}" aria-pressed="${v2.active}">${esc(v2.label)} <small>${v2.count}</small></button>`).join("")}</fieldset>`).join("");
+var emptyHTML = (text2) => `<div class="empty"><h2>Nada coincide.</h2><p>${esc(text2 || "Prueba con otras palabras o quita alg\xFAn filtro.")}</p><button type="button" data-filter-clear>Limpiar filtros</button></div>`;
+function mountFilters({ bar, results, ctx, state: state2, bind: bind2, onChange, onToggle }) {
+  const q = bar.querySelector("[data-filter-q]"), count2 = bar.querySelector("[data-filter-count]"), clear = bar.querySelector("[data-filter-clear]"), det = bar.querySelector("[data-filter-facets]"), chips = bar.querySelector("[data-filter-chips]"), summary = det.querySelector("summary");
+  let timer = null, alive = true;
+  const ro = new ResizeObserver(() => setTop());
+  const setTop = () => {
+    const side2 = matchMedia("(max-width: 750px)").matches && document.querySelector(".sidebar");
+    bar.style.setProperty("--sticky-top", (side2 ? side2.offsetHeight : 0) + "px");
+  };
+  const refresh = (changed = true) => {
+    if (!alive) return;
+    const m2 = filterView(ctx.items, ctx.defs, state2.q, state2.f);
+    state2.f = m2.filters;
+    results.innerHTML = m2.shown || !m2.active ? ctx.paint(m2) : emptyHTML(ctx.empty);
+    chips.innerHTML = chipsHTML(m2.facets) || '<p class="tiny">No hay filtros para estos datos.</p>';
+    const [one, many] = ctx.noun, n = m2.active - (String(state2.q || "").trim() ? 1 : 0);
+    count2.textContent = (m2.active ? m2.shown + " de " : "") + m2.total + " " + (m2.total === 1 ? one : many);
+    clear.hidden = !m2.active;
+    clear.textContent = `Limpiar (${m2.active})`;
+    summary.textContent = n ? `Filtros (${n} ${n === 1 ? "activo" : "activos"})` : "Filtros";
+    bind2(results);
+    if (changed) onChange?.(state2);
+  };
+  const reset = () => {
+    clearTimeout(timer);
+    timer = null;
+    state2.q = "";
+    state2.f = {};
+    q.value = "";
+    refresh();
+    q.focus();
+  };
+  const typed = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      state2.q = q.value;
+      refresh();
+    }, 150);
+  };
+  q.addEventListener("input", (e) => {
+    if (!e.isComposing) typed();
+  });
+  q.addEventListener("compositionend", typed);
+  bar.addEventListener("click", (e) => {
+    const c = e.target.closest("[data-facet]");
+    if (c) {
+      const { facet, value } = c.dataset;
+      state2.f = toggleFilter(state2.f, facet, value);
+      refresh();
+      chips.querySelector(`[data-facet="${CSS.escape(facet)}"][data-value="${CSS.escape(value)}"]`)?.focus();
+      return;
+    }
+    if (e.target.closest("[data-filter-clear]")) reset();
+  });
+  results.addEventListener("click", (e) => {
+    if (e.target.closest("[data-filter-clear]")) reset();
+  });
+  det.addEventListener("toggle", () => onToggle?.(det.open));
+  addEventListener("resize", setTop);
+  const side = document.querySelector(".sidebar");
+  if (side) ro.observe(side);
+  setTop();
+  refresh(false);
+  return { refresh, dispose() {
+    if (timer) {
+      clearTimeout(timer);
+      state2.q = q.value;
+    }
+    timer = null;
+    alive = false;
+    removeEventListener("resize", setTop);
+    ro.disconnect();
+  } };
+}
+
+// app/app.source.js
 import { createStage as createStage3 } from "./stage.js";
 var state;
 var p = null;
@@ -29416,13 +29518,16 @@ var shotState;
 var dirty = false;
 var $2 = (s) => document.querySelector(s);
 var id2 = () => crypto.randomUUID();
-var esc = (v2) => String(v2 ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+var esc2 = (v2) => String(v2 ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 var renderedRoute = null;
 var renderGeneration = 0;
 var sbMedia = null;
 var montajeFocus = null;
 var sbPlayers = /* @__PURE__ */ new Map();
-var currentRoute = () => ({ project: p?.id || null, view, episode: episodeId, sequence: view === "shots" ? shotsFocus : sequenceId, shot: shotId, storyboard: storyboardId, environment: environmentId, character: characterId, location: locationId, scene: sceneId, node: treeNode });
+var filt = { q: "", f: {} };
+var filterMount = null;
+var filterOpen = null;
+var currentRoute = () => ({ project: p?.id || null, view, episode: episodeId, sequence: view === "shots" ? shotsFocus : sequenceId, shot: shotId, storyboard: storyboardId, environment: environmentId, character: characterId, location: locationId, scene: sceneId, node: treeNode, q: hasFilters(view) ? filt.q || null : null, f: hasFilters(view) ? filtersParam(filt.f) || null : null });
 function applyRoute(r) {
   view = r.view;
   if (view === "shot" || view === "anim") {
@@ -29440,6 +29545,10 @@ function applyRoute(r) {
   shotsFocus = view === "shots" && r.sequence || null;
   const f2 = sceneId ? ["sb-scene", sceneId] : treeNode ? ["tree", treeNode] : shotsFocus ? ["shots-seq", shotsFocus] : null;
   pendingFocus = f2 ? `[data-${f2[0]}="${CSS.escape(f2[1])}"]` : null;
+  if (hasFilters(r.view)) {
+    const mem = r.q == null && r.f == null && !(r.view === "shots" && r.sequence) ? loadFilters(r.project || p?.id, r.view) : null;
+    filt = mem || { q: r.q || "", f: parseFilters(r.f) };
+  } else filt = { q: "", f: {} };
 }
 async function goRoute(r) {
   if (dirty) await save();
@@ -29525,9 +29634,9 @@ function sbMove(shotId2, targetShotId, seqId) {
 var media = (f2) => "/api/asset?project=" + p.id + "&file=" + encodeURIComponent(f2);
 var image = (f2) => f2 ? `<img src="${media(f2)}" alt="Referencia visual">` : '<div class="cover">\u25EF</div>';
 var btn = (label, action, cls = "") => `<button class="${cls}" data-action="${action}">${label}</button>`;
-var input = (label, name2, value = "", type = "text") => `<label>${label}<input name="${name2}" type="${type}" value="${esc(value)}"></label>`;
-var area = (label, name2, value = "") => `<label>${label}<textarea name="${name2}">${esc(value)}</textarea></label>`;
-var opts = (items, value) => items.map(([v2, label]) => `<option value="${esc(v2)}" ${v2 === value ? "selected" : ""}>${esc(label)}</option>`).join("");
+var input = (label, name2, value = "", type = "text") => `<label>${label}<input name="${name2}" type="${type}" value="${esc2(value)}"></label>`;
+var area = (label, name2, value = "") => `<label>${label}<textarea name="${name2}">${esc2(value)}</textarea></label>`;
+var opts = (items, value) => items.map(([v2, label]) => `<option value="${esc2(v2)}" ${v2 === value ? "selected" : ""}>${esc2(label)}</option>`).join("");
 var select = (label, name2, items, value) => `<label>${label}<select name="${name2}">${opts(items, value)}</select></label>`;
 async function api(url, data2) {
   const r = await fetch(url, data2 ? { method: "POST", headers: { "Content-Type": "application/json", "x-rodaje-token": state.token }, body: JSON.stringify(data2) } : {});
@@ -29639,16 +29748,16 @@ document.addEventListener("toggle", (e) => {
 }, true);
 var pad2 = (n) => String(n).padStart(2, "0");
 var plural = (n, one, many) => n + " " + (n === 1 ? one : many);
-var treeThumb = (file, alt) => file ? `<img loading="lazy" class="tree-thumb" src="${media(file)}" alt="${esc(alt)}">` : '<span class="tree-thumb blank" aria-hidden="true"></span>';
+var treeThumb = (file, alt) => file ? `<img loading="lazy" class="tree-thumb" src="${media(file)}" alt="${esc2(alt)}">` : '<span class="tree-thumb blank" aria-hidden="true"></span>';
 var shotIds = (l3) => l3.episode.id + ":" + l3.sequence.id + ":" + l3.shot.id;
-var treeLeaf = (l3) => `<div class="tree-shot" title="${esc((l3.episode.title || l3.episode.id) + " / " + (l3.sequence.title || l3.sequence.id))}"><span>${esc(`P${pad2(l3.number)} \xB7 ${l3.shot.title || ""}${l3.shot.duration ? ` \xB7 ${l3.shot.duration} s` : ""}`)}</span>${l3.role === "test" ? '<span class="pill">prueba</span>' : ""}<span class="tree-actions">${btn("Abrir estudio \u2192", "shot:" + shotIds(l3))}${btn("Animaci\xF3n", "anim:" + shotIds(l3))}</span></div>`;
+var treeLeaf = (l3) => `<div class="tree-shot" title="${esc2((l3.episode.title || l3.episode.id) + " / " + (l3.sequence.title || l3.sequence.id))}"><span>${esc2(`P${pad2(l3.number)} \xB7 ${l3.shot.title || ""}${l3.shot.duration ? ` \xB7 ${l3.shot.duration} s` : ""}`)}</span>${l3.role === "test" ? '<span class="pill">prueba</span>' : ""}<span class="tree-actions">${btn("Abrir estudio \u2192", "shot:" + shotIds(l3))}${btn("Animaci\xF3n", "anim:" + shotIds(l3))}</span></div>`;
 var treeLeaves = (list) => list.length ? list.map(treeLeaf).join("") : '<p class="tiny">Sin planos.</p>';
 function treeRow(n) {
-  const title = (x2) => esc(x2?.title || x2?.id || "");
+  const title = (x2) => esc2(x2?.title || x2?.id || "");
   if (n.kind === "act") return `<span class="eyebrow">${p.type === "serie" ? "CAP\xCDTULO" : "ACTO"}</span><b>${title(n.episode)}</b><span class="pill">${n.minutes} min \xB7 ${plural(n.children.length, "secuencia", "secuencias")}</span>`;
   if (n.kind === "ficha") {
     const cur = n.children.find((c) => c.current);
-    return `${treeThumb(n.cover, n.code + " \xB7 " + (n.sequence.title || ""))}<span class="tree-code">${esc(n.code)}</span><b>${title(n.sequence)}</b>${cur ? `<span class="pill ok">v${cur.version} vigente</span>` : ""}<span class="pill">${n.children.length ? plural(n.children.length, "story", "storys") : "sin story"}</span>${n.shots.length ? `<span class="pill">${plural(n.shots.length, "plano", "planos")}</span>` : ""}`;
+    return `${treeThumb(n.cover, n.code + " \xB7 " + (n.sequence.title || ""))}<span class="tree-code">${esc2(n.code)}</span><b>${title(n.sequence)}</b>${cur ? `<span class="pill ok">v${cur.version} vigente</span>` : ""}<span class="pill">${n.children.length ? plural(n.children.length, "story", "storys") : "sin story"}</span>${n.shots.length ? `<span class="pill">${plural(n.shots.length, "plano", "planos")}</span>` : ""}`;
   }
   if (n.kind === "story") return `<b>${n.version ? "v" + n.version + " \xB7 " : ""}${title(n.storyboard)}</b>${n.current ? '<span class="pill ok">vigente</span>' : ""}<span class="tiny">${plural(n.counts.scenes, "escena", "escenas")} \xB7 ${plural(n.counts.panels, "vi\xF1eta", "vi\xF1etas")}</span>`;
   if (n.kind === "scene") return `<b>${title(n.scene)}</b><span class="tiny">${plural(n.panels.length, "vi\xF1eta", "vi\xF1etas")}</span>`;
@@ -29658,37 +29767,37 @@ function treeRow(n) {
 }
 var treeHTML = (n) => {
   const open = treeOpen.has(n.key);
-  return `<details class="tree-node tree-${n.kind}" data-tree="${esc(n.key)}"${open ? " open" : ""}><summary>${treeRow(n)}</summary><div class="tree-kids"${open ? " data-loaded" : ""}>${open ? treeBody(n) : ""}</div></details>`;
+  return `<details class="tree-node tree-${n.kind}" data-tree="${esc2(n.key)}"${open ? " open" : ""}><summary>${treeRow(n)}</summary><div class="tree-kids"${open ? " data-loaded" : ""}>${open ? treeBody(n) : ""}</div></details>`;
 };
 var fichaCard = (n) => {
   const s = n.sequence;
-  return `<div class="ficha-body"><div class="sb-frame">${s.cover ? `<img loading="lazy" src="${media(s.cover)}" alt="${esc(n.code + " \xB7 " + s.title)}">` : '<div class="sb-empty">Sin car\xE1tula \xB7 genera o sube una imagen</div>'}<span class="sb-code">${esc(n.code)}</span>${n.minutes ? `<span class="sb-dur">${esc(n.minutes)} min</span>` : ""}</div><div><p>${esc(s.text || "Sin texto de escaleta.")}</p><details style="margin-top:10px"><summary class="tiny">Prompt de car\xE1tula</summary><textarea data-cover-prompt="${esc(s.id)}" style="margin-top:8px;font-size:12px;min-height:120px" aria-label="Prompt de car\xE1tula de ${esc(s.title)}">${esc(s.coverPrompt || "")}</textarea><p class="tiny">Vac\xEDo: se compone con el estilo del proyecto y el texto de la secuencia.</p></details><div class="actions">${btn("Generar car\xE1tula", "gen-cover:" + s.id, s.cover ? "" : "lime")}${btn("Subir car\xE1tula", "upload-cover:" + s.id)}${btn("Prompt", "cover-prompt:" + s.id)}${btn("Editar", "edit-outline:" + s.id)}${s.covers?.length > 1 ? `<select data-cover-version="${esc(s.id)}" aria-label="Versi\xF3n de la car\xE1tula">${opts(s.covers.map((x2, i2) => [x2.file, "Car\xE1tula " + (i2 + 1)]), s.cover)}</select>` : ""}</div></div></div>`;
+  return `<div class="ficha-body"><div class="sb-frame">${s.cover ? `<img loading="lazy" src="${media(s.cover)}" alt="${esc2(n.code + " \xB7 " + s.title)}">` : '<div class="sb-empty">Sin car\xE1tula \xB7 genera o sube una imagen</div>'}<span class="sb-code">${esc2(n.code)}</span>${n.minutes ? `<span class="sb-dur">${esc2(n.minutes)} min</span>` : ""}</div><div><p>${esc2(s.text || "Sin texto de escaleta.")}</p><details style="margin-top:10px"><summary class="tiny">Prompt de car\xE1tula</summary><textarea data-cover-prompt="${esc2(s.id)}" style="margin-top:8px;font-size:12px;min-height:120px" aria-label="Prompt de car\xE1tula de ${esc2(s.title)}">${esc2(s.coverPrompt || "")}</textarea><p class="tiny">Vac\xEDo: se compone con el estilo del proyecto y el texto de la secuencia.</p></details><div class="actions">${btn("Generar car\xE1tula", "gen-cover:" + s.id, s.cover ? "" : "lime")}${btn("Subir car\xE1tula", "upload-cover:" + s.id)}${btn("Prompt", "cover-prompt:" + s.id)}${btn("Editar", "edit-outline:" + s.id)}${s.covers?.length > 1 ? `<select data-cover-version="${esc2(s.id)}" aria-label="Versi\xF3n de la car\xE1tula">${opts(s.covers.map((x2, i2) => [x2.file, "Car\xE1tula " + (i2 + 1)]), s.cover)}</select>` : ""}</div></div></div>`;
 };
 function treeBody(n) {
-  if (n.kind === "act") return (n.episode.synopsis ? `<p class="tree-note">${esc(n.episode.synopsis)}</p>` : "") + (n.children.map(treeHTML).join("") || '<p class="tiny">Sin secuencias todav\xEDa.</p>');
+  if (n.kind === "act") return (n.episode.synopsis ? `<p class="tree-note">${esc2(n.episode.synopsis)}</p>` : "") + (n.children.map(treeHTML).join("") || '<p class="tiny">Sin secuencias todav\xEDa.</p>');
   if (n.kind === "ficha") return fichaCard(n) + n.children.map(treeHTML).join("") + (n.children.length ? n.shots.length ? '<div class="tree-group eyebrow">Planos propios</div>' + treeLeaves(n.shots) : "" : treeLeaves(n.shots));
   if (n.kind === "story") {
     const b2 = n.storyboard, c = n.container, own = c && sequenceRole(p, c.sequence) === "container";
-    return `<div class="tree-actions">${btn("Abrir story \u2192", "storyboard:" + b2.id, "primary")}${n.version && !n.current ? btn("Marcar como vigente", "sb-current:" + b2.id) : ""}${c ? own ? btn(`Planos en \xAB${esc(c.sequence.title)}\xBB (${n.counts.shots}) \u2192`, "shots:" + c.sequence.id) : btn(`Planos en \xAB${esc(c.sequence.title)}\xBB \u2192`, "tree:seq/" + c.sequence.id) : ""}</div>` + (n.children.map(treeHTML).join("") || '<p class="tiny">Sin escenas todav\xEDa.</p>');
+    return `<div class="tree-actions">${btn("Abrir story \u2192", "storyboard:" + b2.id, "primary")}${n.version && !n.current ? btn("Marcar como vigente", "sb-current:" + b2.id) : ""}${c ? own ? btn(`Planos en \xAB${esc2(c.sequence.title)}\xBB (${n.counts.shots}) \u2192`, "shots:" + c.sequence.id) : btn(`Planos en \xAB${esc2(c.sequence.title)}\xBB \u2192`, "tree:seq/" + c.sequence.id) : ""}</div>` + (n.children.map(treeHTML).join("") || '<p class="tiny">Sin escenas todav\xEDa.</p>');
   }
-  if (n.kind === "scene") return `<div class="tree-actions">${btn("Abrir en el story \u2192", "storyboard:" + n.storyboard.id + ":" + n.scene.id)}</div>` + (n.panels.map(({ panel: t2, thumb, shots }) => `<div class="tree-panel"><div class="tree-panel-row">${treeThumb(thumb, (t2.code ? t2.code + " \xB7 " : "") + (t2.title || ""))}${t2.code ? `<span class="tree-code">${esc(t2.code)}</span>` : ""}<span>${esc(t2.title || "")}</span></div>${shots.length ? shots.map(treeLeaf).join("") : '<p class="tiny tree-shot">Sin plano</p>'}</div>`).join("") || '<p class="tiny">Sin vi\xF1etas todav\xEDa.</p>');
+  if (n.kind === "scene") return `<div class="tree-actions">${btn("Abrir en el story \u2192", "storyboard:" + n.storyboard.id + ":" + n.scene.id)}</div>` + (n.panels.map(({ panel: t2, thumb, shots }) => `<div class="tree-panel"><div class="tree-panel-row">${treeThumb(thumb, (t2.code ? t2.code + " \xB7 " : "") + (t2.title || ""))}${t2.code ? `<span class="tree-code">${esc2(t2.code)}</span>` : ""}<span>${esc2(t2.title || "")}</span></div>${shots.length ? shots.map(treeLeaf).join("") : '<p class="tiny tree-shot">Sin plano</p>'}</div>`).join("") || '<p class="tiny">Sin vi\xF1etas todav\xEDa.</p>');
   if (n.kind === "orphans" || n.kind === "test") return treeLeaves(n.shots);
   return n.children.map(treeHTML).join("");
 }
-var entityRoute = (kind, id3) => esc(routeQuery({ project: p.id, view: kind, [kind]: id3 }));
+var entityRoute = (kind, id3) => esc2(routeQuery({ project: p.id, view: kind, [kind]: id3 }));
 var entityActions = (item, kind) => `<div class="actions">${btn("Editar", kind + ":" + item.id)}${btn("Subir imagen", "upload-" + kind + ":" + item.id)}${btn("Generar hoja", "gen-" + kind + ":" + item.id)}</div>`;
-var voiceLine = (c) => `<small>Voz: ${esc(c.voice || "Sin asignar")}${/^[A-Za-z0-9]{20}$/.test(c.voice || "") ? ` \xB7 <a href="https://elevenlabs.io/app/voice-library?voiceId=${esc(c.voice)}" target="_blank" rel="noopener">escuchar en ElevenLabs \u2197</a>` : ""}</small>`;
+var voiceLine = (c) => `<small>Voz: ${esc2(c.voice || "Sin asignar")}${/^[A-Za-z0-9]{20}$/.test(c.voice || "") ? ` \xB7 <a href="https://elevenlabs.io/app/voice-library?voiceId=${esc2(c.voice)}" target="_blank" rel="noopener">escuchar en ElevenLabs \u2197</a>` : ""}</small>`;
 var voiceActions = (c) => `<div class="actions">${btn("Probar voz", "voice:" + c.id)}${btn("Subir muestra", "upload-voice:" + c.id)}${c.kind !== "voice" && projectVariants(p).length > 1 ? btn("Variantes por zona", "variants:" + c.id) : ""}</div>`;
-var variantsBlock = (c) => c.variants ? `<div class="actions">${Object.entries(c.variants).map(([v2, x2]) => `<div class="note"><b>${esc(projectVariants(p).find((x3) => x3.id === v2)?.label || v2)}</b><p>${esc((x2.description || "").slice(0, 85))}</p>${x2.image ? `<img style="height:90px;width:120px;object-fit:cover" src="${media(x2.image)}" alt="${esc(v2)}">` : ""}<div class="row">${btn("Generar", "gen-variant:" + c.id + ":" + v2)}${btn("Subir", "upload-variant:" + c.id + ":" + v2)}</div></div>`).join("")}</div>` : "";
+var variantsBlock = (c) => c.variants ? `<div class="actions">${Object.entries(c.variants).map(([v2, x2]) => `<div class="note"><b>${esc2(projectVariants(p).find((x3) => x3.id === v2)?.label || v2)}</b><p>${esc2((x2.description || "").slice(0, 85))}</p>${x2.image ? `<img style="height:90px;width:120px;object-fit:cover" src="${media(x2.image)}" alt="${esc2(v2)}">` : ""}<div class="row">${btn("Generar", "gen-variant:" + c.id + ":" + v2)}${btn("Subir", "upload-variant:" + c.id + ":" + v2)}</div></div>`).join("")}</div>` : "";
 var modelSpaceBlock = (l3) => {
   if (!l3.modelSpace?.snapshot) return "";
   const e = modelSpaceEnvironment(p, l3.modelSpace);
-  return `<div class="note"><b>Encuadre 3D</b><p class="tiny">La imagen principal define el aspecto; esta vista fija la distribuci\xF3n y la c\xE1mara.</p><img src="${media(l3.modelSpace.snapshot)}" alt="Encuadre 3D de ${esc(l3.name)}" style="width:100%;height:auto;object-fit:contain">${l3.modelSpace.room !== "exterior" && e ? btn("Visitar estancia en 3D", "visit-room:" + e.id + ":" + l3.modelSpace.room) : ""}</div>`;
+  return `<div class="note"><b>Encuadre 3D</b><p class="tiny">La imagen principal define el aspecto; esta vista fija la distribuci\xF3n y la c\xE1mara.</p><img src="${media(l3.modelSpace.snapshot)}" alt="Encuadre 3D de ${esc2(l3.name)}" style="width:100%;height:auto;object-fit:contain">${l3.modelSpace.room !== "exterior" && e ? btn("Visitar estancia en 3D", "visit-room:" + e.id + ":" + l3.modelSpace.room) : ""}</div>`;
 };
-var versionSelect = (item, kind) => item.images?.length > 1 ? `<label>Versi\xF3n visual<select data-version="${esc(item.id)}" data-kind="${kind}">${opts(item.images.map((f2, i2) => [f2, "Versi\xF3n " + (i2 + 1)]), item.image)}</select></label>` : "";
-var characterCard = (c) => `<article class="card">${image(c.image)}<div class="inner"><div class="row between"><h2><a href="${entityRoute("character", c.id)}" data-route>${esc(c.name)}</a></h2><span class="pill">PERSONAJE</span></div><p>${esc((c.description || "").slice(0, 160))}</p>${voiceLine(c)}${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}${entityActions(c, "character")}${voiceActions(c)}${variantsBlock(c)}${versionSelect(c, "character")}</div></article>`;
-var locationCard = (l3) => `<article class="card">${image(l3.image)}<div class="inner"><div class="row between"><h2><a href="${entityRoute("location", l3.id)}" data-route>${esc(l3.name)}</a></h2><span class="pill">${esc(l3.kind)}</span></div><p>${esc((l3.description || "").slice(0, 160))}</p>${entityActions(l3, "location")}${modelSpaceBlock(l3)}${versionSelect(l3, "location")}</div></article>`;
-var crumbsNav = (list) => `<nav class="crumbs" aria-label="Ruta"><ol>${list.map((c) => `<li>${c.route ? `<a href="${esc(routeQuery({ project: p.id, ...c.route }))}" data-route>${esc(c.label)}</a>` : `<span aria-current="page">${esc(c.label)}</span>`}</li>`).join("")}</ol></nav>`;
+var versionSelect = (item, kind) => item.images?.length > 1 ? `<label>Versi\xF3n visual<select data-version="${esc2(item.id)}" data-kind="${kind}">${opts(item.images.map((f2, i2) => [f2, "Versi\xF3n " + (i2 + 1)]), item.image)}</select></label>` : "";
+var characterCard = (c) => `<article class="card">${image(c.image)}<div class="inner"><div class="row between"><h2><a href="${entityRoute("character", c.id)}" data-route>${esc2(c.name)}</a></h2><span class="pill">PERSONAJE</span></div><p>${esc2((c.description || "").slice(0, 160))}</p>${voiceLine(c)}${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}${entityActions(c, "character")}${voiceActions(c)}${variantsBlock(c)}${versionSelect(c, "character")}</div></article>`;
+var locationCard = (l3) => `<article class="card">${image(l3.image)}<div class="inner"><div class="row between"><h2><a href="${entityRoute("location", l3.id)}" data-route>${esc2(l3.name)}</a></h2><span class="pill">${esc2(l3.kind)}</span></div><p>${esc2((l3.description || "").slice(0, 160))}</p>${entityActions(l3, "location")}${modelSpaceBlock(l3)}${versionSelect(l3, "location")}</div></article>`;
+var crumbsNav = (list) => `<nav class="crumbs" aria-label="Ruta"><ol>${list.map((c) => `<li>${c.route ? `<a href="${esc2(routeQuery({ project: p.id, ...c.route }))}" data-route>${esc2(c.label)}</a>` : `<span aria-current="page">${esc2(c.label)}</span>`}</li>`).join("")}</ol></nav>`;
 var appearStore = { key: () => "rodaje-appear-all-" + p.id, get() {
   try {
     return localStorage.getItem(appearStore.key()) === "1";
@@ -29702,46 +29811,46 @@ var appearStore = { key: () => "rodaje-appear-all-" + p.id, get() {
   } catch {
   }
 } };
-var entityTop = (item) => `<div class="entity-top"><figure class="entity-image">${image(item.image)}${versionSelect(item, view)}${item.images?.length > 1 ? `<div class="entity-thumbs">${item.images.map((f2, i2) => `<img loading="lazy" src="${media(f2)}" alt="Versi\xF3n ${i2 + 1} de ${esc(item.name)}">`).join("")}</div>` : ""}</figure><div class="entity-info"><details open><summary>Descripci\xF3n</summary><div class="entity-text">${esc(item.description || "Sin descripci\xF3n todav\xEDa.")}</div></details></div></div>`;
+var entityTop = (item) => `<div class="entity-top"><figure class="entity-image">${image(item.image)}${versionSelect(item, view)}${item.images?.length > 1 ? `<div class="entity-thumbs">${item.images.map((f2, i2) => `<img loading="lazy" src="${media(f2)}" alt="Versi\xF3n ${i2 + 1} de ${esc2(item.name)}">`).join("")}</div>` : ""}</figure><div class="entity-info"><details open><summary>Descripci\xF3n</summary><div class="entity-text">${esc2(item.description || "Sin descripci\xF3n todav\xEDa.")}</div></details></div></div>`;
 var entitySection = (title, body) => `<section class="panel entity-section"><h2>${title}</h2>${body}</section>`;
-var assetNote = (a) => `<div class="note">${a.exists && /\.(png|jpe?g|webp)$/i.test(a.file) ? `<img loading="lazy" src="${media(a.file)}" alt="${esc(a.tag)}">` : ""}<div class="row"><b>${esc(a.tag)}</b><span class="pill${a.status === "approved" ? " ok" : ""}">${esc(a.status || "sin estado")}</span>${a.variant ? `<span class="pill">${esc(a.variant)}</span>` : ""}${a.proxy ? `<span class="pill">proxy ${esc(a.proxy)}</span>` : ""}${a.provider ? `<span class="pill">${esc(a.provider === "elevenlabs" ? "ElevenLabs" : "MiniMax")}</span>` : ""}</div>${a.voiceId ? `<p class="tiny">${esc(a.voiceId)}</p>` : ""}${a.members ? `<p class="tiny">Grupo: ${esc(a.members.join(", "))}</p>` : ""}${a.states?.length ? `<p class="tiny">Estados: ${esc(a.states.join(", "))}</p>` : ""}${a.file && !a.exists ? `<p class="tiny">Falta ${esc(a.file)}</p>` : ""}${a.descriptor ? `<details><summary class="tiny">Descriptor</summary><p class="entity-text">${esc(a.descriptor)}</p></details>` : ""}</div>`;
+var assetNote = (a) => `<div class="note">${a.exists && /\.(png|jpe?g|webp)$/i.test(a.file) ? `<img loading="lazy" src="${media(a.file)}" alt="${esc2(a.tag)}">` : ""}<div class="row"><b>${esc2(a.tag)}</b><span class="pill${a.status === "approved" ? " ok" : ""}">${esc2(a.status || "sin estado")}</span>${a.variant ? `<span class="pill">${esc2(a.variant)}</span>` : ""}${a.proxy ? `<span class="pill">proxy ${esc2(a.proxy)}</span>` : ""}${a.provider ? `<span class="pill">${esc2(a.provider === "elevenlabs" ? "ElevenLabs" : "MiniMax")}</span>` : ""}</div>${a.voiceId ? `<p class="tiny">${esc2(a.voiceId)}</p>` : ""}${a.members ? `<p class="tiny">Grupo: ${esc2(a.members.join(", "))}</p>` : ""}${a.states?.length ? `<p class="tiny">Estados: ${esc2(a.states.join(", "))}</p>` : ""}${a.file && !a.exists ? `<p class="tiny">Falta ${esc2(a.file)}</p>` : ""}${a.descriptor ? `<details><summary class="tiny">Descriptor</summary><p class="entity-text">${esc2(a.descriptor)}</p></details>` : ""}</div>`;
 var entityAssets = (ent, err, kinds, none4) => {
-  if (err) return `<p class="error">No se pudo leer el registro: ${esc(err)}</p>`;
+  if (err) return `<p class="error">No se pudo leer el registro: ${esc2(err)}</p>`;
   const list = (ent?.assets || []).filter((a) => kinds.includes(a.kind));
   if (!ent?.registry) return '<p class="tiny">El proyecto no tiene registro.json.</p>';
   return list.length ? `<div class="entity-assets">${list.map(assetNote).join("")}</div>` : `<p class="tiny">${none4}</p>`;
 };
-var entityDocs = (ent) => (ent?.docs || []).length ? `<div class="entity-assets">${ent.docs.map((d2) => d2.image ? `<div class="note"><img loading="lazy" src="${media(d2.file)}" alt="${esc(d2.label)}"><b>${esc(d2.label)}</b></div>` : `<div class="note"><a href="${media(d2.file)}" target="_blank" rel="noopener">${esc(d2.label)} \u2197</a><p class="tiny">${esc(d2.file)}</p></div>`).join("")}</div>` : "";
+var entityDocs = (ent) => (ent?.docs || []).length ? `<div class="entity-assets">${ent.docs.map((d2) => d2.image ? `<div class="note"><img loading="lazy" src="${media(d2.file)}" alt="${esc2(d2.label)}"><b>${esc2(d2.label)}</b></div>` : `<div class="note"><a href="${media(d2.file)}" target="_blank" rel="noopener">${esc2(d2.label)} \u2197</a><p class="tiny">${esc2(d2.file)}</p></div>`).join("")}</div>` : "";
 var AP_EYEBROW = { sequence: "SECUENCIA", story: "STORY", scene: "ESCENA", panel: "VI\xD1ETA", shot: "PLANO" };
 var AP_VIA = { "scene.location": "ambiente de la escena", "sequence.location": "ambiente de la secuencia", "shot.location": "ambiente del plano" };
 var apMarks = (a) => {
   const pills = [];
   for (const m2 of a.marks) {
-    const x2 = m2.rel === "appears" ? '<span class="pill">aparece</span>' : m2.rel === "speaks" ? m2.offscreen ? `<span class="pill warn">fuera de campo \xB7 ${esc(m2.channel)}</span>` : '<span class="pill ok">habla</span>' : `<span class="pill">${esc(AP_VIA[m2.via] || m2.rel)}</span>`;
+    const x2 = m2.rel === "appears" ? '<span class="pill">aparece</span>' : m2.rel === "speaks" ? m2.offscreen ? `<span class="pill warn">fuera de campo \xB7 ${esc2(m2.channel)}</span>` : '<span class="pill ok">habla</span>' : `<span class="pill">${esc2(AP_VIA[m2.via] || m2.rel)}</span>`;
     const y2 = x2 + (m2.inherited ? '<span class="tiny">heredado</span>' : "");
     if (!pills.includes(y2)) pills.push(y2);
   }
   return pills.join("") + (a.stale ? '<span class="pill warn">no vigente</span>' : "") + (a.role === "test" ? '<span class="pill">prueba</span>' : "");
 };
-var apLines = (a) => a.marks.filter((m2) => m2.text).map((m2) => `<q class="ap-line">${esc(m2.text)}</q>`).join("");
-var apLink = (a) => `<a href="${esc(routeQuery({ project: p.id, ...a.route }))}" data-route>${esc(a.label)}</a>`;
+var apLines = (a) => a.marks.filter((m2) => m2.text).map((m2) => `<q class="ap-line">${esc2(m2.text)}</q>`).join("");
+var apLink = (a) => `<a href="${esc2(routeQuery({ project: p.id, ...a.route }))}" data-route>${esc2(a.label)}</a>`;
 var apCount = (a) => {
   const t2 = [a.counts.panels ? plural(a.counts.panels, "vi\xF1eta", "vi\xF1etas") : "", a.counts.shots ? plural(a.counts.shots, "plano", "planos") : ""].filter(Boolean).join(" \xB7 ");
   return t2 ? `<span class="pill">${t2}</span>` : "";
 };
 function apHTML(a) {
   const eyebrow = a.kind === "act" ? p.type === "serie" ? "CAP\xCDTULO" : "ACTO" : AP_EYEBROW[a.kind];
-  if (a.kind === "shot" || a.kind === "panel" && !a.children.length) return `<div class="ap-leaf" data-ap="${esc(a.key)}"><span class="eyebrow">${eyebrow}</span>${apLink(a)}${apMarks(a)}${apLines(a)}</div>`;
+  if (a.kind === "shot" || a.kind === "panel" && !a.children.length) return `<div class="ap-leaf" data-ap="${esc2(a.key)}"><span class="eyebrow">${eyebrow}</span>${apLink(a)}${apMarks(a)}${apLines(a)}</div>`;
   const open = a.kind === "act" || !((a.kind === "sequence" || a.kind === "story") && a.counts.panels + a.counts.shots > 30);
-  return `<details class="ap-node ap-${a.kind}" data-ap="${esc(a.key)}"${open ? " open" : ""}><summary><span class="eyebrow">${eyebrow}</span>${apLink(a)}${apCount(a)}${apMarks(a)}</summary><div class="ap-kids">${apLines(a)}${a.children.map(apHTML).join("")}</div></details>`;
+  return `<details class="ap-node ap-${a.kind}" data-ap="${esc2(a.key)}"${open ? " open" : ""}><summary><span class="eyebrow">${eyebrow}</span>${apLink(a)}${apCount(a)}${apMarks(a)}</summary><div class="ap-kids">${apLines(a)}${a.children.map(apHTML).join("")}</div></details>`;
 }
 function appearancesHTML(key, { inherited = true, note = "" } = {}) {
   const all = appearStore.get(), index = relationIndexFor(p), T2 = appearanceTree(index, key, { current: !all, inherited }), t2 = T2.total;
   const sum = [[t2.acts, p.type === "serie" ? "cap\xEDtulo" : "acto", p.type === "serie" ? "cap\xEDtulos" : "actos"], [t2.sequences, "secuencia", "secuencias"], [t2.storys, "story", "storys"], [t2.scenes, "escena", "escenas"], [t2.panels, "vi\xF1eta", "vi\xF1etas"], [t2.shots, "plano", "planos"], [t2.lines, "l\xEDnea", "l\xEDneas"]].filter(([n]) => n).map(([n, a, b2]) => plural(n, a, b2)).join(" \xB7 ");
   const empty = !T2.roots.length ? `<div class="empty"><h2>Sin apariciones todav\xEDa.</h2>${!all && appearanceTree(index, key, { current: false, inherited }).roots.length ? "<p>Hay apariciones en versiones no vigentes: marca \xABTodas las versiones\xBB.</p>" : ""}</div>` : "";
-  return entitySection("Apariciones", `<div class="row between"><p class="tiny">${esc(sum || "Ninguna.")}</p><div class="row"><label class="ap-all"><input type="checkbox" data-appear-all${all ? " checked" : ""}> Todas las versiones</label>${btn("Desplegar todo", "ap-open")}${btn("Plegar todo", "ap-fold")}</div></div>${note ? `<p class="tiny">${note}</p>` : ""}${empty || `<div class="ap-tree">${T2.roots.map(apHTML).join("")}</div>`}`);
+  return entitySection("Apariciones", `<div class="row between"><p class="tiny">${esc2(sum || "Ninguna.")}</p><div class="row"><label class="ap-all"><input type="checkbox" data-appear-all${all ? " checked" : ""}> Todas las versiones</label>${btn("Desplegar todo", "ap-open")}${btn("Plegar todo", "ap-fold")}</div></div>${note ? `<p class="tiny">${note}</p>` : ""}${empty || `<div class="ap-tree">${T2.roots.map(apHTML).join("")}</div>`}`);
 }
-var envLinks = (list) => list.length ? `<div class="entity-envs">${list.map((e) => `<div class="note"><a href="${esc(routeQuery({ project: p.id, ...e.route }))}" data-route>${esc(e.name)}</a> <span class="tiny">${esc(e.via.map((v2) => v2 === "environment" ? "entorno del ambiente" : "modelSpace").join(" \xB7 "))}${e.nodes ? " \xB7 " + plural(e.nodes, "nodo", "nodos") : ""}</span></div>`).join("")}</div>` : '<p class="tiny">Ninguno.</p>';
+var envLinks = (list) => list.length ? `<div class="entity-envs">${list.map((e) => `<div class="note"><a href="${esc2(routeQuery({ project: p.id, ...e.route }))}" data-route>${esc2(e.name)}</a> <span class="tiny">${esc2(e.via.map((v2) => v2 === "environment" ? "entorno del ambiente" : "modelSpace").join(" \xB7 "))}${e.nodes ? " \xB7 " + plural(e.nodes, "nodo", "nodos") : ""}</span></div>`).join("")}</div>` : '<p class="tiny">Ninguno.</p>';
 async function entityData(kind, id3) {
   try {
     return { ent: await api("/api/entity?project=" + encodeURIComponent(p.id) + "&kind=" + kind + "&id=" + encodeURIComponent(id3)), err: null };
@@ -29750,15 +29859,15 @@ async function entityData(kind, id3) {
   }
 }
 function characterPage(c, { ent, err }, heading2) {
-  const voiceAssets = err ? `<p class="error">No se pudo leer el registro: ${esc(err)}</p>` : (ent?.assets || []).filter((a) => a.kind === "voice").map(assetNote).join("");
-  return crumbsNav([{ label: "Personajes y voces", route: { view: "characters" } }, { label: c.name }]) + heading2(esc(c.name), c.kind === "voice" ? "Solo voz" : "Personaje", entityActions(c, "character")) + entityTop(c) + entitySection("Voz", `${voiceLine(c)}${c.voiceStatus ? ` <span class="pill">${esc(c.voiceStatus)}</span>` : ""}${c.voicePrompt ? `<p class="entity-text"><b>Voice prompt:</b> ${esc(c.voicePrompt)}</p>` : ""}${c.voiceBrief ? `<p class="entity-text"><b>Resumen:</b> ${esc(c.voiceBrief)}</p>` : ""}${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}${voiceActions(c)}${voiceAssets ? `<div class="entity-assets">${voiceAssets}</div>` : ""}`) + entitySection("Hojas y referencias", entityDocs(ent) + entityAssets(ent, err, ["character", "group"], "Sin assets de personaje en el registro.")) + (c.kind !== "voice" ? entitySection("Variantes", variantsBlock(c) || '<p class="tiny">Sin variantes.</p>') : "") + entitySection("Entornos 3D", envLinks(appearanceEnvironments(relationIndexFor(p), "character/" + c.id, { current: !appearStore.get() }))) + appearancesHTML("character/" + c.id);
+  const voiceAssets = err ? `<p class="error">No se pudo leer el registro: ${esc2(err)}</p>` : (ent?.assets || []).filter((a) => a.kind === "voice").map(assetNote).join("");
+  return crumbsNav([{ label: "Personajes y voces", route: { view: "characters" } }, { label: c.name }]) + heading2(esc2(c.name), c.kind === "voice" ? "Solo voz" : "Personaje", entityActions(c, "character")) + entityTop(c) + entitySection("Voz", `${voiceLine(c)}${c.voiceStatus ? ` <span class="pill">${esc2(c.voiceStatus)}</span>` : ""}${c.voicePrompt ? `<p class="entity-text"><b>Voice prompt:</b> ${esc2(c.voicePrompt)}</p>` : ""}${c.voiceBrief ? `<p class="entity-text"><b>Resumen:</b> ${esc2(c.voiceBrief)}</p>` : ""}${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}${voiceActions(c)}${voiceAssets ? `<div class="entity-assets">${voiceAssets}</div>` : ""}`) + entitySection("Hojas y referencias", entityDocs(ent) + entityAssets(ent, err, ["character", "group"], "Sin assets de personaje en el registro.")) + (c.kind !== "voice" ? entitySection("Variantes", variantsBlock(c) || '<p class="tiny">Sin variantes.</p>') : "") + entitySection("Entornos 3D", envLinks(appearanceEnvironments(relationIndexFor(p), "character/" + c.id, { current: !appearStore.get() }))) + appearancesHTML("character/" + c.id);
 }
 function locationPage(l3, { ent, err }, heading2) {
-  return crumbsNav([{ label: "Ambientes", route: { view: "locations" } }, { label: l3.name }]) + heading2(esc(l3.name), esc(l3.kind || "Ambiente"), entityActions(l3, "location")) + entityTop(l3) + entitySection("Referencias", entityDocs(ent) + entityAssets(ent, err, ["location"], "Sin referencias en el registro.")) + entitySection("Encuadre 3D", modelSpaceBlock(l3) || '<p class="tiny">Sin encuadre 3D.</p>') + entitySection("Entorno 3D", envLinks(appearanceEnvironments(relationIndexFor(p), "location/" + l3.id, { current: !appearStore.get() }))) + appearancesHTML("location/" + l3.id, { inherited: false, note: "Solo secuencias, escenas y planos con este ambiente propio: las vi\xF1etas y los planos heredan el de su escena o su secuencia." });
+  return crumbsNav([{ label: "Ambientes", route: { view: "locations" } }, { label: l3.name }]) + heading2(esc2(l3.name), esc2(l3.kind || "Ambiente"), entityActions(l3, "location")) + entityTop(l3) + entitySection("Referencias", entityDocs(ent) + entityAssets(ent, err, ["location"], "Sin referencias en el registro.")) + entitySection("Encuadre 3D", modelSpaceBlock(l3) || '<p class="tiny">Sin encuadre 3D.</p>') + entitySection("Entorno 3D", envLinks(appearanceEnvironments(relationIndexFor(p), "location/" + l3.id, { current: !appearStore.get() }))) + appearancesHTML("location/" + l3.id, { inherited: false, note: "Solo secuencias, escenas y planos con este ambiente propio: las vi\xF1etas y los planos heredan el de su escena o su secuencia." });
 }
 function modal(title, body, handler, submitLabel = "Guardar") {
   const m2 = $2("#modal");
-  m2.innerHTML = `<form><h2>${esc(title)}</h2>${body}<div class="actions"><button type="submit" class="primary">${esc(submitLabel)}</button><button type="button" id="cancel">Cancelar</button></div><p class="error" id="form-error"></p></form>`;
+  m2.innerHTML = `<form><h2>${esc2(title)}</h2>${body}<div class="actions"><button type="submit" class="primary">${esc2(submitLabel)}</button><button type="button" id="cancel">Cancelar</button></div><p class="error" id="form-error"></p></form>`;
   $2("#cancel").onclick = () => m2.close();
   m2.querySelector("form").onsubmit = async (e) => {
     e.preventDefault();
@@ -29826,9 +29935,12 @@ function status(j) {
 }
 function jobsHTML() {
   const list = state.jobs.filter((j) => !p || j.project === p.id).sort((a, b2) => b2.created.localeCompare(a.created));
-  return list.length ? list.map((j) => `<div class="job"><div><b>${esc({ preview: "Previsualizaci\xF3n 3D", keyframe: "Fotograma visual", video: "V\xEDdeo H3 Max", character: "Hoja de personaje", location: "Ambiente visual", voice: "Prueba de voz", line: "Di\xE1logo", ambience: "Sonido ambiente", outline: "Desglose de cap\xEDtulo", export: "Montaje", storyboard: "Fotograma de storyboard", animatic: "Anim\xE1ticas de storyboard", anim3d: "Animaci\xF3n 3D de vi\xF1eta" }[j.type] || j.type)}</b><small>${new Date(j.created).toLocaleString()} \xB7 ${esc(j.target?.slice(0, 8))}</small>${j.summary ? `<small>${esc(j.summary)}</small>` : ""}${j.error ? `<p class="error">${esc(j.error)}</p>${j.requestId ? btn("Reconsultar solicitud", "resume:" + j.id) : ""}` : ""}${j.output && p ? `<a href="${media(j.output)}" target="_blank">Abrir resultado \u2197</a>` : ""}</div><span class="pill ${j.status === "done" ? "ok" : j.status === "failed" ? "warn" : ""}">${status(j)}${j.status === "running" && j.progress !== void 0 ? " " + j.progress + "%" : ""}</span></div>`).join("") : "<p>No hay trabajos todav\xEDa. Las generaciones que lances aparecer\xE1n aqu\xED.</p>";
+  return list.length ? list.map((j) => `<div class="job"><div><b>${esc2({ preview: "Previsualizaci\xF3n 3D", keyframe: "Fotograma visual", video: "V\xEDdeo H3 Max", character: "Hoja de personaje", location: "Ambiente visual", voice: "Prueba de voz", line: "Di\xE1logo", ambience: "Sonido ambiente", outline: "Desglose de cap\xEDtulo", export: "Montaje", storyboard: "Fotograma de storyboard", animatic: "Anim\xE1ticas de storyboard", anim3d: "Animaci\xF3n 3D de vi\xF1eta" }[j.type] || j.type)}</b><small>${new Date(j.created).toLocaleString()} \xB7 ${esc2(j.target?.slice(0, 8))}</small>${j.summary ? `<small>${esc2(j.summary)}</small>` : ""}${j.error ? `<p class="error">${esc2(j.error)}</p>${j.requestId ? btn("Reconsultar solicitud", "resume:" + j.id) : ""}` : ""}${j.output && p ? `<a href="${media(j.output)}" target="_blank">Abrir resultado \u2197</a>` : ""}</div><span class="pill ${j.status === "done" ? "ok" : j.status === "failed" ? "warn" : ""}">${status(j)}${j.status === "running" && j.progress !== void 0 ? " " + j.progress + "%" : ""}</span></div>`).join("") : "<p>No hay trabajos todav\xEDa. Las generaciones que lances aparecer\xE1n aqu\xED.</p>";
 }
 async function render() {
+  filterMount?.dispose();
+  filterMount = null;
+  let fctx = null;
   rememberPosition();
   renderedRoute = null;
   const generation = ++renderGeneration;
@@ -29836,23 +29948,23 @@ async function render() {
   stage?.dispose();
   stage = null;
   const nav2 = p ? [["tree", "Escaleta"], ["overview", "Proyecto"], ["ideas", "Historia e ideas"], ["characters", "Personajes y voces"], ["locations", "Ambientes"], ["environments", "Entornos 3D"], ["storyboards", "Storyboards"], ["shots", "Planos"], ["montaje", "Montaje"], ["issues", "Pendientes"], ["jobs", "Generaciones"]] : [["library", "Mis proyectos"], ["jobs", "Generaciones"]];
-  $2("#app").innerHTML = `<div class="shell"><aside class="sidebar"><div class="brand"><i class="logo"></i> rodaje<span style="font-size:10px;align-self:end">LOCAL</span></div><div class="eyebrow">Estudio de historias</div>${p ? `<div class="projectname">${esc(p.name)}</div>` : ""}${nav2.map(([v2, l3]) => btn(l3, "nav:" + v2, navActive(view) === v2 ? "active" : "")).join("")}<div class="bottom">${p ? btn("\u2190 Todos los proyectos", "library") : ""}${btn("\u2699 Ajustes", "settings")}<small>De la primera idea<br>a la \xFAltima toma.</small></div></aside><main class="main"><header class="topbar"><span>${p ? esc(p.name) + " / " + esc(nav2.find((n) => n[0] === view)?.[1] || { storyboard: "Storyboard", environment: "Entornos 3D", character: "Personaje", location: "Ambiente", anim: "Animaci\xF3n", rehearsal: "Ensayo 3D" }[view] || "Estudio de plano") : "TU ESPACIO DE PRODUCCI\xD3N"}</span><div class="row"><span class="pill">${state.settings.configured ? "\u25CF Generaci\xF3n conectada" : "\u25CB Generaci\xF3n sin configurar"}</span>${p ? btn("Actualizar", "refresh") + btn("Guardar cambios", "save") : ""}</div></header><div class="workspace" id="workspace"></div></main></div>`;
+  $2("#app").innerHTML = `<div class="shell"><aside class="sidebar"><div class="brand"><i class="logo"></i> rodaje<span style="font-size:10px;align-self:end">LOCAL</span></div><div class="eyebrow">Estudio de historias</div>${p ? `<div class="projectname">${esc2(p.name)}</div>` : ""}${nav2.map(([v2, l3]) => btn(l3, "nav:" + v2, navActive(view) === v2 ? "active" : "")).join("")}<div class="bottom">${p ? btn("\u2190 Todos los proyectos", "library") : ""}${btn("\u2699 Ajustes", "settings")}<small>De la primera idea<br>a la \xFAltima toma.</small></div></aside><main class="main"><header class="topbar"><span>${p ? esc2(p.name) + " / " + esc2(nav2.find((n) => n[0] === view)?.[1] || { storyboard: "Storyboard", environment: "Entornos 3D", character: "Personaje", location: "Ambiente", anim: "Animaci\xF3n", rehearsal: "Ensayo 3D" }[view] || "Estudio de plano") : "TU ESPACIO DE PRODUCCI\xD3N"}</span><div class="row"><span class="pill">${state.settings.configured ? "\u25CF Generaci\xF3n conectada" : "\u25CB Generaci\xF3n sin configurar"}</span>${p ? btn("Actualizar", "refresh") + btn("Guardar cambios", "save") : ""}</div></header><div class="workspace" id="workspace"></div></main></div>`;
   {
     const a = $2(".sidebar button.active"), s = a?.parentElement;
     if (s && s.scrollWidth > s.clientWidth) s.scrollLeft += a.getBoundingClientRect().left - s.getBoundingClientRect().left - (s.clientWidth - a.offsetWidth) / 2;
   }
   let html3 = "";
-  const heading2 = (title, desc, actions = "", cls = "") => `<div class="heading${cls ? " " + cls : ""}"><div><div class="eyebrow">${p ? esc(p.type === "serie" ? "Serie \xB7 " + p.language : "Pel\xEDcula \xB7 " + p.language) : "Biblioteca"}</div><h1>${title}</h1><p>${desc}</p></div>${actions}</div>`;
+  const heading2 = (title, desc, actions = "", cls = "") => `<div class="heading${cls ? " " + cls : ""}"><div><div class="eyebrow">${p ? esc2(p.type === "serie" ? "Serie \xB7 " + p.language : "Pel\xEDcula \xB7 " + p.language) : "Biblioteca"}</div><h1>${title}</h1><p>${desc}</p></div>${actions}</div>`;
   if (view === "library") {
-    html3 = heading2("Historias por contar.", "Un lugar para imaginar, preparar y producir tu pr\xF3xima historia.", btn("+ Nuevo proyecto", "new-project", "primary")) + `<div class="stepper">${["Historia", "Personajes", "Ambientes", "Cap\xEDtulos", "Previsualizaci\xF3n", "Pel\xEDcula"].map((n, i2) => `<div class="step"><b>0${i2 + 1}</b>${n}</div>`).join("")}</div>` + (state.projects.length ? `<div class="grid">${state.projects.map((pr) => `<article class="card"><div class="cover">${esc(pr.name.slice(0, 1))}<span style="font-size:12px;margin-left:auto">${pr.type === "serie" ? "SERIE" : "PEL\xCDCULA"}</span></div><div class="inner"><h2>${esc(pr.name)}</h2><p>${pr.characters} personajes \xB7 ${pr.episodes} cap\xEDtulos</p>${btn("Abrir proyecto \u2192", "open:" + pr.id)}</div></article>`).join("")}</div>` : `<div class="empty"><h2>Todo empieza con una idea.</h2><p>Crea una serie o pel\xEDcula. Tu historia, referencias y versiones<br>se guardar\xE1n juntas en una carpeta del proyecto.</p>${btn("Crear mi primer proyecto", "new-project", "primary")}</div>`);
+    html3 = heading2("Historias por contar.", "Un lugar para imaginar, preparar y producir tu pr\xF3xima historia.", btn("+ Nuevo proyecto", "new-project", "primary")) + `<div class="stepper">${["Historia", "Personajes", "Ambientes", "Cap\xEDtulos", "Previsualizaci\xF3n", "Pel\xEDcula"].map((n, i2) => `<div class="step"><b>0${i2 + 1}</b>${n}</div>`).join("")}</div>` + (state.projects.length ? `<div class="grid">${state.projects.map((pr) => `<article class="card"><div class="cover">${esc2(pr.name.slice(0, 1))}<span style="font-size:12px;margin-left:auto">${pr.type === "serie" ? "SERIE" : "PEL\xCDCULA"}</span></div><div class="inner"><h2>${esc2(pr.name)}</h2><p>${pr.characters} personajes \xB7 ${pr.episodes} cap\xEDtulos</p>${btn("Abrir proyecto \u2192", "open:" + pr.id)}</div></article>`).join("")}</div>` : `<div class="empty"><h2>Todo empieza con una idea.</h2><p>Crea una serie o pel\xEDcula. Tu historia, referencias y versiones<br>se guardar\xE1n juntas en una carpeta del proyecto.</p>${btn("Crear mi primer proyecto", "new-project", "primary")}</div>`);
   }
   if (p && view === "overview") {
     const S3 = projectStats(p);
-    html3 = heading2(esc(p.name), "La historia y sus referencias son el punto de partida. La previsualizaci\xF3n aprobada gu\xEDa cada generaci\xF3n.", btn("Editar proyecto", "edit-project")) + `<div class="stepper">${[["ideas", "Historia"], ["characters", "Reparto"], ["locations", "Mundo"], ["tree", "Escaleta"], ["shots", "Planos"], ["jobs", "Producir"]].map(([v2, l3], i2) => `<div class="step" data-action="nav:${v2}"><b>0${i2 + 1}</b>${l3}</div>`).join("")}</div><div class="two"><section class="panel"><div class="eyebrow">Premisa</div><h2>${esc(p.premise || "\xBFQu\xE9 historia quieres contar?")}</h2><p style="margin-top:20px">${esc(p.style)}</p>${btn("Escribir la historia", "nav:ideas")}</section><section class="panel"><div class="row between">${[[S3.sequences, "Secuencias"], [S3.minutes, "Minutos"], [S3.storys, "Storys"], [S3.shots, "Planos"], [S3.characters, "Personajes"], [S3.locations, "Ambientes"]].map(([n, l3]) => `<div><span class="stat">${n}</span>${l3}</div>`).join("")}</div><p style="margin-top:25px">Cada proyecto guarda ideas, hojas de personajes, ambientes, cap\xEDtulos, previsualizaciones y generaciones en carpetas propias.</p></section></div><div class="panel"><h2>Actividad reciente</h2>${jobsHTML()}</div>`;
+    html3 = heading2(esc2(p.name), "La historia y sus referencias son el punto de partida. La previsualizaci\xF3n aprobada gu\xEDa cada generaci\xF3n.", btn("Editar proyecto", "edit-project")) + `<div class="stepper">${[["ideas", "Historia"], ["characters", "Reparto"], ["locations", "Mundo"], ["tree", "Escaleta"], ["shots", "Planos"], ["jobs", "Producir"]].map(([v2, l3], i2) => `<div class="step" data-action="nav:${v2}"><b>0${i2 + 1}</b>${l3}</div>`).join("")}</div><div class="two"><section class="panel"><div class="eyebrow">Premisa</div><h2>${esc2(p.premise || "\xBFQu\xE9 historia quieres contar?")}</h2><p style="margin-top:20px">${esc2(p.style)}</p>${btn("Escribir la historia", "nav:ideas")}</section><section class="panel"><div class="row between">${[[S3.sequences, "Secuencias"], [S3.minutes, "Minutos"], [S3.storys, "Storys"], [S3.shots, "Planos"], [S3.characters, "Personajes"], [S3.locations, "Ambientes"]].map(([n, l3]) => `<div><span class="stat">${n}</span>${l3}</div>`).join("")}</div><p style="margin-top:25px">Cada proyecto guarda ideas, hojas de personajes, ambientes, cap\xEDtulos, previsualizaciones y generaciones en carpetas propias.</p></section></div><div class="panel"><h2>Actividad reciente</h2>${jobsHTML()}</div>`;
   }
   if (view === "environments") {
     const list = environmentList(p);
-    html3 = heading2("Entornos 3D.", "Decorados en 3D con medidas reales: exterior, interior y piezas con nombre. Cada entorno se abre en su visor; los planos los usar\xE1n como decorado.", btn("+ Entorno GLB", "new-environment", "primary")) + (list.length ? `<div class="grid">${list.map((e) => `<article class="card">${image(e.image)}<div class="inner"><div class="row between"><h2>${esc(e.name)}</h2><span class="pill">${esc(e.kind === "no v\xE1lido" ? "VISOR NO V\xC1LIDO" : e.kind === "constructor" ? "VISOR 3D" : e.kind === "glb" ? "GLB" : "SIN MODELO")}</span></div><p>${esc(e.description.slice(0, 220))}</p>${e.invalid ? `<small>${esc(e.invalid)}</small>` : ""}${e.glb ? `<small>${esc(e.glb)}</small>` : ""}<div class="actions">${btn("Abrir", e.action, "primary")}${btn("Editar", "edit-environment:" + e.id) + btn("Subir GLB", "upload-environment:" + e.id)}</div></div></article>`).join("")}</div>` : '<section class="panel"><p>Este proyecto a\xFAn no tiene entornos 3D. Sube un GLB (de Tripo, Meshy, Hunyuan3D\u2026) o a\xF1ade uno con constructor y datos en <code>environments</code>.</p></section>');
+    html3 = heading2("Entornos 3D.", "Decorados en 3D con medidas reales: exterior, interior y piezas con nombre. Cada entorno se abre en su visor; los planos los usar\xE1n como decorado.", btn("+ Entorno GLB", "new-environment", "primary")) + (list.length ? `<div class="grid">${list.map((e) => `<article class="card">${image(e.image)}<div class="inner"><div class="row between"><h2>${esc2(e.name)}</h2><span class="pill">${esc2(e.kind === "no v\xE1lido" ? "VISOR NO V\xC1LIDO" : e.kind === "constructor" ? "VISOR 3D" : e.kind === "glb" ? "GLB" : "SIN MODELO")}</span></div><p>${esc2(e.description.slice(0, 220))}</p>${e.invalid ? `<small>${esc2(e.invalid)}</small>` : ""}${e.glb ? `<small>${esc2(e.glb)}</small>` : ""}<div class="actions">${btn("Abrir", e.action, "primary")}${btn("Editar", "edit-environment:" + e.id) + btn("Subir GLB", "upload-environment:" + e.id)}</div></div></article>`).join("")}</div>` : '<section class="panel"><p>Este proyecto a\xFAn no tiene entornos 3D. Sube un GLB (de Tripo, Meshy, Hunyuan3D\u2026) o a\xF1ade uno con constructor y datos en <code>environments</code>.</p></section>');
   }
   if (view === "environment") {
     const e = (p.environments || []).find((x2) => x2.id === environmentId);
@@ -29860,10 +29972,10 @@ async function render() {
       view = "environments";
       return render();
     }
-    html3 = heading2(esc(e.name), esc(e.description || ""), `<div class="row">${btn("\u2190 Entornos 3D", "nav:environments")}${btn("Editar", "edit-environment:" + e.id)}${btn("Subir GLB", "upload-environment:" + e.id)}${hasPlantaEditor(e) ? btn("Editar planta", "edit-planta:" + e.id) : ""}</div>`) + '<section class="panel" id="environment-model"></section>';
+    html3 = heading2(esc2(e.name), esc2(e.description || ""), `<div class="row">${btn("\u2190 Entornos 3D", "nav:environments")}${btn("Editar", "edit-environment:" + e.id)}${btn("Subir GLB", "upload-environment:" + e.id)}${hasPlantaEditor(e) ? btn("Editar planta", "edit-planta:" + e.id) : ""}</div>`) + '<section class="panel" id="environment-model"></section>';
   }
   if (view === "ideas") {
-    html3 = heading2("Historia e ideas", "La biblia de la serie: premisa, arcos, reglas del mundo y notas de guion.", `<div class="row">${btn("Importar texto", "import-text")}${btn("+ Documento", "new-idea", "primary")}</div>`) + (p.ideas.length ? `<div class="grid">${p.ideas.map((i2) => `<article class="card"><div class="inner"><span class="pill">DOCUMENTO</span><h2 style="margin-top:16px">${esc(i2.title)}</h2><p>${esc(i2.text.slice(0, 220))}</p>${btn("Editar documento", "idea:" + i2.id)}</div></article>`).join("")}</div>` : '<div class="empty"><h2>La historia antes que los planos.</h2><p>Escribe el argumento general, las reglas del mundo o una idea suelta.</p></div>');
+    html3 = heading2("Historia e ideas", "La biblia de la serie: premisa, arcos, reglas del mundo y notas de guion.", `<div class="row">${btn("Importar texto", "import-text")}${btn("+ Documento", "new-idea", "primary")}</div>`) + (p.ideas.length ? `<div class="grid">${p.ideas.map((i2) => `<article class="card"><div class="inner"><span class="pill">DOCUMENTO</span><h2 style="margin-top:16px">${esc2(i2.title)}</h2><p>${esc2(i2.text.slice(0, 220))}</p>${btn("Editar documento", "idea:" + i2.id)}</div></article>`).join("")}</div>` : '<div class="empty"><h2>La historia antes que los planos.</h2><p>Escribe el argumento general, las reglas del mundo o una idea suelta.</p></div>');
   }
   if (view === "issues") {
     p.issues ||= [];
@@ -29871,7 +29983,7 @@ async function render() {
       const x2 = String(s || "").split("\n").find((l3) => l3.trim() && !/^\|/.test(l3)) || "";
       return x2.length > 180 ? x2.slice(0, 180) + "\u2026" : x2;
     };
-    html3 = heading2("Pendientes", "Fallos de guion, decisiones abiertas y tareas. Arrastra las tarjetas entre columnas; el orden dentro de cada columna tambi\xE9n se guarda.", btn("+ Pendiente", "issue", "primary")) + `<div class="kanban">${board.map((col) => `<section class="kanban-col" data-kanban-col="${col.key}"><h3>${esc(col.label)} <span class="tiny">${col.items.length}</span></h3>${col.items.map((i2) => `<article class="kanban-card" draggable="true" data-kanban-card="${i2.id}"><div class="row">${i2.code ? `<span class="pill">${esc(i2.code)}</span>` : ""}${i2.severity && i2.severity !== "nota" ? `<span class="pill sev-${esc(i2.severity)}">${esc(sevLabel[i2.severity] || i2.severity)}</span>` : ""}</div><h4>${esc(i2.title)}</h4><p>${esc(excerpt(i2.text))}</p><div class="actions">${btn("Abrir", "issue:" + i2.id)}${btn("Borrar", "delete-issue:" + i2.id)}</div></article>`).join("") || '<div class="kanban-empty">Nada aqu\xED.</div>'}</section>`).join("")}</div>`;
+    html3 = heading2("Pendientes", "Fallos de guion, decisiones abiertas y tareas. Arrastra las tarjetas entre columnas; el orden dentro de cada columna tambi\xE9n se guarda.", btn("+ Pendiente", "issue", "primary")) + `<div class="kanban">${board.map((col) => `<section class="kanban-col" data-kanban-col="${col.key}"><h3>${esc2(col.label)} <span class="tiny">${col.items.length}</span></h3>${col.items.map((i2) => `<article class="kanban-card" draggable="true" data-kanban-card="${i2.id}"><div class="row">${i2.code ? `<span class="pill">${esc2(i2.code)}</span>` : ""}${i2.severity && i2.severity !== "nota" ? `<span class="pill sev-${esc2(i2.severity)}">${esc2(sevLabel[i2.severity] || i2.severity)}</span>` : ""}</div><h4>${esc2(i2.title)}</h4><p>${esc2(excerpt(i2.text))}</p><div class="actions">${btn("Abrir", "issue:" + i2.id)}${btn("Borrar", "delete-issue:" + i2.id)}</div></article>`).join("") || '<div class="kanban-empty">Nada aqu\xED.</div>'}</section>`).join("")}</div>`;
   }
   if (view === "characters" || view === "locations") {
     const chars = view === "characters", list = chars ? p.characters : p.locations;
@@ -29896,15 +30008,15 @@ async function render() {
   };
   const sbFrame = (t2, m2) => {
     const main = t2.render || t2.sketch, v2 = sbShown(m2);
-    return `<div class="sb-frame${v2 ? " has-video" + (m2.current ? "" : " show-img") : ""}">${main ? `<img src="${media(main)}" alt="${esc((t2.code ? t2.code + " \xB7 " : "") + t2.title)}">` : '<div class="sb-empty">Sin vi\xF1eta \xB7 sube un boceto o genera el fotograma</div>'}${v2 ? `<video class="sb-video" controls preload="none"${main ? ` poster="${media(main)}"` : ""} src="${media(v2.video)}"></video>` : ""}${t2.code ? `<span class="sb-code">${esc(t2.code)}</span>` : ""}${t2.duration ? `<span class="sb-dur">${esc(t2.duration)} s</span>` : ""}${t2.render && t2.sketch ? `<img class="sb-sketch" src="${media(t2.sketch)}" alt="Boceto ${esc(t2.code || t2.title)}">` : ""}${v2 ? `<span class="pill sb-take ${sbPillClass(v2)}" data-sb-pill>v${v2.n} \xB7 ${esc(sbVerdict(v2))}</span><button type="button" class="sb-toggle" data-sb-toggle>${m2.current ? "Imagen" : "V\xEDdeo"}</button>` : ""}</div>`;
+    return `<div class="sb-frame${v2 ? " has-video" + (m2.current ? "" : " show-img") : ""}">${main ? `<img src="${media(main)}" alt="${esc2((t2.code ? t2.code + " \xB7 " : "") + t2.title)}">` : '<div class="sb-empty">Sin vi\xF1eta \xB7 sube un boceto o genera el fotograma</div>'}${v2 ? `<video class="sb-video" controls preload="none"${main ? ` poster="${media(main)}"` : ""} src="${media(v2.video)}"></video>` : ""}${t2.code ? `<span class="sb-code">${esc2(t2.code)}</span>` : ""}${t2.duration ? `<span class="sb-dur">${esc2(t2.duration)} s</span>` : ""}${t2.render && t2.sketch ? `<img class="sb-sketch" src="${media(t2.sketch)}" alt="Boceto ${esc2(t2.code || t2.title)}">` : ""}${v2 ? `<span class="pill sb-take ${sbPillClass(v2)}" data-sb-pill>v${v2.n} \xB7 ${esc2(sbVerdict(v2))}</span><button type="button" class="sb-toggle" data-sb-toggle>${m2.current ? "Imagen" : "V\xEDdeo"}</button>` : ""}</div>`;
   };
   const sbTakes = (t2, m2) => {
     if (!m2) return "";
     const v2 = sbShown(m2);
-    return `<select data-sb-take="${t2.id}" aria-label="Toma de v\xEDdeo">${m2.groups.map((g) => `<optgroup label="${esc(g.lote + " \xB7 " + g.block)}">${g.takes.map((x2) => `<option value="${esc(x2.lote + "/" + x2.block + "/" + x2.n)}" ${x2 === v2 ? "selected" : ""}>${esc(`v${x2.n} \xB7 ${sbWhen(x2.at)} \xB7 ${sbVerdict(x2)}${x2.current ? " \xB7 vigente" : ""}`)}</option>`).join("")}</optgroup>`).join("")}</select><button data-action="sb-montaje:${esc(v2.lote)}:${esc(v2.block)}" data-sb-take-go="${t2.id}">Montaje \u2192</button>`;
+    return `<select data-sb-take="${t2.id}" aria-label="Toma de v\xEDdeo">${m2.groups.map((g) => `<optgroup label="${esc2(g.lote + " \xB7 " + g.block)}">${g.takes.map((x2) => `<option value="${esc2(x2.lote + "/" + x2.block + "/" + x2.n)}" ${x2 === v2 ? "selected" : ""}>${esc2(`v${x2.n} \xB7 ${sbWhen(x2.at)} \xB7 ${sbVerdict(x2)}${x2.current ? " \xB7 vigente" : ""}`)}</option>`).join("")}</optgroup>`).join("")}</select><button data-action="sb-montaje:${esc2(v2.lote)}:${esc2(v2.block)}" data-sb-take-go="${t2.id}">Montaje \u2192</button>`;
   };
-  const sbVerSelect = (key, list, current2, label, attrs = "") => `<select data-sb-src="${esc(key)}"${attrs}>${sbByLote(list).map(([l3, xs]) => `<optgroup label="${esc(l3)}">${xs.map((x2) => `<option value="${esc(x2.file)}" ${x2.file === current2.file ? "selected" : ""}>${esc(label(x2) + (x2.file === current2.file ? " \xB7 vigente" : ""))}</option>`).join("")}</optgroup>`).join("")}</select>`;
-  const sbVersions = (key, list, current2, label, attrs = "") => `<video class="sb-cut-video" controls preload="none" data-sb-vid="${esc(key)}" src="${media(current2.file)}"></video>${sbVerSelect(key, list, current2, label, attrs)}`;
+  const sbVerSelect = (key, list, current2, label, attrs = "") => `<select data-sb-src="${esc2(key)}"${attrs}>${sbByLote(list).map(([l3, xs]) => `<optgroup label="${esc2(l3)}">${xs.map((x2) => `<option value="${esc2(x2.file)}" ${x2.file === current2.file ? "selected" : ""}>${esc2(label(x2) + (x2.file === current2.file ? " \xB7 vigente" : ""))}</option>`).join("")}</optgroup>`).join("")}</select>`;
+  const sbVersions = (key, list, current2, label, attrs = "") => `<video class="sb-cut-video" controls preload="none" data-sb-vid="${esc2(key)}" src="${media(current2.file)}"></video>${sbVerSelect(key, list, current2, label, attrs)}`;
   const SB_MISS = { "foto-3d": ["vi\xF1eta sin foto 3D", "vi\xF1etas sin foto 3D"], fotograma: ["vi\xF1eta sin fotograma", "vi\xF1etas sin fotograma"], plano: ["vi\xF1eta sin plano", "vi\xF1etas sin plano"], audio: ["l\xEDnea sin audio", "l\xEDneas sin audio"] };
   const sbMissCount = (list) => {
     const by = {};
@@ -29912,13 +30024,13 @@ async function render() {
     return Object.entries(by).map(([k, n]) => n + " " + (SB_MISS[k] || [k, k])[n === 1 ? 0 : 1]).join(", ");
   }, sbMissList = (list) => list.slice(0, 20).map((m2) => `${m2.code || m2.shot} \xB7 ${(SB_MISS[m2.kind] || [m2.kind])[0]}${m2.text ? ` \xAB${m2.text}\xBB` : ""}`).join("\n") + (list.length > 20 ? `
 y ${list.length - 20} m\xE1s` : "");
-  const sbAnimPills = (x2) => `${x2.incomplete ? `<span class="pill warn" title="${esc(sbMissList(x2.missing || []))}">incompleta: ${esc(sbMissCount(x2.missing || []))}</span>` : ""}${x2.subtitles && x2.subtitles !== "en" ? `<span class="pill">${x2.subtitles === "es" ? "subt\xEDtulos en espa\xF1ol" : "subt\xEDtulos: " + esc(x2.subtitles)}</span>` : ""}${x2.imported ? '<span class="pill">importada</span>' : ""}`;
+  const sbAnimPills = (x2) => `${x2.incomplete ? `<span class="pill warn" title="${esc2(sbMissList(x2.missing || []))}">incompleta: ${esc2(sbMissCount(x2.missing || []))}</span>` : ""}${x2.subtitles && x2.subtitles !== "en" ? `<span class="pill">${x2.subtitles === "es" ? "subt\xEDtulos en espa\xF1ol" : "subt\xEDtulos: " + esc2(x2.subtitles)}</span>` : ""}${x2.imported ? '<span class="pill">importada</span>' : ""}`;
   const sbAnimLabel = (x2) => `v${String(x2.version).padStart(2, "0")} \xB7 ${sbWhen(x2.at)} \xB7 ${sbTime(x2.duration)}`, sbPlayerPills = (step, x2) => step === "montaje" ? x2.partial ? `<span class="pill warn">parcial (${x2.covered}/${x2.total} vi\xF1etas)</span>` : "" : sbAnimPills(x2);
   const sbPlayer = (key, P2, { cutLabel, go }) => {
     if (!P2?.steps.length) return "";
     sbPlayers.set(key, P2.steps);
-    const k = esc(key), init = P2.steps.find((s) => s.key === P2.initial), cut = P2.steps.find((s) => s.key === "montaje");
-    return `<div class="sb-player" data-sb-player="${k}"><div class="sb-player-bar">${P2.steps.length > 1 ? `<select data-sb-step="${k}" aria-label="Paso">${P2.steps.map((s) => `<option value="${s.key}" ${s === init ? "selected" : ""}>${s.label}</option>`).join("")}</select>` : `<span class="eyebrow">${init.label}</span>`}${P2.steps.map((s) => sbVerSelect(key, s.list, s.current, s.key === "montaje" ? cutLabel : sbAnimLabel, ` data-step="${s.key}" aria-label="Versi\xF3n: ${s.label}"${s === init ? "" : " hidden"}`)).join("")}${go && cut ? `<button data-action="sb-montaje:${esc(cut.current.lote)}:" data-sb-go="${k}"${init === cut ? "" : " hidden"}>Montaje \u2192</button>` : ""}</div><span class="sb-player-pills" data-sb-pills="${k}">${sbPlayerPills(init.key, init.current)}</span><video class="sb-cut-video" controls preload="none" data-sb-vid="${k}" src="${media(init.current.file)}"></video></div>`;
+    const k = esc2(key), init = P2.steps.find((s) => s.key === P2.initial), cut = P2.steps.find((s) => s.key === "montaje");
+    return `<div class="sb-player" data-sb-player="${k}"><div class="sb-player-bar">${P2.steps.length > 1 ? `<select data-sb-step="${k}" aria-label="Paso">${P2.steps.map((s) => `<option value="${s.key}" ${s === init ? "selected" : ""}>${s.label}</option>`).join("")}</select>` : `<span class="eyebrow">${init.label}</span>`}${P2.steps.map((s) => sbVerSelect(key, s.list, s.current, s.key === "montaje" ? cutLabel : sbAnimLabel, ` data-step="${s.key}" aria-label="Versi\xF3n: ${s.label}"${s === init ? "" : " hidden"}`)).join("")}${go && cut ? `<button data-action="sb-montaje:${esc2(cut.current.lote)}:" data-sb-go="${k}"${init === cut ? "" : " hidden"}>Montaje \u2192</button>` : ""}</div><span class="sb-player-pills" data-sb-pills="${k}">${sbPlayerPills(init.key, init.current)}</span><video class="sb-cut-video" controls preload="none" data-sb-vid="${k}" src="${media(init.current.file)}"></video></div>`;
   };
   const sbPlayerShow = (key, step, file) => {
     const q = (a) => document.querySelector(`[data-${a}="${CSS.escape(key)}"]`), v2 = q("sb-vid");
@@ -29942,7 +30054,7 @@ y ${list.length - 20} m\xE1s` : "");
       const e = p.episodes.find((e2) => e2.id === x2.episode), s = e?.sequences.find((s2) => s2.id === x2.sequence);
       return (e?.title || x2.episode) + " / " + (s?.title || x2.sequence) + " / " + (s?.shots.find((t3) => t3.id === x2.shot)?.title || x2.shot);
     };
-    return `<details class="menu down"><summary>Animaci\xF3n 3D</summary><div>${list.map((x2) => btn(esc(name2(x2)), to(x2))).join("")}</div></details>`;
+    return `<details class="menu down"><summary>Animaci\xF3n 3D</summary><div>${list.map((x2) => btn(esc2(name2(x2)), to(x2))).join("")}</div></details>`;
   };
   const sbCardVersions = (t2, m2, g) => {
     const rows = (t2.renders?.length > 1 ? `<div class="sb-ver"><span class="sb-ver-k">Fotograma</span><select data-sb-render="${t2.id}" aria-label="Versi\xF3n del fotograma">${opts(t2.renders.map((r, i2) => [r.file, "Fotograma " + (i2 + 1)]), t2.render)}</select></div>` : "") + (m2 ? `<div class="sb-ver"><span class="sb-ver-k">V\xEDdeo</span>${sbTakes(t2, m2)}</div>` : "") + (g?.current ? `<details class="sb-ver sb-a3d"><summary><span class="sb-ver-k">Animaci\xF3n 3D</span> v${String(g.current.version).padStart(2, "0")}</summary>${sbVersions("a3d-" + t2.id, g.list, g.current, sbAnimLabel, ' aria-label="Versi\xF3n de la animaci\xF3n 3D"')}</details>` : "");
@@ -29950,11 +30062,18 @@ y ${list.length - 20} m\xE1s` : "");
   };
   const sbAnimBtn = (b2) => state.jobs.some((j) => j.project === p.id && j.type === "animatic" && j.target === b2.id && ["queued", "running"].includes(j.status)) ? '<span class="pill">Generando anim\xE1ticas\u2026</span>' : btn("Generar anim\xE1ticas", "sb-animaticas:" + b2.id);
   if (view === "storyboards") {
-    const list = p.storyboards || [];
-    html3 = heading2("Storyboards.", "Vi\xF1etas con boceto, fotograma generado, encuadre y di\xE1logo. Cuando un storyboard est\xE1 listo se convierte en cap\xEDtulo.", `<div class="row">${btn("Importar JSON", "import-storyboard")}${btn("+ Storyboard", "new-storyboard", "primary")}</div>`) + (list.length ? `<div class="grid">${list.map((b2) => {
-      const shots = sbShots(b2), cover = shots.find((t2) => t2.render)?.render || shots.find((t2) => t2.sketch)?.sketch;
-      return `<article class="card">${cover ? `<img src="${media(cover)}" alt="${esc(b2.title)}">` : '<div class="cover">\u25A6</div>'}<div class="inner"><span class="pill">STORYBOARD</span><h2 style="margin-top:12px">${esc(b2.title)}</h2><p>${esc(b2.subtitle || (b2.description || "").slice(0, 140))}</p><p class="tiny" style="margin-bottom:14px">${b2.sequences.length} escenas \xB7 ${shots.length} vi\xF1etas \xB7 ${sbDur(shots.reduce((n, t2) => n + (Number(t2.duration) || 0), 0))} \xB7 ${shots.filter((t2) => t2.render).length} fotogramas</p>${btn("Abrir storyboard \u2192", "storyboard:" + b2.id, "primary")}</div></article>`;
-    }).join("")}</div>` : '<div class="empty"><h2>Dibuja antes de rodar.</h2><p>Crea un storyboard vac\xEDo o importa uno en JSON con sus bocetos y fotogramas.</p></div>');
+    const { items, defs } = storyboardItems(p), hitsHTML = (b2, hits) => hits.length ? `<ul class="filter-hits">${hits.slice(0, 12).map((h) => `<li><a href="${esc2(routeQuery({ project: p.id, view: "storyboard", storyboard: b2.id, scene: h.scene }))}" data-route>${esc2(h.label)}</a></li>`).join("")}${hits.length > 12 ? `<li class="tiny">y ${hits.length - 12} m\xE1s</li>` : ""}</ul>` : "";
+    const sbCard = ({ item, hits }) => {
+      const b2 = item.ref.storyboard, shots = sbShots(b2), cover = shots.find((t2) => t2.render)?.render || shots.find((t2) => t2.sketch)?.sketch;
+      return `<article class="card">${cover ? `<img src="${media(cover)}" alt="${esc2(b2.title)}">` : '<div class="cover">\u25A6</div>'}<div class="inner"><div class="row"><span class="pill">${item.ref.version ? "v" + item.ref.version : "STORYBOARD"}</span>${item.ref.current ? '<span class="pill ok">vigente</span>' : ""}</div><h2 style="margin-top:12px">${esc2(b2.title)}</h2><p>${esc2(b2.subtitle || (b2.description || "").slice(0, 140))}</p><p class="tiny" style="margin-bottom:14px">${(b2.sequences || []).length} escenas \xB7 ${shots.length} vi\xF1etas \xB7 ${sbDur(shots.reduce((n, t2) => n + (Number(t2.duration) || 0), 0))} \xB7 ${shots.filter((t2) => t2.render).length} fotogramas</p>${hitsHTML(b2, hits)}${btn("Abrir storyboard \u2192", "storyboard:" + b2.id, "primary")}</div></article>`;
+    };
+    const testCard = ({ item }) => {
+      const s = item.ref.sequence;
+      return `<article class="card"><div class="inner"><span class="pill">PRUEBA</span><h2 style="margin-top:12px">${esc2(s.title || s.id)}</h2><p class="tiny" style="margin-bottom:14px">${esc2(item.ref.episode.title || item.ref.episode.id)} \xB7 ${plural(item.ref.shots, "plano", "planos")}</p>${btn("Ver en Planos \u2192", "shots:" + s.id)}</div></article>`;
+    };
+    const grid = (list) => `<div class="grid">${list.map((r) => r.item.kind === "test" ? testCard(r) : sbCard(r)).join("")}</div>`;
+    html3 = heading2("Storyboards.", "Vi\xF1etas con boceto, fotograma generado, encuadre y di\xE1logo. Cuando un storyboard est\xE1 listo se convierte en cap\xEDtulo.", `<div class="row">${btn("Importar JSON", "import-storyboard")}${btn("+ Storyboard", "new-storyboard", "primary")}</div>`) + (items.length ? filterBarHTML({ view, query: filt.q, placeholder: "Buscar story, escena o vi\xF1eta (c\xF3digo o t\xEDtulo)", open: filterOpen ?? matchMedia("(min-width: 751px)").matches }) + "<div data-filter-results></div>" : '<div class="empty"><h2>Dibuja antes de rodar.</h2><p>Crea un storyboard vac\xEDo o importa uno en JSON con sus bocetos y fotogramas.</p></div>');
+    fctx = { view, items, defs, noun: ["resultado", "resultados"], empty: "Ning\xFAn story, escena ni vi\xF1eta coincide con la b\xFAsqueda y los filtros.", paint: (m2) => storyboardResultSections(m2.results).map((x2) => x2.kind === "act" ? `<section class="panel sbs-act"><span class="eyebrow">${p.type === "serie" ? "CAP\xCDTULO" : "ACTO"}</span><h2>${esc2(x2.episode.title || x2.episode.id)}</h2>${x2.fichas.map((f2) => `<div class="sbs-ficha"><h3><a href="${esc2(routeQuery({ project: p.id, view: "tree", node: "seq/" + f2.ficha.id }))}" data-route>${esc2(f2.code + " \xB7 " + f2.ficha.title)}</a></h3>${grid(f2.results)}</div>`).join("")}</section>` : `<section class="panel sbs-group"><span class="eyebrow">${x2.kind === "tests" ? "Pruebas" : "Sin secuencia"}</span>${grid(x2.results)}</section>`).join("") };
   }
   if (view === "storyboard") {
     sbPlayers.clear();
@@ -29972,9 +30091,9 @@ y ${list.length - 20} m\xE1s` : "");
     }
     const M2 = sbMedia.data, A2 = sbMedia.anim;
     const shots = sbShots(b2), CH = projectChannels2(p), crumbs = storyCrumbs(p, b2.id, sceneId), vo = storyVersionOptions(p, b2.id), shown = vo.find((o) => o.selected);
-    html3 = (crumbs.length ? `<nav class="crumbs" aria-label="Ruta"><ol>${crumbs.map((c) => `<li>${c.route ? `<a href="${esc(routeQuery({ project: p.id, ...c.route }))}" data-route>${esc(c.label)}</a>` : `<span aria-current="page">${esc(c.label)}</span>`}</li>`).join("")}</ol></nav>` : "") + heading2(esc(b2.title), esc(b2.subtitle || ""), `<div class="heading-actions">${vo.length > 1 ? `<select data-sb-version="${esc(b2.id)}" aria-label="Versi\xF3n del story">${vo.map((o) => `<option value="${esc(o.id)}"${o.selected ? " selected" : ""}>${esc(o.label)}</option>`).join("")}</select>` : ""}${shown ? shown.current ? '<span class="pill ok">vigente</span>' : btn("Marcar como vigente", "sb-current:" + b2.id) : ""}${btn(storyPlansLabel(p, b2), "sb-to-episode:" + b2.id, "primary")}${sbAnimBtn(b2)}${btn("Editar", "edit-storyboard:" + b2.id)}${btn("+ Escena", "new-sb-sequence:" + b2.id)}<details class="menu down"><summary>M\xE1s</summary><div>${btn("Exportar JSON", "sb-export:" + b2.id)}${btn("Eliminar", "delete-storyboard:" + b2.id)}</div></details></div>`, "stack") + `<div class="two"><section class="panel"><div class="eyebrow">Planteamiento</div><p style="white-space:pre-wrap">${esc(b2.description || "Sin descripci\xF3n todav\xEDa.")}</p>${b2.notes ? `<div class="note" style="margin-top:16px;white-space:pre-wrap">${esc(b2.notes)}</div>` : ""}</section><section class="panel"><div class="sb-stats"><div><span class="stat">${b2.sequences.length}</span>Escenas</div><div><span class="stat">${shots.length}</span>Vi\xF1etas</div><div><span class="stat">${shots.filter((t2) => t2.render).length}</span>Fotogramas</div><div><span class="stat">${sbDur(shots.reduce((n, t2) => n + (Number(t2.duration) || 0), 0))}</span>Duraci\xF3n</div></div>${sbPlayer("storyboard", storyboardPlayer(A2?.storyboard, M2?.cuts), { cutLabel: (c) => `${c.name} \xB7 ${sbWhen(c.at)} \xB7 ${sbTime(c.duration)}${c.partial ? ` \xB7 parcial (${c.covered}/${c.total} vi\xF1etas)` : ""}`, go: true })}<details class="sb-help"><summary>C\xF3mo funciona</summary><p>Cada vi\xF1eta guarda su boceto, el fotograma generado, las referencias y el prompt. \xABGenerar fotograma\xBB env\xEDa el boceto y las referencias al modelo de imagen; \xABCrear cap\xEDtulo\xBB convierte las vi\xF1etas en planos editables con su di\xE1logo. Arrastra una vi\xF1eta sobre otra (o sobre el hueco final de una escena) para reordenarla; \xABMover antes\xBB y \xABMover despu\xE9s\xBB, en el men\xFA \u22EF de la vi\xF1eta, hacen lo mismo con el teclado.</p></details></section></div>` + b2.sequences.map((s) => {
+    html3 = (crumbs.length ? `<nav class="crumbs" aria-label="Ruta"><ol>${crumbs.map((c) => `<li>${c.route ? `<a href="${esc2(routeQuery({ project: p.id, ...c.route }))}" data-route>${esc2(c.label)}</a>` : `<span aria-current="page">${esc2(c.label)}</span>`}</li>`).join("")}</ol></nav>` : "") + heading2(esc2(b2.title), esc2(b2.subtitle || ""), `<div class="heading-actions">${vo.length > 1 ? `<select data-sb-version="${esc2(b2.id)}" aria-label="Versi\xF3n del story">${vo.map((o) => `<option value="${esc2(o.id)}"${o.selected ? " selected" : ""}>${esc2(o.label)}</option>`).join("")}</select>` : ""}${shown ? shown.current ? '<span class="pill ok">vigente</span>' : btn("Marcar como vigente", "sb-current:" + b2.id) : ""}${btn(storyPlansLabel(p, b2), "sb-to-episode:" + b2.id, "primary")}${sbAnimBtn(b2)}${btn("Editar", "edit-storyboard:" + b2.id)}${btn("+ Escena", "new-sb-sequence:" + b2.id)}<details class="menu down"><summary>M\xE1s</summary><div>${btn("Exportar JSON", "sb-export:" + b2.id)}${btn("Eliminar", "delete-storyboard:" + b2.id)}</div></details></div>`, "stack") + `<div class="two"><section class="panel"><div class="eyebrow">Planteamiento</div><p style="white-space:pre-wrap">${esc2(b2.description || "Sin descripci\xF3n todav\xEDa.")}</p>${b2.notes ? `<div class="note" style="margin-top:16px;white-space:pre-wrap">${esc2(b2.notes)}</div>` : ""}</section><section class="panel"><div class="sb-stats"><div><span class="stat">${b2.sequences.length}</span>Escenas</div><div><span class="stat">${shots.length}</span>Vi\xF1etas</div><div><span class="stat">${shots.filter((t2) => t2.render).length}</span>Fotogramas</div><div><span class="stat">${sbDur(shots.reduce((n, t2) => n + (Number(t2.duration) || 0), 0))}</span>Duraci\xF3n</div></div>${sbPlayer("storyboard", storyboardPlayer(A2?.storyboard, M2?.cuts), { cutLabel: (c) => `${c.name} \xB7 ${sbWhen(c.at)} \xB7 ${sbTime(c.duration)}${c.partial ? ` \xB7 parcial (${c.covered}/${c.total} vi\xF1etas)` : ""}`, go: true })}<details class="sb-help"><summary>C\xF3mo funciona</summary><p>Cada vi\xF1eta guarda su boceto, el fotograma generado, las referencias y el prompt. \xABGenerar fotograma\xBB env\xEDa el boceto y las referencias al modelo de imagen; \xABCrear cap\xEDtulo\xBB convierte las vi\xF1etas en planos editables con su di\xE1logo. Arrastra una vi\xF1eta sobre otra (o sobre el hueco final de una escena) para reordenarla; \xABMover antes\xBB y \xABMover despu\xE9s\xBB, en el men\xFA \u22EF de la vi\xF1eta, hacen lo mismo con el teclado.</p></details></section></div>` + b2.sequences.map((s) => {
       const H2 = storyboardSequenceHeader(s, p.locations, sbDur), P2 = storyboardPlayer(A2?.sequences?.[s.id], M2?.sequences?.[s.id]);
-      return `<div class="panel sb-seq${s.id === sceneId ? " target" : ""}" data-sb-scene="${esc(s.id)}"><div class="sb-seq-head"><div><div class="eyebrow">${esc(H2.eyebrow)}</div><h2>${esc(s.title)}</h2>${H2.meta ? `<p class="sb-seq-meta">${esc(H2.meta)}</p>` : ""}</div><div class="row">${btn("Editar", "sb-sequence:" + b2.id + ":" + s.id)}${btn("+ Vi\xF1eta", "new-sb-shot:" + b2.id + ":" + s.id)}${btn("Eliminar", "delete-sb-sequence:" + b2.id + ":" + s.id)}</div></div><div class="sb-grid" data-sb-grid="${s.id}">${s.shots.map((t2) => `<article class="sb-card" draggable="true" data-sb-drag="${t2.id}">${sbFrame(t2, M2?.shots?.[t2.id])}<div class="inner"><div class="sb-card-head"><h3>${esc(t2.title)}</h3>${t2.zone ? ((z) => `<span class="pill zone" style="${catalogStyle(z, "zone")}">${esc(z.unknown ? t2.zone : z.label)}</span>`)(zoneOf(p, t2.zone)) : ""}</div>${t2.camera ? `<p class="tiny" style="margin:6px 0 0">${esc(t2.camera)}</p>` : ""}${t2.action ? `<p style="margin:8px 0 0">${esc(t2.action)}</p>` : ""}${t2.dialogue?.length ? `<ul class="sb-dial">${t2.dialogue.map((l3) => `<li style="${catalogStyle(channelOf(CH, l3.channel), "ch")}"><b>${esc(l3.who || p.characters.find((c) => c.id === l3.character)?.name || "")}</b>${l3.channel ? `<span class="tiny">(${esc(channelShort(channelOf(CH, l3.channel)))})</span> ` : ""}${esc(l3.text)}</li>`).join("")}</ul>` : ""}${t2.sound ? `<p class="tiny" style="margin-top:8px;font-style:italic">${esc(t2.sound)}</p>` : ""}${t2.cast?.length ? `<p class="tiny" style="margin-top:6px">Reparto: ${esc(t2.cast.map((c) => p.characters.find((x2) => x2.id === c)?.name || c).join(", "))}</p>` : ""}<div class="sb-actions">${btn("Editar", "sb-shot:" + b2.id + ":" + s.id + ":" + t2.id)}${btn("Generar fotograma", "gen-sb:" + t2.id, t2.render ? "" : "lime")}${sbAnim(t2)}${btn("Prompt", "sb-prompt:" + t2.id)}<details class="menu down end sb-more"><summary aria-label="M\xE1s acciones de la vi\xF1eta">\u22EF</summary><div>${btn("Subir boceto", "upload-sb-sketch:" + t2.id)}${btn("Subir fotograma", "upload-sb-render:" + t2.id)}${btn("\u25C0 Mover antes", "sb-move:" + t2.id + ":-1")}${btn("\u25B6 Mover despu\xE9s", "sb-move:" + t2.id + ":1")}${btn("\u2715 Eliminar vi\xF1eta", "delete-sb-shot:" + t2.id)}</div></details></div>${sbCardVersions(t2, M2?.shots?.[t2.id], sbMedia.a3d?.shots?.[t2.id])}</div></article>`).join("") || '<p class="tiny">Sin vi\xF1etas todav\xEDa.</p>'}</div>${P2.steps.length ? `<details class="sb-cuts"><summary>V\xEDdeos de la escena</summary>${sbPlayer("seq-" + s.id, P2, { cutLabel: (x2) => `${x2.cut} \xB7 ${sbTime(x2.duration)} \xB7 ${x2.blocks.length} bloques`, go: false })}</details>` : ""}</div>`;
+      return `<div class="panel sb-seq${s.id === sceneId ? " target" : ""}" data-sb-scene="${esc2(s.id)}"><div class="sb-seq-head"><div><div class="eyebrow">${esc2(H2.eyebrow)}</div><h2>${esc2(s.title)}</h2>${H2.meta ? `<p class="sb-seq-meta">${esc2(H2.meta)}</p>` : ""}</div><div class="row">${btn("Editar", "sb-sequence:" + b2.id + ":" + s.id)}${btn("+ Vi\xF1eta", "new-sb-shot:" + b2.id + ":" + s.id)}${btn("Eliminar", "delete-sb-sequence:" + b2.id + ":" + s.id)}</div></div><div class="sb-grid" data-sb-grid="${s.id}">${s.shots.map((t2) => `<article class="sb-card" draggable="true" data-sb-drag="${t2.id}">${sbFrame(t2, M2?.shots?.[t2.id])}<div class="inner"><div class="sb-card-head"><h3>${esc2(t2.title)}</h3>${t2.zone ? ((z) => `<span class="pill zone" style="${catalogStyle(z, "zone")}">${esc2(z.unknown ? t2.zone : z.label)}</span>`)(zoneOf(p, t2.zone)) : ""}</div>${t2.camera ? `<p class="tiny" style="margin:6px 0 0">${esc2(t2.camera)}</p>` : ""}${t2.action ? `<p style="margin:8px 0 0">${esc2(t2.action)}</p>` : ""}${t2.dialogue?.length ? `<ul class="sb-dial">${t2.dialogue.map((l3) => `<li style="${catalogStyle(channelOf(CH, l3.channel), "ch")}"><b>${esc2(l3.who || p.characters.find((c) => c.id === l3.character)?.name || "")}</b>${l3.channel ? `<span class="tiny">(${esc2(channelShort(channelOf(CH, l3.channel)))})</span> ` : ""}${esc2(l3.text)}</li>`).join("")}</ul>` : ""}${t2.sound ? `<p class="tiny" style="margin-top:8px;font-style:italic">${esc2(t2.sound)}</p>` : ""}${t2.cast?.length ? `<p class="tiny" style="margin-top:6px">Reparto: ${esc2(t2.cast.map((c) => p.characters.find((x2) => x2.id === c)?.name || c).join(", "))}</p>` : ""}<div class="sb-actions">${btn("Editar", "sb-shot:" + b2.id + ":" + s.id + ":" + t2.id)}${btn("Generar fotograma", "gen-sb:" + t2.id, t2.render ? "" : "lime")}${sbAnim(t2)}${btn("Prompt", "sb-prompt:" + t2.id)}<details class="menu down end sb-more"><summary aria-label="M\xE1s acciones de la vi\xF1eta">\u22EF</summary><div>${btn("Subir boceto", "upload-sb-sketch:" + t2.id)}${btn("Subir fotograma", "upload-sb-render:" + t2.id)}${btn("\u25C0 Mover antes", "sb-move:" + t2.id + ":-1")}${btn("\u25B6 Mover despu\xE9s", "sb-move:" + t2.id + ":1")}${btn("\u2715 Eliminar vi\xF1eta", "delete-sb-shot:" + t2.id)}</div></details></div>${sbCardVersions(t2, M2?.shots?.[t2.id], sbMedia.a3d?.shots?.[t2.id])}</div></article>`).join("") || '<p class="tiny">Sin vi\xF1etas todav\xEDa.</p>'}</div>${P2.steps.length ? `<details class="sb-cuts"><summary>V\xEDdeos de la escena</summary>${sbPlayer("seq-" + s.id, P2, { cutLabel: (x2) => `${x2.cut} \xB7 ${sbTime(x2.duration)} \xB7 ${x2.blocks.length} bloques`, go: false })}</details>` : ""}</div>`;
     }).join("") + (b2.sequences.length ? "" : '<div class="empty"><h2>Empieza por una escena.</h2><p>Cada escena agrupa vi\xF1etas con su encuadre, acci\xF3n y di\xE1logo.</p></div>');
   }
   if (view === "tree") {
@@ -29989,16 +30108,20 @@ y ${list.length - 20} m\xE1s` : "");
     if (!p.episodes.length) html3 += `<div class="empty"><h2>La escaleta se llena desde ${p.type === "serie" ? "los cap\xEDtulos" : "los actos"}.</h2><p>Crea el primero en Planos y sus secuencias aparecer\xE1n aqu\xED en orden, cada una con su car\xE1tula.</p></div>`;
   }
   if (view === "shots") {
-    const GT = { container: "Planos de storys", outline: "Planos propios", test: "Pruebas" }, shotCard = (e, s, t2, i2) => `<article class="card"><div class="inner"><div class="row between"><span class="pill">P${pad2(i2 + 1)}</span><span class="tiny">${t2.duration}s \xB7 ${t2.lines.length} di\xE1logos</span></div><h3 style="margin-top:14px">${esc(t2.title)}</h3><p>${esc(t2.description.slice(0, 90) || "Define encuadre, acci\xF3n y conversaci\xF3n.")}</p><div class="row">${btn("Abrir estudio \u2192", "shot:" + e.id + ":" + s.id + ":" + t2.id)}${btn("Animaci\xF3n", "anim:" + e.id + ":" + s.id + ":" + t2.id)}</div></div></article>`, seqHTML = (e, x2) => {
+    const GT = { container: "Planos de storys", outline: "Planos propios", test: "Pruebas" }, shotCard = (e, s, t2, i2) => `<article class="card"><div class="inner"><div class="row between"><span class="pill">P${pad2(i2 + 1)}</span><span class="tiny">${t2.duration}s \xB7 ${t2.lines.length} di\xE1logos</span></div><h3 style="margin-top:14px">${esc2(t2.title)}</h3><p>${esc2(t2.description.slice(0, 90) || "Define encuadre, acci\xF3n y conversaci\xF3n.")}</p><div class="row">${btn("Abrir estudio \u2192", "shot:" + e.id + ":" + s.id + ":" + t2.id)}${btn("Animaci\xF3n", "anim:" + e.id + ":" + s.id + ":" + t2.id)}</div></div></article>`, seqHTML = (e, x2) => {
       const s = x2.sequence;
-      return `<div class="shots-seq" data-shots-seq="${esc(s.id)}"><div class="row between"><div><h3>${esc(s.title)} <span class="tiny">${plural(s.shots.length, "plano", "planos")} \xB7 ${esc(p.locations.find((l3) => l3.id === s.location)?.name || "Sin ambiente")}</span></h3>${x2.storyboard ? `<p class="tiny">Story v${x2.version} de ${x2.ficha ? `<a href="${esc(routeQuery({ project: p.id, view: "tree", node: "seq/" + x2.ficha.id }))}" data-route>\xAB${esc(x2.ficha.title)}\xBB</a>` : "su secuencia"}</p>` : ""}</div>${btn("+ Plano", "new-shot:" + e.id + ":" + s.id)}</div><div class="grid" style="margin-top:12px">${s.shots.map((t2, i2) => shotCard(e, s, t2, i2)).join("")}</div></div>`;
-    };
-    html3 = heading2("Planos.", "Los planos de cada " + (p.type === "serie" ? "cap\xEDtulo" : "acto") + ": los de los storys, los propios de las secuencias y las pruebas. Cada uno se abre en su estudio o en Animaci\xF3n.", `<div class="row">${btn("Generar con IA", "outline")}${btn(p.type === "serie" ? "+ Cap\xEDtulo" : "+ Acto", "new-episode", "primary")}</div>`) + shotGroups(p).map(({ episode: e, groups, empty }) => `<div class="panel"><div class="row between"><div><span class="eyebrow">${p.type === "serie" ? "CAP\xCDTULO" : "ACTO"}</span><h2>${esc(e.title)}</h2><p>${esc(e.synopsis)}</p></div><div class="row">${e.rehearsal ? btn("\u25B6 Ensayar 3D \xB7 voz del navegador", "rehearsal:" + e.id, "primary") : ""}${btn("Editar", "episode:" + e.id)}${btn("+ Secuencia", "new-sequence:" + e.id)}${btn(p.type === "serie" ? "Montar cap\xEDtulo" : "Montar acto", "export:" + e.id)}</div></div>${groups.map((g) => `<section class="shots-group">${groups.length === 1 && g.role === "outline" ? "" : `<div class="eyebrow">${GT[g.role]}</div>`}${g.sequences.map((x2) => seqHTML(e, x2)).join("")}</section>`).join("")}${empty.length ? `<details class="shots-empty"><summary>${plural(empty.length, "secuencia sin planos", "secuencias sin planos")}</summary>${empty.map((s) => `<div class="row between"><span>${esc(s.title)}</span>${btn("+ Plano", "new-shot:" + e.id + ":" + s.id)}</div>`).join("")}</details>` : ""}${e.exports?.length ? `<div class="actions">${e.exports.map((x2, i2) => `<a href="${media(x2.file)}" target="_blank">Montaje v${i2 + 1} \u2197</a>`).join(" \xB7 ")}</div>` : ""}</div>`).join("");
+      return `<div class="shots-seq" data-shots-seq="${esc2(s.id)}"><div class="row between"><div><h3>${esc2(s.title)} <span class="tiny">${x2.shots.length !== s.shots.length ? x2.shots.length + " de " : ""}${plural(s.shots.length, "plano", "planos")} \xB7 ${esc2(p.locations.find((l3) => l3.id === s.location)?.name || "Sin ambiente")}</span></h3>${x2.storyboard ? `<p class="tiny">Story v${x2.version} de ${x2.ficha ? `<a href="${esc2(routeQuery({ project: p.id, view: "tree", node: "seq/" + x2.ficha.id }))}" data-route>\xAB${esc2(x2.ficha.title)}\xBB</a>` : "su secuencia"}</p>` : ""}</div>${btn("+ Plano", "new-shot:" + e.id + ":" + s.id)}</div><div class="grid" style="margin-top:12px">${x2.shots.map(({ shot: t2, index: i2 }) => shotCard(e, s, t2, i2)).join("")}</div></div>`;
+    }, groupsHTML = (list) => list.map(({ episode: e, groups, empty }) => `<div class="panel"><div class="row between"><div><span class="eyebrow">${p.type === "serie" ? "CAP\xCDTULO" : "ACTO"}</span><h2>${esc2(e.title)}</h2><p>${esc2(e.synopsis)}</p></div><div class="row">${e.rehearsal ? btn("\u25B6 Ensayar 3D \xB7 voz del navegador", "rehearsal:" + e.id, "primary") : ""}${btn("Editar", "episode:" + e.id)}${btn("+ Secuencia", "new-sequence:" + e.id)}${btn(p.type === "serie" ? "Montar cap\xEDtulo" : "Montar acto", "export:" + e.id)}</div></div>${groups.map((g) => `<section class="shots-group">${groups.length === 1 && g.role === "outline" ? "" : `<div class="eyebrow">${GT[g.role]}</div>`}${g.sequences.map((x2) => seqHTML(e, x2)).join("")}</section>`).join("")}${empty.length ? `<details class="shots-empty"><summary>${plural(empty.length, "secuencia sin planos", "secuencias sin planos")}</summary>${empty.map((s) => `<div class="row between"><span>${esc2(s.title)}</span>${btn("+ Plano", "new-shot:" + e.id + ":" + s.id)}</div>`).join("")}</details>` : ""}${e.exports?.length ? `<div class="actions">${e.exports.map((x2, i2) => `<a href="${media(x2.file)}" target="_blank">Montaje v${i2 + 1} \u2197</a>`).join(" \xB7 ")}</div>` : ""}</div>`).join(""), { items, defs } = shotItems(p);
+    html3 = heading2("Planos.", "Los planos de cada " + (p.type === "serie" ? "cap\xEDtulo" : "acto") + ": los de los storys, los propios de las secuencias y las pruebas. Cada uno se abre en su estudio o en Animaci\xF3n.", `<div class="row">${btn("Generar con IA", "outline")}${btn(p.type === "serie" ? "+ Cap\xEDtulo" : "+ Acto", "new-episode", "primary")}</div>`) + (items.length ? filterBarHTML({ view, query: filt.q, placeholder: "Buscar plano, descripci\xF3n o di\xE1logo", open: filterOpen ?? matchMedia("(min-width: 751px)").matches }) + "<div data-filter-results></div>" : groupsHTML(filterShotGroups(shotGroups(p), null)));
+    fctx = { view, items, defs, noun: ["plano", "planos"], empty: "Ning\xFAn plano coincide con la b\xFAsqueda y los filtros.", paint: (m2) => {
+      const keep = m2.active ? new Set(m2.results.map((r) => r.item.id)) : null, G2 = filterShotGroups(shotGroups(p), keep), hidden = keep && shotsFocus && !G2.some((x2) => x2.groups.some((g) => g.sequences.some((y2) => y2.sequence.id === shotsFocus)));
+      return (hidden ? '<p class="note filter-hidden">La secuencia enfocada queda oculta por los filtros. <button type="button" data-filter-clear>Limpiar</button></p>' : "") + groupsHTML(G2);
+    } };
     if (!p.episodes.length) html3 += `<div class="empty"><h2>${p.type === "serie" ? "El primer cap\xEDtulo" : "El primer acto"} toma forma aqu\xED.</h2><p>Cr\xE9alo manualmente o pide un desglose a partir de los documentos y referencias.</p></div>`;
   }
   if (view === "rehearsal") {
     const e = p.episodes.find((e2) => e2.id === episodeId);
-    html3 = heading2(esc(e?.title || "Ensayo 3D"), "Guion completo \xB7 decorados provisionales \xB7 voces del navegador. Los tiempos son orientativos.", btn("\u2190 Planos", "nav:shots")) + '<div id="rehearsal"></div>';
+    html3 = heading2(esc2(e?.title || "Ensayo 3D"), "Guion completo \xB7 decorados provisionales \xB7 voces del navegador. Los tiempos son orientativos.", btn("\u2190 Planos", "nav:shots")) + '<div id="rehearsal"></div>';
   }
   if (view === "anim") {
     const want = shotId, { e, s, t: t2 } = current();
@@ -30006,7 +30129,7 @@ y ${list.length - 20} m\xE1s` : "");
       view = "shots";
       return render();
     }
-    html3 = heading2(esc(t2.title) + " \xB7 Animaci\xF3n", esc(e.title) + " / " + esc(s.title) + " \xB7 c\xE1mara del plano, di\xE1logo con la voz del navegador y grabaci\xF3n de la c\xE1mara.", `<div class="row">${btn("\u2190 Planos", "nav:shots")}${btn("Estudio del plano", "shot:" + e.id + ":" + s.id + ":" + t2.id)}</div>`) + '<div id="anim"></div>';
+    html3 = heading2(esc2(t2.title) + " \xB7 Animaci\xF3n", esc2(e.title) + " / " + esc2(s.title) + " \xB7 c\xE1mara del plano, di\xE1logo con la voz del navegador y grabaci\xF3n de la c\xE1mara.", `<div class="row">${btn("\u2190 Planos", "nav:shots")}${btn("Estudio del plano", "shot:" + e.id + ":" + s.id + ":" + t2.id)}</div>`) + '<div id="anim"></div>';
   }
   if (view === "montaje") html3 = heading2("Montaje.", "El corte de cada lote, plano a plano: la toma generada, la vi\xF1eta del storyboard y la secuencia. Revisa las tomas, recorta y vuelve a montar.") + '<div id="montaje"></div>';
   if (view === "jobs") html3 = heading2("Generaciones.", "Trabajos persistentes, versiones y resultados de producci\xF3n.", btn("Actualizar", "refresh")) + `<section class="panel">${jobsHTML()}</section>`;
@@ -30017,9 +30140,18 @@ y ${list.length - 20} m\xE1s` : "");
       return render();
     }
     shotState = await api("/api/shot-state?project=" + p.id + "&shot=" + t2.id);
-    html3 = heading2(esc(t2.title), esc(e.title) + " / " + esc(s.title), `<div class="row">${btn("\u2190 Planos", "nav:shots")}${btn("Editar secuencia", "sequence:" + s.id)}</div>`) + `<div class="stepper"><div class="step active"><b>01 \xB7 PREPARAR</b>Escenario y c\xE1mara</div><div class="step"><b>02 \xB7 INTERPRETAR</b>Voces y ambiente</div><div class="step"><b>03 \xB7 REVISAR</b>Previsualizaci\xF3n</div><div class="step"><b>04 \xB7 APROBAR</b>${shotState.approved ? "\u2713 Aprobada" : "Pendiente"}</div><div class="step"><b>05 \xB7 DISE\xD1AR</b>Fotograma visual</div><div class="step"><b>06 \xB7 PRODUCIR</b>V\xEDdeo H3 Max</div></div><div class="wide"><div><div class="stagebox"><div id="viewport" style="aspect-ratio:16/9"></div><div class="stagefoot">${btn("\u25B6 Ensayar con audio", "play")}${btn("\u25A0 Parar", "stop")}${btn("Inicio de c\xE1mara", "camera-start")}${btn("Final de c\xE1mara", "camera-end")}</div></div><div class="shot-strip"><span>Tiempo</span><input id="scrub" aria-label="Tiempo del plano" type="range" min="0" max="${t2.duration}" step="0.041667" value="0"><output id="scrub-time">0.0 s</output></div><p class="tiny" style="margin:10px 0 20px">Arrastra para orbitar; rueda para acercar. Guarda el inicio y el final para definir el movimiento. Figuras corporales sin rig facial.</p><div class="panel"><div class="row between"><h2>Conversaci\xF3n</h2>${btn("+ Intervenci\xF3n", "new-line")}</div><div class="lines">${t2.lines.map((l3) => `<div class="line"><div class="fields">${select("Personaje", "character", p.characters.map((c) => [c.id, c.name + (c.kind === "voice" ? " \xB7 voz sin cuerpo" : "")]), l3.character).replace("<select ", '<select data-line="' + l3.id + '" ')}${input("Inicio \xB7 s", "start", l3.start, "number").replace("<input ", '<input min="0" step="0.05" data-line="' + l3.id + '" ')}</div>${area("Texto", "text", l3.text).replace("<textarea ", '<textarea data-line="' + l3.id + '" ')}${select("Canal", "channel", catalogOptions(projectChannels2(p), l3.channel, { channel: true }), l3.channel || "direct").replace("<select ", '<select data-line="' + l3.id + '" ')}<label><input style="width:auto" type="checkbox" name="offscreen" data-line="${l3.id}" ${l3.offscreen ? "checked" : ""}> Voz fuera de campo</label>${l3.audio ? `<audio controls src="${media(l3.audio)}"></audio><span class="tiny">${(l3.audioDuration || 0).toFixed(2)} s</span>` : ""}<div class="row">${btn("Generar voz", "line:" + l3.id)}${btn("Subir audio", "upload-line:" + l3.id)}${btn("Quitar", "remove-line:" + l3.id)}</div></div>`).join("") || '<p style="margin-top:15px">Un plano puede ser silencioso. A\xF1ade las intervenciones de quienes hablan.</p>'}</div></div><div class="panel"><h2>Continuidad del reparto</h2><p>Estas posiciones pertenecen a toda la secuencia.</p><table><thead><tr><th>Personaje</th><th>X</th><th>Z</th><th>Giro \xB0</th><th>Postura</th><th></th></tr></thead><tbody>${s.cast.map((a) => `<tr><td>${esc(p.characters.find((c) => c.id === a.character)?.name)}</td>${["x", "z", "yaw"].map((k) => `<td><input type="number" step="${k === "yaw" ? 5 : 0.1}" value="${k === "yaw" ? Math.round(a[k] * 180 / Math.PI) : a[k]}" data-actor="${a.character}" data-field="${k}" aria-label="${k}"></td>`).join("")}<td><select data-actor="${a.character}" data-field="pose">${opts([["seated", "Sentado"], ["standing", "De pie"]], a.pose)}</select></td><td>${btn("\xD7", "remove-cast:" + a.character)}</td></tr>`).join("")}</tbody></table><div class="actions">${btn("+ A\xF1adir al reparto", "add-cast")}${btn("+ Elemento 3D", "add-prop")}${btn("Aplicar posiciones", "apply-stage")}</div></div></div><aside><section class="panel"><h3>El plano</h3>${input("T\xEDtulo", "title", t2.title).replace("<input ", '<input data-shot-field="title" ')}${area("Acci\xF3n e intenci\xF3n", "description", t2.description).replace("<textarea ", '<textarea data-shot-field="description" ')}${input("Duraci\xF3n \xB7 segundos (1\u201315)", "duration", t2.duration, "number").replace("<input ", '<input min="1" max="15" step="0.125" data-shot-field="duration" ')}<label><input style="width:auto" type="checkbox" data-shot-field="allowOverlap" ${t2.allowOverlap ? "checked" : ""}> Permitir solapamiento intencional</label>${btn("C\xE1mara fija (usar inicio)", "camera-fixed")}<hr style="border:0;border-top:1px solid #dfe4db;margin:20px 0"><h3>Ambiente de la secuencia</h3>${area("Descripci\xF3n del sonido", "ambiencePrompt", s.ambiencePrompt).replace("<textarea ", '<textarea data-sequence-field="ambiencePrompt" ')}<label>Volumen<input type="range" min="0" max="1" step="0.01" value="${s.ambienceGain ?? 0.18}" data-sequence-field="ambienceGain"></label><label><input style="width:auto" type="checkbox" data-sequence-field="silent" ${s.silent ? "checked" : ""}> Sin sonido ambiente</label>${s.ambience ? `<audio controls src="${media(s.ambience)}"></audio>` : ""}<div class="actions">${btn("Generar ambiente", "ambience")}${btn("Subir sonido", "upload-ambience")}</div></section><section class="panel"><h3>Revisi\xF3n y producci\xF3n</h3><p style="margin:12px 0">${shotState.issues.map(esc).join("<br>") || "Fuentes listas para previsualizar."}</p>${t2.preview && t2.preview.hash !== shotState.hash ? '<p class="error">La previsualizaci\xF3n anterior est\xE1 desactualizada.</p>' : ""}<div class="actions">${btn("1. Renderizar 3D + sonido", "preview", "primary")}${btn("2. Aprobar previsualizaci\xF3n", "approve", shotState.approved ? "lime" : "")}${btn("3. Generar fotograma visual", "keyframe")}${btn("4. Convertir con H3 Max", "video")}</div><p class="tiny" style="margin-top:15px">Revisa el v\xEDdeo 3D antes de aprobar y el fotograma antes de convertir. Generar im\xE1genes, voces o v\xEDdeo usa tu cuenta de fal.ai.</p></section></aside></div><div class="two">${t2.preview ? `<div class="panel"><h2>Previsualizaci\xF3n ${t2.preview.hash === shotState.hash ? "actual" : "anterior"}</h2><video controls src="${media(t2.preview.file)}"></video><a href="${media(t2.preview.scene)}" target="_blank">Escena 3D y tiempos \xB7 JSON</a></div>` : ""}${t2.keyframe ? `<div class="panel"><h2>Fotograma visual</h2>${image(t2.keyframe.file)}</div>` : ""}${t2.final ? `<div class="panel"><h2>Conversi\xF3n final \xB7 revisar</h2><video controls src="${media(t2.final.file)}"></video></div>` : ""}</div><section class="panel"><h2>Versiones del plano</h2>${(t2.history || []).map((h, i2) => `<div class="job"><span>v${i2 + 1} \xB7 ${esc(h.type)} \xB7 ${new Date(h.at).toLocaleString()}</span><a target="_blank" href="${media(h.file)}">Abrir \u2197</a></div>`).join("") || "<p>Aqu\xED se conservar\xE1n tus previsualizaciones, fotogramas y v\xEDdeos.</p>"}</section>`;
+    html3 = heading2(esc2(t2.title), esc2(e.title) + " / " + esc2(s.title), `<div class="row">${btn("\u2190 Planos", "nav:shots")}${btn("Editar secuencia", "sequence:" + s.id)}</div>`) + `<div class="stepper"><div class="step active"><b>01 \xB7 PREPARAR</b>Escenario y c\xE1mara</div><div class="step"><b>02 \xB7 INTERPRETAR</b>Voces y ambiente</div><div class="step"><b>03 \xB7 REVISAR</b>Previsualizaci\xF3n</div><div class="step"><b>04 \xB7 APROBAR</b>${shotState.approved ? "\u2713 Aprobada" : "Pendiente"}</div><div class="step"><b>05 \xB7 DISE\xD1AR</b>Fotograma visual</div><div class="step"><b>06 \xB7 PRODUCIR</b>V\xEDdeo H3 Max</div></div><div class="wide"><div><div class="stagebox"><div id="viewport" style="aspect-ratio:16/9"></div><div class="stagefoot">${btn("\u25B6 Ensayar con audio", "play")}${btn("\u25A0 Parar", "stop")}${btn("Inicio de c\xE1mara", "camera-start")}${btn("Final de c\xE1mara", "camera-end")}</div></div><div class="shot-strip"><span>Tiempo</span><input id="scrub" aria-label="Tiempo del plano" type="range" min="0" max="${t2.duration}" step="0.041667" value="0"><output id="scrub-time">0.0 s</output></div><p class="tiny" style="margin:10px 0 20px">Arrastra para orbitar; rueda para acercar. Guarda el inicio y el final para definir el movimiento. Figuras corporales sin rig facial.</p><div class="panel"><div class="row between"><h2>Conversaci\xF3n</h2>${btn("+ Intervenci\xF3n", "new-line")}</div><div class="lines">${t2.lines.map((l3) => `<div class="line"><div class="fields">${select("Personaje", "character", p.characters.map((c) => [c.id, c.name + (c.kind === "voice" ? " \xB7 voz sin cuerpo" : "")]), l3.character).replace("<select ", '<select data-line="' + l3.id + '" ')}${input("Inicio \xB7 s", "start", l3.start, "number").replace("<input ", '<input min="0" step="0.05" data-line="' + l3.id + '" ')}</div>${area("Texto", "text", l3.text).replace("<textarea ", '<textarea data-line="' + l3.id + '" ')}${select("Canal", "channel", catalogOptions(projectChannels2(p), l3.channel, { channel: true }), l3.channel || "direct").replace("<select ", '<select data-line="' + l3.id + '" ')}<label><input style="width:auto" type="checkbox" name="offscreen" data-line="${l3.id}" ${l3.offscreen ? "checked" : ""}> Voz fuera de campo</label>${l3.audio ? `<audio controls src="${media(l3.audio)}"></audio><span class="tiny">${(l3.audioDuration || 0).toFixed(2)} s</span>` : ""}<div class="row">${btn("Generar voz", "line:" + l3.id)}${btn("Subir audio", "upload-line:" + l3.id)}${btn("Quitar", "remove-line:" + l3.id)}</div></div>`).join("") || '<p style="margin-top:15px">Un plano puede ser silencioso. A\xF1ade las intervenciones de quienes hablan.</p>'}</div></div><div class="panel"><h2>Continuidad del reparto</h2><p>Estas posiciones pertenecen a toda la secuencia.</p><table><thead><tr><th>Personaje</th><th>X</th><th>Z</th><th>Giro \xB0</th><th>Postura</th><th></th></tr></thead><tbody>${s.cast.map((a) => `<tr><td>${esc2(p.characters.find((c) => c.id === a.character)?.name)}</td>${["x", "z", "yaw"].map((k) => `<td><input type="number" step="${k === "yaw" ? 5 : 0.1}" value="${k === "yaw" ? Math.round(a[k] * 180 / Math.PI) : a[k]}" data-actor="${a.character}" data-field="${k}" aria-label="${k}"></td>`).join("")}<td><select data-actor="${a.character}" data-field="pose">${opts([["seated", "Sentado"], ["standing", "De pie"]], a.pose)}</select></td><td>${btn("\xD7", "remove-cast:" + a.character)}</td></tr>`).join("")}</tbody></table><div class="actions">${btn("+ A\xF1adir al reparto", "add-cast")}${btn("+ Elemento 3D", "add-prop")}${btn("Aplicar posiciones", "apply-stage")}</div></div></div><aside><section class="panel"><h3>El plano</h3>${input("T\xEDtulo", "title", t2.title).replace("<input ", '<input data-shot-field="title" ')}${area("Acci\xF3n e intenci\xF3n", "description", t2.description).replace("<textarea ", '<textarea data-shot-field="description" ')}${input("Duraci\xF3n \xB7 segundos (1\u201315)", "duration", t2.duration, "number").replace("<input ", '<input min="1" max="15" step="0.125" data-shot-field="duration" ')}<label><input style="width:auto" type="checkbox" data-shot-field="allowOverlap" ${t2.allowOverlap ? "checked" : ""}> Permitir solapamiento intencional</label>${btn("C\xE1mara fija (usar inicio)", "camera-fixed")}<hr style="border:0;border-top:1px solid #dfe4db;margin:20px 0"><h3>Ambiente de la secuencia</h3>${area("Descripci\xF3n del sonido", "ambiencePrompt", s.ambiencePrompt).replace("<textarea ", '<textarea data-sequence-field="ambiencePrompt" ')}<label>Volumen<input type="range" min="0" max="1" step="0.01" value="${s.ambienceGain ?? 0.18}" data-sequence-field="ambienceGain"></label><label><input style="width:auto" type="checkbox" data-sequence-field="silent" ${s.silent ? "checked" : ""}> Sin sonido ambiente</label>${s.ambience ? `<audio controls src="${media(s.ambience)}"></audio>` : ""}<div class="actions">${btn("Generar ambiente", "ambience")}${btn("Subir sonido", "upload-ambience")}</div></section><section class="panel"><h3>Revisi\xF3n y producci\xF3n</h3><p style="margin:12px 0">${shotState.issues.map(esc2).join("<br>") || "Fuentes listas para previsualizar."}</p>${t2.preview && t2.preview.hash !== shotState.hash ? '<p class="error">La previsualizaci\xF3n anterior est\xE1 desactualizada.</p>' : ""}<div class="actions">${btn("1. Renderizar 3D + sonido", "preview", "primary")}${btn("2. Aprobar previsualizaci\xF3n", "approve", shotState.approved ? "lime" : "")}${btn("3. Generar fotograma visual", "keyframe")}${btn("4. Convertir con H3 Max", "video")}</div><p class="tiny" style="margin-top:15px">Revisa el v\xEDdeo 3D antes de aprobar y el fotograma antes de convertir. Generar im\xE1genes, voces o v\xEDdeo usa tu cuenta de fal.ai.</p></section></aside></div><div class="two">${t2.preview ? `<div class="panel"><h2>Previsualizaci\xF3n ${t2.preview.hash === shotState.hash ? "actual" : "anterior"}</h2><video controls src="${media(t2.preview.file)}"></video><a href="${media(t2.preview.scene)}" target="_blank">Escena 3D y tiempos \xB7 JSON</a></div>` : ""}${t2.keyframe ? `<div class="panel"><h2>Fotograma visual</h2>${image(t2.keyframe.file)}</div>` : ""}${t2.final ? `<div class="panel"><h2>Conversi\xF3n final \xB7 revisar</h2><video controls src="${media(t2.final.file)}"></video></div>` : ""}</div><section class="panel"><h2>Versiones del plano</h2>${(t2.history || []).map((h, i2) => `<div class="job"><span>v${i2 + 1} \xB7 ${esc2(h.type)} \xB7 ${new Date(h.at).toLocaleString()}</span><a target="_blank" href="${media(h.file)}">Abrir \u2197</a></div>`).join("") || "<p>Aqu\xED se conservar\xE1n tus previsualizaciones, fotogramas y v\xEDdeos.</p>"}</section>`;
   }
   $2("#workspace").innerHTML = html3;
+  {
+    const bar = fctx && $2("[data-filter-bar]");
+    if (bar) filterMount = mountFilters({ bar, results: $2("[data-filter-results]"), ctx: fctx, state: filt, bind, onChange: (st2) => {
+      syncRoute();
+      saveFilters(p.id, view, st2);
+    }, onToggle: (open) => {
+      filterOpen = open;
+    } });
+  }
   if (view === "montaje") {
     const focus = montajeFocus;
     montajeFocus = null;
@@ -30437,7 +30569,7 @@ async function act(action) {
   }
   if (["new-character", "character", "new-location", "location"].includes(a)) {
     const chars = a.includes("character"), list = chars ? p.characters : p.locations, item = list.find((c2) => c2.id === b2) || { id: id2(), name: "", description: "", voice: "", kind: "forest", color: "#88a899" };
-    modal(chars ? "Hoja de personaje" : "Ambiente", input("Nombre", "name", item.name) + area(chars ? "Identidad, vestuario, personalidad y voz" : "Aspecto, iluminaci\xF3n y referencias de espacio", "description", item.description) + (chars ? area("Aspecto para prompts de imagen y v\xEDdeo (breve; si se deja vac\xEDo se deduce de la descripci\xF3n)", "look", item.look || "") + select("Presencia", "kind", [["person", "Personaje f\xEDsico"], ["voice", "Solo voz / megafon\xEDa"]], item.kind || "person") + input("Voz ElevenLabs \xB7 nombre o ID", "voice", item.voice) + `<p class="tiny">Voz actual${item.voice ? `: ${esc(item.voice)}` : " sin asignar"}.${/^[A-Za-z0-9]{20}$/.test(item.voice || "") ? ` <a href="https://elevenlabs.io/app/voice-library?voiceId=${esc(item.voice)}" target="_blank" rel="noopener">Escuchar en ElevenLabs \u2197</a>` : ""}</p>` + (item.sample ? `<div class="note"><b>Muestra de voz</b><audio controls src="${media(item.sample)}"></audio></div>` : '<p class="tiny">Sin muestra de voz: \xABProbar voz\xBB en la tarjeta del personaje la genera.</p>') + input("Color del mu\xF1eco 3D", "color", item.color, "color") : select("Base de previsualizaci\xF3n", "kind", [["forest", "Exterior \xB7 bosque"], ["interior", "Interior"], ["city", "Exterior \xB7 ciudad"], ["empty", "Espacio libre"]], item.kind) + select("Entorno 3D (sustituye la base en los planos)", "environment", [["", "Ninguno"], ...(p.environments || []).filter((e) => e.builder && e.data).map((e) => [e.id, e.name])], item.environment || "")), async (f2) => {
+    modal(chars ? "Hoja de personaje" : "Ambiente", input("Nombre", "name", item.name) + area(chars ? "Identidad, vestuario, personalidad y voz" : "Aspecto, iluminaci\xF3n y referencias de espacio", "description", item.description) + (chars ? area("Aspecto para prompts de imagen y v\xEDdeo (breve; si se deja vac\xEDo se deduce de la descripci\xF3n)", "look", item.look || "") + select("Presencia", "kind", [["person", "Personaje f\xEDsico"], ["voice", "Solo voz / megafon\xEDa"]], item.kind || "person") + input("Voz ElevenLabs \xB7 nombre o ID", "voice", item.voice) + `<p class="tiny">Voz actual${item.voice ? `: ${esc2(item.voice)}` : " sin asignar"}.${/^[A-Za-z0-9]{20}$/.test(item.voice || "") ? ` <a href="https://elevenlabs.io/app/voice-library?voiceId=${esc2(item.voice)}" target="_blank" rel="noopener">Escuchar en ElevenLabs \u2197</a>` : ""}</p>` + (item.sample ? `<div class="note"><b>Muestra de voz</b><audio controls src="${media(item.sample)}"></audio></div>` : '<p class="tiny">Sin muestra de voz: \xABProbar voz\xBB en la tarjeta del personaje la genera.</p>') + input("Color del mu\xF1eco 3D", "color", item.color, "color") : select("Base de previsualizaci\xF3n", "kind", [["forest", "Exterior \xB7 bosque"], ["interior", "Interior"], ["city", "Exterior \xB7 ciudad"], ["empty", "Espacio libre"]], item.kind) + select("Entorno 3D (sustituye la base en los planos)", "environment", [["", "Ninguno"], ...(p.environments || []).filter((e) => e.builder && e.data).map((e) => [e.id, e.name])], item.environment || "")), async (f2) => {
       if (!f2.name.trim()) throw Error("Escribe un nombre");
       if (!chars && !f2.environment) {
         delete f2.environment;
@@ -30645,7 +30777,7 @@ async function act(action) {
   if (a === "cover-prompt") {
     const { episode: e0, sequence: s2 } = outlineSequence(p, b2);
     const text2 = coverPrompt(p, e0, s2);
-    modal("Prompt de car\xE1tula \xB7 " + s2.title, `<textarea readonly style="min-height:300px;font-size:12px">${esc(text2)}</textarea><p class="tiny">Se env\xEDa sin im\xE1genes de referencia.</p>`, async () => {
+    modal("Prompt de car\xE1tula \xB7 " + s2.title, `<textarea readonly style="min-height:300px;font-size:12px">${esc2(text2)}</textarea><p class="tiny">Se env\xEDa sin im\xE1genes de referencia.</p>`, async () => {
       await navigator.clipboard.writeText(text2);
       toast("Prompt copiado al portapapeles");
     }, "Copiar prompt");
@@ -30675,7 +30807,7 @@ async function act(action) {
   if (a === "sb-prompt") {
     const { storyboard: b0, sequence: s0, shot: t3 } = storyboardShot2(p, b2);
     const text2 = storyboardPrompt(p, b0, s0, t3), images = [t3.sketch, ...(t3.references || []).map(sbRefPath)].filter(Boolean);
-    modal("Prompt de imagen \xB7 " + (t3.code || t3.title), `<textarea readonly style="min-height:300px;font-size:12px">${esc(text2)}</textarea><p class="tiny">Im\xE1genes que se env\xEDan, en orden: ${images.length ? images.map((f2, i2) => `${i2 + 1}. ${esc(f2)}`).join(" \xB7 ") : "ninguna (generaci\xF3n sin referencia)"}</p>`, async () => {
+    modal("Prompt de imagen \xB7 " + (t3.code || t3.title), `<textarea readonly style="min-height:300px;font-size:12px">${esc2(text2)}</textarea><p class="tiny">Im\xE1genes que se env\xEDan, en orden: ${images.length ? images.map((f2, i2) => `${i2 + 1}. ${esc2(f2)}`).join(" \xB7 ") : "ninguna (generaci\xF3n sin referencia)"}</p>`, async () => {
       await navigator.clipboard.writeText(text2);
       toast("Prompt copiado al portapapeles");
     }, "Copiar prompt");
