@@ -315,6 +315,14 @@ export function storyboardMedia(storyboard,lotes,has=()=>true){const ids=new Set
  const sequences={};for(const s of storyboard?.sequences||[]){const found=withCuts.flatMap(({l})=>l.cuts.flatMap(c=>(c.sequences||[]).filter(x=>x.storyboard===storyboard.id&&x.sequence===s.id).map(x=>({lote:l.id,cut:c.name,file:x.file,at:x.at,duration:x.duration,blocks:x.blocks||[]}))));
   if(found.length)sequences[s.id]={current:found.filter(x=>x.lote===found[0].lote).at(-1),list:found};}
  return {storyboard:storyboard?.id,lotes:info,shots,sequences,cuts};}
+// Reproductor único de la vista Storyboard (#55): anim = {paso:{current,list}} de las animáticas; cut = {current,list} de los montajes (paso «montaje»).
+// Pasos en orden fijo, solo los que tienen vigente; list vacía o ausente → [current]. Inicial: montaje si lo hay, si no el último. No muta.
+export const STORYBOARD_PLAYER_STEPS=[['3d','Ensayo 3D'],['fotogramas','Fotogramas'],['voces','Con voces'],['montaje','Montaje']];
+export function storyboardPlayer(anim,cut){const steps=STORYBOARD_PLAYER_STEPS.flatMap(([key,label])=>{const g=key==='montaje'?cut:anim?.[key];if(!g?.current)return [];return [{key,label,current:g.current,list:g.list?.length?g.list:[g.current]}];});
+ return {steps,initial:steps.some(s=>s.key==='montaje')?'montaje':steps.at(-1)?.key??null};}
+// Cabecera de una escena del storyboard: «Escena · N viñetas · duración» y nota · ubicación (nombre o id), sin separadores sueltos.
+export function storyboardSequenceHeader(seq,locations=[],fmt=String){const shots=seq?.shots||[],total=shots.reduce((n,t)=>n+(Number(t?.duration)||0),0),loc=seq?.location?(locations||[]).find(l=>l.id===seq.location)?.name||seq.location:'';
+ return {eyebrow:`Escena · ${shots.length===1?'1 viñeta':shots.length+' viñetas'}${total?' · '+fmt(total):''}`,meta:[seq?.note,loc].filter(Boolean).join(' · ')};}
 // ---- Animáticas del storyboard (#46): por paso (3d, fotogramas, voces), por secuencia del storyboard y entera. Las codifica lib/animaticas.mjs;
 // el paso «Vídeo» son los montajes de storyboardMedia. Tiempos y audio de la secuencia de capítulo enlazada (chapterSequenceFor).
 export const SOURCE_3D='ensayo 3D',ANIMATIC_STEPS=['3d','fotogramas','voces'];
