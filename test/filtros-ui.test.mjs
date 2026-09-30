@@ -1,5 +1,6 @@
 // Buscador y facetas en el navegador (#59): teclear no repinta la vista (foco y cursor intactos), facetas en la URL y en la memoria por vista,
-// Storyboards agrupada con coincidencias de viñeta, Planos con reparto heredado y numeración original, filtrar sin escribir y móvil a 390 px.
+// Storyboards agrupada con coincidencias de viñeta, Planos con reparto heredado y numeración original, filtrar sin escribir y móvil a 390 px;
+// Personajes, Ambientes y Entornos 3D (#62) con las mismas tarjetas, memoria por vista, tarjeta filtrada viva y vista vacía sin barra.
 // Servidor con RODAJE_DATA temporal y el fixture de #56 migrado (textos inventados).
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import {spawnServer} from './fixtures/hijos.mjs';
 import {withChrome,newRenderContext,chromePath,VIEWPORTS} from '../lib/chrome.mjs';
@@ -13,7 +14,13 @@ const p=storyMigrationPlan(storysProject(),storysSpec()).next;p.id=id;p.stage={z
 Object.assign(p.storyboards.find(b=>b.id==='sb-v2').sequences[0].shots[1],{zone:'norte',dialogue:[{who:'Bea',text:'Hola.'}]});
 p.storyboards.push({id:'sb-suelto',title:'Suelto',subtitle:'Borrador',sequences:[{id:'su-e1',title:'Patio',location:'otro',shots:[{id:'su1',code:'Z09',title:'Mirada',duration:3,cast:[],dialogue:[]}]}]});
 const seqs=p.episodes[0].sequences,seq=x=>seqs.find(s=>s.id===x);seq('x-cruce').cast=[{character:'bea',x:0,z:0,yaw:0}];seq('x-fuego').shots[1].visibleCast=['bea'];
-fs.mkdirSync(path.join(DATA,id),{recursive:true});fs.writeFileSync(path.join(DATA,id,'proyecto.json'),JSON.stringify(p));
+// #62: un segundo proyecto sin entornos (vista vacía); en el primero, una voz con muestra, dos versiones visuales de Ana, un ambiente con tipo y zona,
+// otro con entorno 3D por environment y dos entornos (constructor y GLB).
+const vacio=structuredClone(p);vacio.id=id+'-vacio';
+p.characters.push({id:'voz',name:'Megafonía',kind:'voice',description:'Aviso lejano',sample:'voz.mp3'});Object.assign(p.characters[0],{description:'Maestra de escuela',image:'a1.png',images:['a1.png','a2.png']});
+Object.assign(p.locations[0],{kind:'interior',zone:'norte'});p.locations[1].environment='env-c';
+p.environments=[{id:'env-c',name:'Casa',builder:'m/c.js',data:'m/c.json'},{id:'env-g',name:'Hangar',glb:'m/h.glb'}];
+for(const x of [p,vacio]){fs.mkdirSync(path.join(DATA,x.id),{recursive:true});fs.writeFileSync(path.join(DATA,x.id,'proyecto.json'),JSON.stringify(x));}
 let child;
 test.before(()=>new Promise((resolve,reject)=>{child=spawnServer(process.execPath,[path.join(ROOT,'app/server.mjs')],{cwd:ROOT,env:{...process.env,PORT:String(port),RODAJE_DATA:DATA,RODAJE_LAN:'',RODAJE_TLS_CERT:'',RODAJE_TLS_KEY:''},stdio:['ignore','pipe','pipe']});let out='';
  const t=setTimeout(()=>reject(Error('El servidor no arrancó: '+out)),15000);child.stdout.on('data',d=>{out+=d;if(out.includes('Rodaje ·')){clearTimeout(t);resolve();}});child.stderr.on('data',d=>out+=d);child.on('exit',c=>reject(Error('El servidor salió con '+c+': '+out)));}));
@@ -87,9 +94,60 @@ test('Planos: personaje heredado deja sus planos con su número original; sin ac
  await page.click('.filter-hidden [data-filter-clear]');assert.equal(params(page).f,undefined);assert.ok(await page.$('[data-shots-seq="x-v1"]'));
  assert.equal(await revision(page),r0);}));
 
-test('móvil (390×844): sin desbordes, entrada de 16 px y barra pegada en las dos vistas',{skip:SIN_CHROME},()=>session(async page=>{
- for(const v of ['storyboards','shots']){await load(page,'&view='+v);await page.evaluate(()=>{document.querySelector('[data-filter-facets]').open=true;});await page.waitForTimeout(100);
+test('móvil (390×844): sin desbordes, entrada de 16 px y barra pegada en las vistas con buscador',{skip:SIN_CHROME},()=>session(async page=>{
+ for(const v of ['storyboards','shots','characters']){await load(page,'&view='+v);await page.evaluate(()=>{document.querySelector('[data-filter-facets]').open=true;});await page.waitForTimeout(100);
   const m=await page.evaluate(()=>{const bar=document.querySelector('.filter-bar'),cs=getComputedStyle(bar);return {sw:document.documentElement.scrollWidth,font:parseFloat(getComputedStyle(document.querySelector('[data-filter-q]')).fontSize),pos:cs.position,top:parseFloat(cs.top),side:document.querySelector('.sidebar').offsetHeight};});
   assert.ok(m.sw<=390,v+': scrollWidth '+m.sw);assert.ok(m.font>=16,v+': '+m.font);assert.equal(m.pos,'sticky');assert.equal(m.top,m.side,v+': debajo de la barra lateral');
   await page.evaluate(()=>scrollTo(0,600));await page.waitForTimeout(100);const y=await page.$eval('.filter-bar',b=>Math.round(b.getBoundingClientRect().top));assert.equal(y,m.side,v+': pegada al desplazar');}
 },{width:390,height:844}));
+
+test('Personajes (#62): la rejilla sin filtros es la de siempre; teclear no pierde el foco ni guarda',{skip:SIN_CHROME},()=>session(async page=>{
+ await load(page,'&view=characters');const r0=await revision(page);
+ const g=await page.evaluate(()=>({cols:document.querySelector('[data-filter-results] .tiles').dataset.cols,cards:[...document.querySelectorAll('[data-filter-results] .tile-character .tile-title')].map(t=>t.textContent),facets:[...document.querySelectorAll('[data-facet]')].map(b=>b.dataset.facet+':'+b.dataset.value),count:document.querySelector('[data-filter-count]').textContent,actions:[...document.querySelectorAll('.heading [data-action]')].map(b=>b.dataset.action)}));
+ assert.deepEqual(g.cards,['Ana','Bea','Megafonía']);assert.equal(g.cols,'2');assert.equal(g.count,'3 personajes');assert.deepEqual(g.actions,['new-character']);
+ for(const x of ['kind:person','kind:voice','sample:yes','sample:no','image:yes','image:no'])assert.ok(g.facets.includes(x),x);assert.ok(!g.facets.some(x=>x.startsWith('variants:')),'faceta de un solo valor');
+ await page.click('[data-filter-q]');await page.keyboard.type('escuela');await page.waitForFunction(()=>new URLSearchParams(location.search).get('q')==='escuela');
+ assert.equal(await page.evaluate(()=>document.activeElement?.matches('[data-filter-q]')),true);
+ assert.deepEqual(await page.$$eval('[data-filter-results] .tile-title',l=>l.map(t=>t.textContent)),['Ana']);assert.equal(await page.$eval('[data-filter-count]',e=>e.textContent),'1 de 3 personajes');
+ await page.keyboard.type(' zzz');await page.waitForFunction(()=>new URLSearchParams(location.search).get('q')==='escuela zzz');assert.match(await page.$eval('[data-filter-results]',e=>e.textContent),/Ningún personaje coincide/);
+ assert.equal(await revision(page),r0,'filtrar no guarda');}));
+
+test('Ambientes y Entornos 3D (#62): faceta en la URL, recarga y Limpiar',{skip:SIN_CHROME},()=>session(async page=>{
+ await load(page,'&view=locations');const r0=await revision(page);
+ await page.click(chip('env','yes'));assert.equal(params(page).f,'env:yes');assert.deepEqual(await page.$$eval('[data-filter-results] .tile-title',l=>l.map(t=>t.textContent)),['Otro']);
+ await page.reload();await page.waitForSelector('[data-filter-results] article');assert.equal(await pressed(page,'env','yes'),'true');
+ await page.click('.filter-bar [data-filter-clear]');assert.deepEqual([params(page).q,params(page).f],[undefined,undefined]);assert.equal(await page.$$eval('[data-filter-results] article',l=>l.length),2);
+ await load(page,'&view=environments');const e=await page.evaluate(()=>({labels:[...document.querySelectorAll('[data-facet="kind"]')].map(b=>b.dataset.value+':'+b.textContent.trim()),pills:[...document.querySelectorAll('[data-filter-results] .pill')].map(x=>x.textContent)}));
+ assert.deepEqual(e.pills,['VISOR 3D','GLB']);assert.equal(e.labels.length,2);assert.match(e.labels[0],/^mount:Visor 3D/);assert.match(e.labels[1],/^glb:GLB/);
+ await page.click(chip('kind','glb'));assert.equal(params(page).f,'kind:glb');await page.reload();await page.waitForSelector('[data-filter-results] article');
+ assert.equal(await pressed(page,'kind','glb'),'true');assert.deepEqual(await page.$$eval('[data-filter-results] .tile-title',l=>l.map(t=>t.textContent)),['Hangar']);
+ await page.click('.filter-bar [data-filter-clear]');assert.equal(params(page).f,undefined);
+ assert.equal(await revision(page),r0,'filtrar no guarda');}));
+
+test('memoria por vista (#62): Personajes recuerda su filtro; Ambientes empieza vacío',{skip:SIN_CHROME},()=>session(async page=>{
+ await load(page,'&view=characters');await page.click('[data-filter-q]');await page.keyboard.type('bea');await page.waitForFunction(()=>new URLSearchParams(location.search).get('q')==='bea');
+ await page.click('.sidebar [data-action="nav:locations"]');await page.waitForFunction(()=>new URLSearchParams(location.search).get('view')==='locations');await page.waitForSelector('[data-filter-q]');
+ assert.deepEqual([params(page).q,params(page).f],[undefined,undefined]);assert.equal(await page.$eval('[data-filter-q]',q=>q.value),'');
+ await page.click('.sidebar [data-action="nav:characters"]');await page.waitForFunction(()=>new URLSearchParams(location.search).get('q')==='bea');
+ assert.equal(await page.$eval('[data-filter-q]',q=>q.value),'bea');assert.deepEqual(await page.$$eval('[data-filter-results] .tile-title',l=>l.map(t=>t.textContent)),['Bea']);
+ const keys=await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('rodaje-filtros-')));
+ assert.ok(keys.includes('rodaje-filtros-'+id+'-characters'),keys.join());assert.ok(!keys.some(k=>k.endsWith('-locations')),keys.join());}));
+
+test('tarjeta filtrada viva (#62): tras teclear y pulsar una faceta, cambiar la versión guarda y conserva el filtro; su enlace navega',{skip:SIN_CHROME},()=>session(async page=>{
+ await load(page,'&view=characters');const r0=await revision(page);
+ // Las tarjetas que se miran son las repintadas por la barra (refresh → bind(results)), no las del render().
+ await page.click('[data-filter-q]');await page.keyboard.type('maestra');await page.waitForFunction(()=>new URLSearchParams(location.search).get('q')==='maestra');
+ await page.click(chip('image','yes'));assert.equal(params(page).f,'image:yes');
+ const posts=[];page.on('request',r=>{if(r.method()==='POST'&&new URL(r.url()).pathname.startsWith('/api/'))posts.push(new URL(r.url()).pathname);});
+ await page.selectOption('select[data-version="ana"]','a2.png');
+ const until=Date.now()+5000;let r1=r0;while(r1===r0&&Date.now()<until){await page.waitForTimeout(100);r1=await revision(page);}
+ assert.ok(posts.length>=1,'el cambio de versión hace POST');assert.ok(r1>r0,'la revisión sube');
+ await page.waitForFunction(()=>document.querySelector('select[data-version="ana"]')?.value==='a2.png');
+ assert.deepEqual([params(page).q,params(page).f],['maestra','image:yes']);assert.equal(await page.$eval('[data-filter-q]',q=>q.value),'maestra');assert.equal(await pressed(page,'image','yes'),'true');
+ assert.deepEqual(await page.$$eval('[data-filter-results] .tile-title',l=>l.map(t=>t.textContent)),['Ana']);
+ await page.click('[data-filter-results] .tile-character .tile-link');await page.waitForFunction(()=>new URLSearchParams(location.search).get('view')==='character');
+ assert.equal(params(page).character,'ana');}));
+
+test('vista vacía (#62): sin entornos no hay barra y queda el aviso de siempre',{skip:SIN_CHROME},()=>session(async page=>{
+ await page.goto(`http://127.0.0.1:${port}/?project=${vacio.id}&view=environments`);await page.waitForSelector('#workspace .heading');
+ assert.equal(await page.$('[data-filter-bar]'),null);assert.match(await page.$eval('#workspace',e=>e.textContent),/Este proyecto aún no tiene entornos 3D/);}));

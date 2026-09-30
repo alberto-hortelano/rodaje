@@ -272,7 +272,7 @@ export function modelSpaceEnvironment(p,modelSpace){const m=modelSpace?.model;re
 // scene y panel del storyboard son páginas (#68): la escena y la viñeta; at de personaje y ambiente es el nivel de sus Apariciones (#69).
 export const VIEWS=['tree','overview','ideas','characters','locations','environments','environment','character','location','storyboards','storyboard','shots','shot','rehearsal','anim','montaje','issues','jobs'];
 export const VIEW_ALIASES={outline:'tree',episodes:'shots',ship:'environments'};
-export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene','panel'],environment:['environment'],character:['character','at'],location:['location','at'],tree:['node'],shots:['sequence','q','f'],storyboards:['q','f']};
+export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene','panel'],environment:['environment'],character:['character','at'],location:['location','at'],tree:['node'],shots:['sequence','q','f'],storyboards:['q','f'],characters:['q','f'],locations:['q','f'],environments:['q','f']};
 export const FOCUS_PARAMS={shots:['sequence']};
 export const ROUTE_KEYS=['episode','sequence','shot','storyboard','environment','character','location','scene','panel','node','q','f','at'];
 // Buscador y facetas (#59): q y f no cuentan para el scroll; en la URL, f conserva ':' y ',' legibles (f=act:e1,cast:ana).
@@ -1376,6 +1376,41 @@ export function shotItems(p){const idx=relationIndexFor(p),items=[],seqs=[];
   {id:'sequence',label:'Secuencia',values:seqs},{id:'loc',label:'Ambiente',values:entityValues(p?.locations)},{id:'cast',label:'Personaje',values:entityValues(p?.characters)},
   {id:'panel',label:'Viñeta',values:[{value:'yes',label:'Con viñeta'},{value:'no',label:'Sin viñeta'}]}];
  return {items,defs};}
+// Personajes, Ambientes y Entornos 3D (#62): un ítem por entidad en el orden del proyecto, sin grupos ni subs. «Aparece en» (act, sequence) con
+// holders vigentes, como Apariciones; la faceta sequence solo ofrece fichas y pruebas (el contenedor de un story no vigente contaría por pertenencia).
+const yn=b=>[b?'yes':'no'];
+const yesNo=(id,label,yes,no)=>({id,label,values:[{value:'yes',label:yes},{value:'no',label:no}]});
+const holderIds=(idx,key,kind,rel)=>holders(idx,key,kind,{rel,current:true}).map(k=>k.split('/').slice(1).join('/'));
+const entityText=x=>searchText([x.name,x.id,x.description].filter(s=>typeof s==='string').join(' '));
+const entityList=list=>(Array.isArray(list)?list:[]).filter(x=>isObj(x)&&typeof x.id==='string');
+function sequenceFacetValues(p){const m=treeModel(p);
+ return [...m.acts.flatMap(a=>a.children.map(f=>({value:f.sequence.id,label:f.code+' · '+(f.sequence.title||f.sequence.id)}))),
+  ...m.groups.filter(g=>g.kind==='tests').flatMap(g=>g.children.map(n=>({value:n.sequence.id,label:'Prueba · '+(n.sequence.title||n.sequence.id)})))];}
+export function characterItems(p){const idx=relationIndexFor(p),seqs=sequenceFacetValues(p),seqSet=new Set(seqs.map(s=>s.value)),rel=['appears','speaks'];
+ const items=entityList(p?.characters).map(c=>{const key=relKey('character',c.id);return {key,kind:'character',id:c.id,text:entityText(c),
+  facets:{kind:[c.kind==='voice'?'voice':'person'],voice:yn(c.voice),sample:yn(c.sample),image:yn(c.image||c.images?.length),variants:yn(isObj(c.variants)&&Object.keys(c.variants).length),
+   act:holderIds(idx,key,'act',rel),sequence:holderIds(idx,key,'sequence',rel).filter(id=>seqSet.has(id))},group:null,ref:c};});
+ const defs=[{id:'kind',label:'Tipo',values:[{value:'person',label:'Persona'},{value:'voice',label:'Solo voz'}]},{id:'act',label:actLabel(p),values:episodeValues(p)},
+  {id:'sequence',label:'Secuencia',values:seqs},yesNo('voice','Voz','Con voz','Sin voz'),yesNo('sample','Muestra','Con muestra','Sin muestra'),
+  yesNo('image','Imagen','Con imagen','Sin imagen'),yesNo('variants','Variantes','Con variantes','Sin variantes')];
+ return {items,defs};}
+export function locationItems(p){const idx=relationIndexFor(p),list=entityList(p?.locations);
+ const items=list.map(l=>{const key=relKey('location',l.id);return {key,kind:'location',id:l.id,text:entityText(l),
+  facets:{kind:[typeof l.kind==='string'&&l.kind?l.kind:'-'],zone:[zoneOf(p,l.zone).id],env:yn(idx.locationEnvironments.get(key)?.length),act:holderIds(idx,key,'act',['location'])},group:null,ref:l};});
+ const kinds=uniq(items.map(i=>i.facets.kind[0]).filter(k=>k!=='-'));
+ const defs=[{id:'kind',label:'Tipo',values:[...kinds.map(k=>({value:k,label:k})),{value:'-',label:'Sin tipo'}]},{id:'zone',label:'Zona',values:projectZones(p).map(z=>({value:z.id,label:z.label}))},
+  yesNo('env','Entorno 3D','Con entorno 3D','Sin entorno 3D'),{id:'act',label:actLabel(p),values:episodeValues(p)}];
+ return {items,defs};}
+export const ENVIRONMENT_KIND_LABELS={mount:'Visor 3D',glb:'GLB',invalido:'Visor no válido',none:'Sin modelo'};
+// ref: la entrada de environmentList(p), la que pinta la tarjeta.
+export function environmentItems(p){const idx=relationIndexFor(p),list=environmentList({environments:entityList(p?.environments)}),envs=entityList(p?.environments);
+ const items=envs.map((e,i)=>{const key=relKey('environment',e.id);return {key,kind:'environment',id:e.id,text:entityText(e),
+  facets:{kind:[environmentViewer(e).kind],loc:(idx.environmentLocations.get(key)||[]).map(k=>k.slice('location/'.length))},group:null,ref:list[i]};});
+ const defs=[{id:'kind',label:'Tipo',values:Object.entries(ENVIRONMENT_KIND_LABELS).map(([value,label])=>({value,label}))},{id:'loc',label:'Ambiente',values:entityValues(p?.locations)}];
+ return {items,defs};}
+// Vistas con buscador: toda vista con q en ROUTE_PARAMS (hasFilters) tiene aquí su constructor de ítems (test/filtros.test.mjs lo exige).
+export const FILTER_SOURCES={storyboards:storyboardItems,shots:shotItems,characters:characterItems,locations:locationItems,environments:environmentItems};
+export function viewItems(view,p){return Object.hasOwn(FILTER_SOURCES,view)?FILTER_SOURCES[view](p):null;}
 // shotGroups con los planos que quedan ({shot, index} con su posición original). keep null: todos; un Set de ids: sin secuencias, grupos ni actos vacíos.
 export function filterShotGroups(groups,keep){return (groups||[]).map(({episode,groups:gs,empty})=>{
  const out=gs.map(g=>({role:g.role,sequences:g.sequences.map(x=>({...x,shots:(x.sequence.shots||[]).map((shot,index)=>({shot,index})).filter(y=>!keep||keep.has(y.shot?.id))})).filter(x=>!keep||x.shots.length)})).filter(g=>g.sequences.length);

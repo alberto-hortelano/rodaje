@@ -29393,7 +29393,7 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, routeHref, historyStep, historyState, entryScroll, navActive, sequenceRole, treeModel, levelCrumbs, levelResolve, levelRoute, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, nodeImage, firstNodeImage, cardColumns, appearanceTree, appearanceEnvironments, relationLinks, relationLine, appearanceLevel, appearanceCrumbs, APPEARANCE_LEVELS, shotLabel, voiceStatusLabel, storyboardItems, storyboardResultSections, storyboardPage, storyScenes, movePanel, panelSceneOptions, shotItems, filterShotGroups, filterView as filterView2, hasFilters, parseFilters, filtersParam } from "./workflow.mjs";
+import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, routeHref, historyStep, historyState, entryScroll, navActive, sequenceRole, treeModel, levelCrumbs, levelResolve, levelRoute, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, nodeImage, firstNodeImage, cardColumns, appearanceTree, appearanceEnvironments, relationLinks, relationLine, appearanceLevel, appearanceCrumbs, APPEARANCE_LEVELS, shotLabel, voiceStatusLabel, storyboardItems, viewItems, storyboardResultSections, storyboardPage, storyScenes, movePanel, panelSceneOptions, shotItems, filterShotGroups, filterView as filterView2, hasFilters, parseFilters, filtersParam } from "./workflow.mjs";
 
 // app/filtros.source.js
 import { filterView, toggleFilter } from "./workflow.mjs";
@@ -29725,6 +29725,11 @@ function bind(root) {
     await save();
     await render();
   });
+  root.querySelectorAll("[data-version]").forEach((el) => el.onchange = async () => {
+    (el.dataset.kind === "character" ? p.characters : p.locations).find((c) => c.id === el.dataset.version).image = el.value;
+    await save();
+    await render();
+  });
   root.querySelectorAll("[data-cover-prompt]").forEach((el) => el.onchange = () => {
     outlineSequence(p, el.dataset.coverPrompt).sequence.coverPrompt = el.value;
     dirty = true;
@@ -29858,6 +29863,18 @@ var locationCard = (l3) => tile({
   head: `<b class="tile-title">${esc2(l3.name)}</b>${l3.kind ? `<span class="pill">${esc2(l3.kind)}</span>` : ""}`,
   body: `<p class="tile-text">${esc2((l3.description || "").slice(0, 160))}</p>${entityActions(l3, "location")}${modelSpaceBlock(l3)}${versionSelect(l3, "location")}`
 });
+var environmentCard = (e) => {
+  const k = e.kind === "no v\xE1lido" ? "VISOR NO V\xC1LIDO" : e.kind === "constructor" ? "VISOR 3D" : e.kind === "glb" ? "GLB" : "SIN MODELO";
+  return tile({
+    kind: "environment",
+    href: routeQuery({ project: p.id, view: "environment", environment: e.id }),
+    image: nodeImage(relationIndexFor(p), "environment/" + e.id),
+    alt: e.name,
+    label: k,
+    head: `<b class="tile-title">${esc2(e.name)}</b><span class="pill">${esc2(k)}</span>`,
+    body: `<p class="tile-text">${esc2(e.description.slice(0, 220))}</p>${e.invalid ? `<small>${esc2(e.invalid)}</small>` : ""}${e.glb ? `<small>${esc2(e.glb)}</small>` : ""}<div class="actions">${btn("Abrir", e.action, "primary")}${btn("Editar", "edit-environment:" + e.id) + btn("Subir GLB", "upload-environment:" + e.id)}</div>`
+  });
+};
 var crumbsNav = (list) => list.length < 2 ? "" : `<nav class="crumbs" aria-label="Ruta"><ol>${list.map((c) => `<li>${c.route ? `<a href="${esc2(routeQuery({ project: p.id, ...c.route }))}" title="${esc2(c.label)}" data-route>${esc2(c.label)}</a>` : `<span aria-current="page" title="${esc2(c.label)}">${esc2(c.label)}</span>`}</li>`).join("")}</ol></nav>`;
 var appearStore = { key: () => "rodaje-appear-all-" + p.id, get() {
   try {
@@ -30053,6 +30070,7 @@ async function render() {
   filterMount?.dispose();
   filterMount = null;
   let fctx = null;
+  const filterBlock = ({ items, defs, placeholder, noun, empty, paint, emptyHTML: emptyHTML2 }) => items.length ? (fctx = { view, items, defs, noun, empty, paint }, filterBarHTML({ view, query: filt.q, placeholder, open: filterOpen ?? matchMedia("(min-width: 751px)").matches }) + "<div data-filter-results></div>") : emptyHTML2;
   rememberPosition();
   renderedRoute = null;
   const generation = ++renderGeneration;
@@ -30075,19 +30093,7 @@ async function render() {
     html3 = heading2(esc2(p.name), "La historia y sus referencias son el punto de partida. La previsualizaci\xF3n aprobada gu\xEDa cada generaci\xF3n.", btn("Editar proyecto", "edit-project")) + `<div class="stepper">${[["ideas", "Historia"], ["characters", "Reparto"], ["locations", "Mundo"], ["tree", "Escaleta"], ["shots", "Planos"], ["jobs", "Producir"]].map(([v2, l3], i2) => `<div class="step" data-action="nav:${v2}"><b>0${i2 + 1}</b>${l3}</div>`).join("")}</div><div class="two"><section class="panel"><div class="eyebrow">Premisa</div><h2>${esc2(p.premise || "\xBFQu\xE9 historia quieres contar?")}</h2><p style="margin-top:20px">${esc2(p.style)}</p>${btn("Escribir la historia", "nav:ideas")}</section><section class="panel"><div class="row between">${[[S3.sequences, "Secuencias"], [S3.minutes, "Minutos"], [S3.storys, "Storys"], [S3.shots, "Planos"], [S3.characters, "Personajes"], [S3.locations, "Ambientes"]].map(([n, l3]) => `<div><span class="stat">${n}</span>${l3}</div>`).join("")}</div><p style="margin-top:25px">Cada proyecto guarda ideas, hojas de personajes, ambientes, cap\xEDtulos, previsualizaciones y generaciones en carpetas propias.</p></section></div><div class="panel"><h2>Actividad reciente</h2>${jobsHTML()}</div>`;
   }
   if (view === "environments") {
-    const list = environmentList(p);
-    html3 = heading2("Entornos 3D.", "Decorados en 3D con medidas reales: exterior, interior y piezas con nombre. Cada entorno se abre en su visor; los planos los usar\xE1n como decorado.", btn("+ Entorno GLB", "new-environment", "primary")) + (list.length ? tiles("environment", list.map((e) => {
-      const k = e.kind === "no v\xE1lido" ? "VISOR NO V\xC1LIDO" : e.kind === "constructor" ? "VISOR 3D" : e.kind === "glb" ? "GLB" : "SIN MODELO";
-      return tile({
-        kind: "environment",
-        href: routeQuery({ project: p.id, view: "environment", environment: e.id }),
-        image: nodeImage(relationIndexFor(p), "environment/" + e.id),
-        alt: e.name,
-        label: k,
-        head: `<b class="tile-title">${esc2(e.name)}</b><span class="pill">${esc2(k)}</span>`,
-        body: `<p class="tile-text">${esc2(e.description.slice(0, 220))}</p>${e.invalid ? `<small>${esc2(e.invalid)}</small>` : ""}${e.glb ? `<small>${esc2(e.glb)}</small>` : ""}<div class="actions">${btn("Abrir", e.action, "primary")}${btn("Editar", "edit-environment:" + e.id) + btn("Subir GLB", "upload-environment:" + e.id)}</div>`
-      });
-    })) : '<section class="panel"><p>Este proyecto a\xFAn no tiene entornos 3D. Sube un GLB (de Tripo, Meshy, Hunyuan3D\u2026) o a\xF1ade uno con constructor y datos en <code>environments</code>.</p></section>');
+    html3 = heading2("Entornos 3D.", "Decorados en 3D con medidas reales: exterior, interior y piezas con nombre. Cada entorno se abre en su visor; los planos los usar\xE1n como decorado.", btn("+ Entorno GLB", "new-environment", "primary")) + filterBlock({ ...viewItems(view, p), placeholder: "Buscar entorno (nombre, id o descripci\xF3n)", noun: ["entorno", "entornos"], empty: "Ning\xFAn entorno coincide con la b\xFAsqueda y los filtros.", paint: (m2) => tiles("environment", m2.results.map((r) => environmentCard(r.item.ref))), emptyHTML: '<section class="panel"><p>Este proyecto a\xFAn no tiene entornos 3D. Sube un GLB (de Tripo, Meshy, Hunyuan3D\u2026) o a\xF1ade uno con constructor y datos en <code>environments</code>.</p></section>' });
   }
   if (view === "environment") {
     const e = (p.environments || []).find((x2) => x2.id === environmentId);
@@ -30109,8 +30115,8 @@ async function render() {
     html3 = heading2("Pendientes", "Fallos de guion, decisiones abiertas y tareas. Arrastra las tarjetas entre columnas; el orden dentro de cada columna tambi\xE9n se guarda.", btn("+ Pendiente", "issue", "primary")) + `<div class="kanban">${board.map((col) => `<section class="kanban-col" data-kanban-col="${col.key}"><h3>${esc2(col.label)} <span class="tiny">${col.items.length}</span></h3>${col.items.map((i2) => `<article class="kanban-card" draggable="true" data-kanban-card="${i2.id}"><div class="row">${i2.code ? `<span class="pill">${esc2(i2.code)}</span>` : ""}${i2.severity && i2.severity !== "nota" ? `<span class="pill sev-${esc2(i2.severity)}">${esc2(sevLabel[i2.severity] || i2.severity)}</span>` : ""}</div><h4>${esc2(i2.title)}</h4><p>${esc2(excerpt(i2.text))}</p><div class="actions">${btn("Abrir", "issue:" + i2.id)}${btn("Borrar", "delete-issue:" + i2.id)}</div></article>`).join("") || '<div class="kanban-empty">Nada aqu\xED.</div>'}</section>`).join("")}</div>`;
   }
   if (view === "characters" || view === "locations") {
-    const chars = view === "characters", list = chars ? p.characters : p.locations;
-    html3 = heading2(chars ? "El reparto." : "Los lugares de la historia.", chars ? "Identidad visual, vestuario y voz de cada personaje." : "Referencias de luz, color y geograf\xEDa para cada ambiente.", btn(chars ? "+ Personaje" : "+ Ambiente", chars ? "new-character" : "new-location", "primary")) + (list.length ? tiles(chars ? "character" : "location", list.map(chars ? characterCard : locationCard)) : `<div class="empty"><h2>${chars ? "Presenta a tu protagonista." : "Define el primer ambiente."}</h2><p>Puedes generar im\xE1genes o importar las que ya tienes.</p></div>`);
+    const chars = view === "characters", card = chars ? characterCard : locationCard;
+    html3 = heading2(chars ? "El reparto." : "Los lugares de la historia.", chars ? "Identidad visual, vestuario y voz de cada personaje." : "Referencias de luz, color y geograf\xEDa para cada ambiente.", btn(chars ? "+ Personaje" : "+ Ambiente", chars ? "new-character" : "new-location", "primary")) + filterBlock({ ...viewItems(view, p), placeholder: chars ? "Buscar personaje (nombre, id o descripci\xF3n)" : "Buscar ambiente (nombre, id o descripci\xF3n)", noun: chars ? ["personaje", "personajes"] : ["ambiente", "ambientes"], empty: chars ? "Ning\xFAn personaje coincide con la b\xFAsqueda y los filtros." : "Ning\xFAn ambiente coincide con la b\xFAsqueda y los filtros.", paint: (m2) => tiles(chars ? "character" : "location", m2.results.map((r) => card(r.item.ref))), emptyHTML: `<div class="empty"><h2>${chars ? "Presenta a tu protagonista." : "Define el primer ambiente."}</h2><p>Puedes generar im\xE1genes o importar las que ya tienes.</p></div>` });
   }
   if (view === "character" || view === "location") {
     const chars = view === "character", eid = chars ? characterId : locationId, item = (chars ? p.characters : p.locations).find((x2) => x2.id === eid);
@@ -30246,8 +30252,15 @@ y ${list.length - 20} m\xE1s` : "");
       });
     };
     const grid = (list) => tiles("story-list", list.map((r) => r.item.kind === "test" ? testCard(r) : sbCard2(r)));
-    html3 = heading2("Storyboards.", "Vi\xF1etas con boceto, fotograma generado, encuadre y di\xE1logo. Cuando un storyboard est\xE1 listo se convierte en cap\xEDtulo.", `<div class="row">${btn("Importar JSON", "import-storyboard")}${btn("+ Storyboard", "new-storyboard", "primary")}</div>`) + (items.length ? filterBarHTML({ view, query: filt.q, placeholder: "Buscar story, escena o vi\xF1eta (c\xF3digo o t\xEDtulo)", open: filterOpen ?? matchMedia("(min-width: 751px)").matches }) + "<div data-filter-results></div>" : '<div class="empty"><h2>Dibuja antes de rodar.</h2><p>Crea un storyboard vac\xEDo o importa uno en JSON con sus bocetos y fotogramas.</p></div>');
-    fctx = { view, items, defs, noun: ["resultado", "resultados"], empty: "Ning\xFAn story, escena ni vi\xF1eta coincide con la b\xFAsqueda y los filtros.", paint: (m2) => storyboardResultSections(m2.results).map((x2) => x2.kind === "act" ? `<section class="panel sbs-act"><span class="eyebrow">${p.type === "serie" ? "CAP\xCDTULO" : "ACTO"}</span><h2>${esc2(x2.episode.title || x2.episode.id)}</h2>${x2.fichas.map((f2) => `<div class="sbs-ficha"><h3><a href="${esc2(routeQuery({ project: p.id, view: "tree", node: "seq/" + f2.ficha.id }))}" data-route>${esc2(f2.code + " \xB7 " + f2.ficha.title)}</a></h3>${grid(f2.results)}</div>`).join("")}</section>` : `<section class="panel sbs-group"><span class="eyebrow">${x2.kind === "tests" ? "Pruebas" : "Sin secuencia"}</span>${grid(x2.results)}</section>`).join("") };
+    html3 = heading2("Storyboards.", "Vi\xF1etas con boceto, fotograma generado, encuadre y di\xE1logo. Cuando un storyboard est\xE1 listo se convierte en cap\xEDtulo.", `<div class="row">${btn("Importar JSON", "import-storyboard")}${btn("+ Storyboard", "new-storyboard", "primary")}</div>`) + filterBlock({
+      items,
+      defs,
+      placeholder: "Buscar story, escena o vi\xF1eta (c\xF3digo o t\xEDtulo)",
+      emptyHTML: '<div class="empty"><h2>Dibuja antes de rodar.</h2><p>Crea un storyboard vac\xEDo o importa uno en JSON con sus bocetos y fotogramas.</p></div>',
+      noun: ["resultado", "resultados"],
+      empty: "Ning\xFAn story, escena ni vi\xF1eta coincide con la b\xFAsqueda y los filtros.",
+      paint: (m2) => storyboardResultSections(m2.results).map((x2) => x2.kind === "act" ? `<section class="panel sbs-act"><span class="eyebrow">${p.type === "serie" ? "CAP\xCDTULO" : "ACTO"}</span><h2>${esc2(x2.episode.title || x2.episode.id)}</h2>${x2.fichas.map((f2) => `<div class="sbs-ficha"><h3><a href="${esc2(routeQuery({ project: p.id, view: "tree", node: "seq/" + f2.ficha.id }))}" data-route>${esc2(f2.code + " \xB7 " + f2.ficha.title)}</a></h3>${grid(f2.results)}</div>`).join("")}</section>` : `<section class="panel sbs-group"><span class="eyebrow">${x2.kind === "tests" ? "Pruebas" : "Sin secuencia"}</span>${grid(x2.results)}</section>`).join("")
+    });
   }
   if (view === "storyboard") {
     sbPlayers.clear();
@@ -30542,11 +30555,6 @@ y ${list.length - 20} m\xE1s` : "");
   }
   document.querySelectorAll("[data-sb-render]").forEach((el) => el.onchange = async () => {
     storyboardShot2(p, el.dataset.sbRender).shot.render = el.value;
-    await save();
-    await render();
-  });
-  document.querySelectorAll("[data-version]").forEach((el) => el.onchange = async () => {
-    (el.dataset.kind === "character" ? p.characters : p.locations).find((c) => c.id === el.dataset.version).image = el.value;
     await save();
     await render();
   });

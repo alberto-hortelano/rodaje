@@ -1,7 +1,7 @@
 // Buscador y facetas (#59): normalización, filtrado por términos y facetas, recuentos, estado en la URL y los constructores de ítems de
-// Storyboards y Planos sobre los fixtures de #56 (escaleta → storys) y #58 (relaciones). Puro; textos inventados.
+// Storyboards, Planos (#59), Personajes, Ambientes y Entornos 3D (#62) sobre los fixtures de #56 (escaleta → storys) y #58 (relaciones). Puro; textos inventados.
 import test from 'node:test';import assert from 'node:assert/strict';
-import {searchText,queryTerms,filterItems,itemHits,facets,filterView,parseFilters,filtersParam,toggleFilter,activeCount,hasFilters,storyboardItems,storyboardResultSections,shotItems,filterShotGroups,shotGroups,storyMigrationPlan,relationIndexFor,holders} from '../app/workflow.mjs';
+import {searchText,queryTerms,filterItems,itemHits,facets,filterView,parseFilters,filtersParam,toggleFilter,activeCount,hasFilters,storyboardItems,storyboardResultSections,shotItems,filterShotGroups,shotGroups,storyMigrationPlan,relationIndexFor,holders,characterItems,locationItems,environmentItems,ENVIRONMENT_KIND_LABELS,FILTER_SOURCES,viewItems,ROUTE_PARAMS} from '../app/workflow.mjs';
 import {storysProject,storysSpec,planShot} from './fixtures/escaleta-storys.mjs';
 import {relProject} from './fixtures/relaciones.mjs';
 
@@ -63,7 +63,7 @@ test('toggleFilter no muta y quita la faceta vacía; activeCount; hasFilters',()
  const f={cast:['ana']},g=toggleFilter(f,'cast','bea');assert.deepEqual(f,{cast:['ana']});assert.deepEqual(g,{cast:['ana','bea']});
  assert.deepEqual(toggleFilter(g,'cast','ana'),{cast:['bea']});assert.deepEqual(toggleFilter({cast:['ana']},'cast','ana'),{});assert.deepEqual(toggleFilter(undefined,'k','v'),{k:['v']});
  assert.equal(activeCount('',{}),0);assert.equal(activeCount('  ',{a:['x']}),1);assert.equal(activeCount('luna',{a:['x','y'],b:['z']}),4);
- assert.deepEqual(['storyboards','shots','tree','storyboard','characters','shot',undefined].map(hasFilters),[true,true,false,false,false,false,false]);});
+ assert.deepEqual(['storyboards','shots','tree','storyboard','character','shot',undefined].map(hasFilters),[true,true,false,false,false,false,false]);});
 
 // Migrado (ficha x-colgado con v1 y v2 vigente, x-prologo con sb-carga, pruebas x-fuego y x-cruce) más un story sin ficha, una zona, una viñeta
 // con otro personaje que habla y una prueba con reparto.
@@ -116,3 +116,62 @@ test('filterShotGroups: índices originales, sin vacíos; null no cambia',()=>{
  assert.deepEqual(some.map(x=>[x.episode.id,x.groups.map(y=>[y.role,y.sequences.map(s=>[s.sequence.id,s.shots.map(t=>[t.shot.id,t.index])])]),x.empty]),[['e1',[['container',[['x-v2',[['p4',1]]]]],['test',[['x-fuego',[['p7',1]]]]]],[]]]);
  assert.deepEqual(filterShotGroups(g,new Set()),[]);assert.deepEqual(filterShotGroups([],null),[]);
  const q=storyMigrationPlan(storysProject(),storysSpec()).next;q.episodes[1].sequences[0].shots.push(planShot('p10'));assert.deepEqual(filterShotGroups(shotGroups(q),new Set(['p10'])).map(x=>x.episode.id),['e2']);});
+
+// #62: Personajes, Ambientes y Entornos 3D.
+test('characterItems: orden, texto y facetas; sin kind cuenta como persona',()=>{
+ const p=relProject();p.characters.push({id:'eli',name:'Elías',description:'Pescador de ÁNIMO triste',voice:'v1',sample:'m.mp3',images:['x'],variants:{norte:{description:'d'}}});
+ const {items,defs}=characterItems(p),by=id=>items.find(i=>i.id===id);
+ assert.deepEqual(items.map(i=>i.id),['ana','beto','pa','dani','eli']);assert.deepEqual(items.map(i=>i.key),['character/ana','character/beto','character/pa','character/dani','character/eli']);
+ assert.deepEqual([by('eli').facets.kind,by('pa').facets.kind,by('ana').facets.kind],[['person'],['voice'],['person']]);
+ assert.deepEqual([by('eli').facets.voice,by('eli').facets.sample,by('eli').facets.image,by('eli').facets.variants],[['yes'],['yes'],['yes'],['yes']],'images sin image cuenta como imagen');
+ assert.deepEqual([by('ana').facets.voice,by('ana').facets.sample,by('ana').facets.image,by('ana').facets.variants],[['no'],['no'],['no'],['no']]);
+ assert.ok(by('eli').text.includes('pescador de animo triste'));assert.ok(by('eli').text.includes('elias eli'));
+ assert.equal(by('ana').ref,p.characters[0]);assert.equal(by('ana').group,null);assert.equal(by('ana').subs,undefined);
+ assert.deepEqual(defs.map(d=>d.id),['kind','act','sequence','voice','sample','image','variants']);assert.equal(defs[1].label,'Capítulo');
+ assert.deepEqual(defs[2].values,[{value:'f1',label:'01 · Ficha uno'},{value:'f2',label:'02 · Ficha dos'},{value:'f3',label:'03 · Ficha tres'},{value:'k1',label:'Prueba · Prueba'}]);});
+
+test('characterItems: aparece en solo con storys vigentes; la secuencia, solo fichas y pruebas',()=>{
+ const p=relProject();p.characters.push({id:'eva',name:'Eva',kind:'person'});p.storyboards[0].sequences[0].shots[1].cast=['eva'];
+ const {items,defs}=characterItems(p),by=id=>items.find(i=>i.id===id).facets,idx=relationIndexFor(p);
+ assert.deepEqual(holders(idx,'character/eva','act',{rel:['appears','speaks']}),['act/e1'],'control: sin current sí cuenta');
+ assert.deepEqual([by('eva').act,by('eva').sequence],[[],[]]);assert.deepEqual(by('ana').act,['e1','e2']);assert.deepEqual(by('beto').sequence,['f1','k1','f2']);
+ const allowed=new Set(defs.find(d=>d.id==='sequence').values.map(v=>v.value));
+ for(const i of items)for(const s of i.facets.sequence)assert.ok(allowed.has(s),i.id+': '+s);assert.ok(!allowed.has('c1')&&!allowed.has('c2'));});
+
+test('locationItems: tipo, zona y entorno 3D (también por modelSpace)',()=>{
+ const p=relProject();p.stage={zones:[{id:'norte',label:'Norte'}]};Object.assign(p.locations[2],{kind:'forest',zone:'norte',description:'Árboles altos'});
+ const {items,defs}=locationItems(p),by=id=>items.find(i=>i.id===id).facets;
+ assert.deepEqual(items.map(i=>i.id),['plaza','nave','bosque']);assert.equal(items[1].ref,p.locations[1]);
+ assert.deepEqual([by('plaza').env,by('nave').env,by('bosque').env],[['yes'],['yes'],['no']],'nave, solo por modelSpace');
+ assert.deepEqual([by('plaza').zone,by('plaza').kind,by('bosque').zone,by('bosque').kind],[['other'],['-'],['norte'],['forest']]);
+ assert.deepEqual(by('plaza').act,['e1']);assert.ok(items[2].text.includes('arboles altos'));
+ assert.deepEqual(defs.map(d=>d.id),['kind','zone','env','act']);assert.deepEqual(defs[0].values,[{value:'forest',label:'forest'},{value:'-',label:'Sin tipo'}]);
+ assert.deepEqual(filterView(items,defs,'',{env:['yes']}).results.map(r=>r.item.id),['plaza','nave']);});
+
+test('environmentItems: tipo del visor y ambientes que lo usan',()=>{
+ const p=relProject();p.environments.push({id:'env-g',name:'Nave GLB',glb:'a/b.glb'},{id:'env-v'},{id:'env-x',viewer:'x.js'});
+ const {items,defs}=environmentItems(p),by=id=>items.find(i=>i.id===id);
+ assert.deepEqual(items.map(i=>i.id),['env-a','env-b','env-g','env-v','env-x']);
+ assert.deepEqual([by('env-a').facets,by('env-b').facets.loc],[{kind:['mount'],loc:['plaza']},['nave']]);
+ assert.deepEqual(['env-g','env-v','env-x'].map(id=>by(id).facets.kind[0]),['glb','none','invalido']);
+ assert.deepEqual(by('env-g').ref,{id:'env-g',name:'Nave GLB',description:'',image:'',glb:'a/b.glb',kind:'glb',invalid:'',action:'env-open:env-g'},'la entrada de environmentList');
+ assert.deepEqual(defs[0].values,Object.entries(ENVIRONMENT_KIND_LABELS).map(([value,label])=>({value,label})));assert.deepEqual(defs[0].values.map(v=>v.label),['Visor 3D','GLB','Visor no válido','Sin modelo']);
+ assert.deepEqual(defs[1].values.map(v=>v.value),['plaza','nave','bosque']);});
+
+test('facets oculta las de un solo valor en personajes, ambientes y entornos',()=>{
+ const p=relProject(),ids=({items,defs})=>filterView(items,defs,'',{}).facets.map(f=>f.id);
+ assert.ok(!ids(characterItems(p)).includes('variants'));assert.ok(ids(characterItems(p)).includes('kind'));
+ assert.deepEqual(ids(environmentItems(p)),['loc'],'los dos entornos son mount');assert.deepEqual(ids(locationItems(p)),['env','act']);});
+
+test('filterView sobre characterItems: q por descripción y faceta voice',()=>{
+ const p=relProject();p.characters[0].description='Maestra de escuela';p.characters[1].voice='abc';
+ const {items,defs}=characterItems(p);
+ assert.deepEqual(filterView(items,defs,'escuela',{}).results.map(r=>r.item.id),['ana']);
+ const m=filterView(items,defs,'',{voice:['yes']});assert.deepEqual([m.total,m.shown,m.active],[4,1,1]);
+ assert.deepEqual(m.facets.find(f=>f.id==='voice').values.map(v=>[v.value,v.count,v.active]),[['yes',1,true],['no',3,false]]);
+ assert.deepEqual(m.facets.find(f=>f.id==='kind').values.map(v=>[v.value,v.count]),[['person',1]]);});
+
+test('FILTER_SOURCES cubre toda vista con buscador',()=>{
+ assert.deepEqual(Object.keys(ROUTE_PARAMS).filter(hasFilters).sort(),Object.keys(FILTER_SOURCES).sort());
+ for(const [v,f] of Object.entries(FILTER_SOURCES))for(const x of [{},null,{characters:[1,null,{id:3}],locations:'x',environments:[{},null,{id:5}]}]){const r=f(x);assert.ok(Array.isArray(r.items)&&Array.isArray(r.defs),v);}
+ const p=relProject();assert.equal(viewItems('tree',p),null);assert.equal(viewItems('__proto__',p),null);assert.deepEqual(viewItems('characters',p).items.map(i=>i.id),characterItems(p).items.map(i=>i.id));});

@@ -71,15 +71,16 @@ test('rutas: páginas de personaje y de ambiente (#60)',()=>{
  for(const q of ['?project=x&view=character&character=ana&at=seq%2Ff1','?project=x&view=location&location=plaza&at=scene%2Fsb1%2Fsc1'])assert.equal(routeQuery(parseRoute(q)),q);
  assert.deepEqual(ROUTE_KEYS.filter(x=>!Object.values(ROUTE_PARAMS).flat().includes(x)),[]);});
 
-test('rutas: q y f del buscador (#59) solo en Storyboards y Planos, fuera del scroll',()=>{
+test('rutas: q y f del buscador (#59, #62) solo en las vistas con buscador, fuera del scroll',()=>{
  const f='act:e1,cast:ana';
  for(const q of ['?project=x&view=storyboards&q=luna%20roja&f='+f,'?project=x&view=shots&sequence=s&q=caf%C3%A9&f='+f,'?project=x&view=storyboards&f=cast:a%253Ab'])assert.equal(routeQuery(parseRoute(q)),q);
  assert.deepEqual([parseRoute('?project=x&view=storyboards&q=luna&f='+f).q,parseRoute('?project=x&view=storyboards&q=luna&f='+f).f],['luna',f]);
- for(const v of ['tree','storyboard','characters','shot','overview'])assert.deepEqual([parseRoute('?project=x&view='+v+'&q=a&f='+f).q,parseRoute('?project=x&view='+v+'&q=a&f='+f).f],[null,null],v);
+ for(const v of ['tree','storyboard','character','shot','overview'])assert.deepEqual([parseRoute('?project=x&view='+v+'&q=a&f='+f).q,parseRoute('?project=x&view='+v+'&q=a&f='+f).f],[null,null],v);
  assert.equal(routeQuery({project:'x',view:'shots',q:'a b',f}),'?project=x&view=shots&q=a%20b&f=act:e1,cast:ana');assert.equal(routeQuery({project:'x',view:'tree',q:'a',f}),'?project=x&view=tree');
  assert.equal(routeQuery({project:'x',view:'storyboards',q:'',f:null}),'?project=x&view=storyboards');
  const k=q=>routeKey(parseRoute(q));assert.equal(k('?project=x&view=storyboards&q=a&f='+f),k('?project=x&view=storyboards'));assert.equal(k('?project=x&view=shots&sequence=s&q=a'),JSON.stringify(['x','shots']));
- assert.deepEqual(FILTER_PARAMS,['q','f']);assert.deepEqual(Object.keys(ROUTE_PARAMS).filter(hasFilters).sort(),['shots','storyboards']);
+ assert.deepEqual(FILTER_PARAMS,['q','f']);assert.deepEqual(Object.keys(ROUTE_PARAMS).filter(hasFilters).sort(),['characters','environments','locations','shots','storyboards']);
+ for(const v of ['characters','locations','environments']){const q='?project=x&view='+v+'&q=a&f=kind:voice';assert.equal(routeQuery(parseRoute(q)),q,v);assert.equal(k(q),k('?project=x&view='+v),v);}
  assert.deepEqual(Object.values(ROUTE_PARAMS).flat().filter(x=>!ROUTE_KEYS.includes(x)),[],'todo parámetro de vista está en ROUTE_KEYS');});
 
 test('fuente: buscador de Storyboards y Planos (#59)',()=>{
@@ -200,7 +201,7 @@ test('estilos: tarjetas 16:9, rejilla por columnas, migas sin desbordar y foco',
 test('fuente: rutas y tarjetas de personaje y ambiente (#60)',()=>{
  assert.match(fs.readFileSync(new URL('../app/workflow.mjs',import.meta.url),'utf8'),/ROUTE_NAMES=\['project','view',\.\.\.ROUTE_KEYS\]/);assert.ok(!src.includes('data-kind="${view}"'),'el selector de versión no usa la vista');
  assert.ok(src.includes("el.dataset.kind==='character'?p.characters:p.locations"));
- for(const x of ['const characterCard=','const locationCard=',"list.map(chars?characterCard:locationCard)","'rodaje-appear-all-'+p.id",'data-appear-all','/api/entity?project=',"'No existe el personaje '","'No existe el ambiente '"])assert.ok(src.includes(x),'falta '+x);});
+ for(const x of ['const characterCard=','const locationCard=',"card=chars?characterCard:locationCard","'rodaje-appear-all-'+p.id",'data-appear-all','/api/entity?project=',"'No existe el personaje '","'No existe el ambiente '"])assert.ok(src.includes(x),'falta '+x);});
 
 // Historial (#66): push si cambia la ruta sin q/f; replace en filtros, en la misma ruta y si se fuerza.
 test('historial: push si cambia la ruta sin q/f',()=>{
