@@ -30,4 +30,4 @@ Cómo se encadenan los pasos:
 - `npm test` en verde al terminar cada issue.
 - `npm run check:proyectos` sin errores antes de cerrar una issue que toque el validador, los datos o un productor de ficheros de proyecto.
 - Si se toca la UI, ejecutar `npm run build:ui` y hacer commit también de `app/app.js`.
-- Línea base: `node scripts/linea-base.mjs <dir> [--url http://127.0.0.1:4320] [--sin-capturas]` sirve para comparar el antes y el después (digests de planos, GLB, coplanares y capturas de las vistas 3D; las capturas necesitan la app arrancada). Compara dos con `diff -r <antes> <después>`. La referencia vigente es `pruebas-desarrollo/linea-base-1`.
+- Línea base: `node scripts/linea-base.mjs <dir> [--url http://127.0.0.1:4320] [--sin-capturas]` sirve para comparar el antes y el después (digests de planos, GLB, coplanares y capturas de las vistas 3D; las capturas necesitan la app arrancada). Compara dos con `diff -r <antes> <después>`. La referencia vigente es `pruebas-desarrollo/linea-base-2` (la 1 se conserva como histórico).
