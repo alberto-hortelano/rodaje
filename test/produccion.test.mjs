@@ -1,0 +1,100 @@
+// Producción por plano (#65): productionIndex (puro), montajeStart y el lector de disco productionFor (lib/lotes.mjs).
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';
+import {productionIndex,montajeStart} from '../app/workflow.mjs';
+const {DATA}=await import('../lib/paths.mjs'),L=await import('../lib/lotes.mjs');
+
+// Vivo con p1…p4; l2 (reciente) y l1; has responde a un Set de ficheros relativos al proyecto.
+const live={episodes:[{id:'e1',sequences:[{id:'s1',shots:[{id:'p1'},{id:'p2'},{id:'p3'},{id:'p4'}]}]}]};
+const done=(n,verdict=null,extra={})=>({n,at:'2026-09-0'+n,status:'done',video:`generated-v0${n}.mp4`,verdict,...extra});
+const fixture=()=>({live,lotes:[
+ {id:'l2',created:'2026-09-02',plan:[{id:'b1',parts:[{shot:'p1',from:0,to:2,at:0},{shot:'p2',from:2,to:4,at:2}]}],attempts:{b1:[done(1,'rejected'),done(2)]},
+  cuts:[{name:'corte',file:'assets/l2/montaje/corte.mp4',blocks:[{block:'b1',start:0,end:4}]}]},
+ {id:'l1',created:'2026-09-01',plan:[{id:'b1',parts:[{shot:'p1',from:0,to:3,at:0}]},{id:'b2',parts:[{shot:'p3'}]},{id:'b3',parts:[{shot:'p3'}]},{id:'b4',parts:[{shot:'p9'}]}],
+  attempts:{b1:[done(1,'accepted')],b2:[done(1,'accepted'),{n:2,status:'submitted',verdict:null}],b3:[done(1,'rejected')]},
+  cuts:[{name:'a',file:'assets/l1/montaje/a.mp4',blocks:[{block:'b2',start:0,end:5}]},{name:'b',file:'assets/l1/montaje/b.mp4',blocks:[{block:'b1',start:0,end:3},{block:'b2',start:3,end:8}]}]},
+ {id:'viejo',error:'Lote no válido: plan.json no es una lista de bloques'}],
+ anim3d:[{storyboard:'sb',entries:[{file:'storyboards/sb/animacion-3d/v-v01.mp4',version:1,at:'a',duration:3,storyboardShot:'v1',shot:'p4'},{file:'storyboards/sb/animacion-3d/v-v02.mp4',version:2,at:'b',duration:3.5,storyboardShot:'v1',shot:'p4'},{file:'storyboards/sb/animacion-3d/falta.mp4',version:3,shot:'p4'},{file:'storyboards/sb/animacion-3d/x.mp4',version:1}]}]});
+const files=new Set(['assets/l2/b1/generated-v01.mp4','assets/l2/b1/generated-v02.mp4','assets/l1/b1/generated-v01.mp4','assets/l1/b2/generated-v01.mp4','assets/l1/b3/generated-v01.mp4','storyboards/sb/animacion-3d/v-v01.mp4','storyboards/sb/animacion-3d/v-v02.mp4','storyboards/sb/animacion-3d/x.mp4']);
+const has=f=>files.has(f);
+const idx=(over={})=>productionIndex({...fixture(),has,...over});
+
+test('productionIndex: un plano en dos lotes, del más reciente al más antiguo',()=>{
+ const e=idx().shots.p1.lotes;assert.deepEqual(e.map(x=>[x.lote,x.created,x.block]),[['l2','2026-09-02','b1'],['l1','2026-09-01','b1']]);});
+test('productionIndex: bloque con dos partes de dos planos',()=>{
+ const {shots}=idx(),a=shots.p1.lotes[0],b=shots.p2.lotes[0];
+ assert.deepEqual([a.block,a.part,a.from,a.to,a.at],['b1',0,0,2,0]);assert.deepEqual([b.block,b.part,b.from,b.to,b.at],['b1',1,2,4,2]);
+ assert.deepEqual(a.attempts,b.attempts);assert.notEqual(a.attempts,b.attempts,'cada entrada lleva su copia');});
+test('productionIndex: un plano en dos bloques del mismo lote',()=>{
+ assert.deepEqual(idx().shots.p3.lotes.map(x=>[x.lote,x.block,x.part]),[['l1','b2',0],['l1','b3',0]]);});
+test('productionIndex: lote de formato antiguo va a skipped y no lanza',()=>{
+ const r=idx();assert.deepEqual(r.skipped,[{lote:'viejo',reason:'Lote no válido: plan.json no es una lista de bloques'}]);
+ assert.ok(Object.values(r.shots).every(s=>s.lotes.every(x=>x.lote!=='viejo')));});
+test('productionIndex: bloque sin attempts.json está pendiente',()=>{
+ const f=fixture();delete f.lotes[1].attempts.b1;const e=productionIndex({...f,has}).shots.p1.lotes[1];
+ assert.deepEqual([e.attempts,e.current,e.pending],[[],null,false]);});
+test('productionIndex: el corte que no incluye el bloque no aparece',()=>{
+ const {shots}=idx();assert.deepEqual(shots.p1.lotes[1].cuts,[{name:'b',file:'assets/l1/montaje/b.mp4',start:0,end:3}]);
+ assert.deepEqual(shots.p3.lotes[0].cuts.map(c=>[c.name,c.start,c.end]),[['a',0,5],['b',3,8]]);assert.deepEqual(shots.p3.lotes[1].cuts,[]);});
+test('productionIndex: plano ausente del vivo',()=>{
+ const {shots}=idx();assert.equal(shots.p9.orphan,true);assert.deepEqual(shots.p9.lotes.map(x=>x.block),['b4']);
+ for(const k of ['p1','p2','p3','p4'])assert.equal('orphan' in shots[k],false,k);});
+test('productionIndex: vídeos que faltan se descartan con has',()=>{
+ const f=fixture();f.lotes[0].attempts.b1=[done(1),done(2,'accepted')];const gone=new Set([...files].filter(x=>x!=='assets/l2/b1/generated-v02.mp4'));
+ const e=productionIndex({...f,has:x=>gone.has(x)}).shots.p1.lotes[0];
+ assert.deepEqual(e.attempts.map(a=>[a.n,a.video,a.current]),[[1,'assets/l2/b1/generated-v01.mp4',true],[2,null,false]]);assert.deepEqual([e.current,e.pending],[1,true]);
+ const {shots}=idx();assert.ok(shots.p4.anim3d.every(x=>x.file!=='storyboards/sb/animacion-3d/falta.mp4'));
+ assert.deepEqual(shots.p3.lotes[0].attempts.map(a=>[a.n,a.video,a.verdict]),[[1,'assets/l1/b2/generated-v01.mp4','accepted'],[2,null,null]]);});
+test('productionIndex: sin animación 3D y solo animación 3D',()=>{
+ const none=idx({anim3d:[]});assert.ok(Object.values(none.shots).every(s=>Array.isArray(s.anim3d)&&!s.anim3d.length));assert.equal(none.shots.p4,undefined);
+ const p4=idx().shots.p4;assert.deepEqual(p4.lotes,[]);assert.deepEqual(p4.anim3d,[
+  {file:'storyboards/sb/animacion-3d/v-v02.mp4',version:2,at:'b',duration:3.5,storyboard:'sb',storyboardShot:'v1'},
+  {file:'storyboards/sb/animacion-3d/v-v01.mp4',version:1,at:'a',duration:3,storyboard:'sb',storyboardShot:'v1'}]);
+ assert.equal(p4.orphan,undefined);assert.deepEqual(Object.keys(idx().shots).sort(),['p1','p2','p3','p4','p9'],'la entrada sin shot se ignora');});
+test('productionIndex: current y pending como chosenAttempt; entradas raras',()=>{
+ const {shots}=idx();
+ assert.deepEqual([shots.p1.lotes[1].current,shots.p1.lotes[1].pending],[1,false]);
+ assert.deepEqual([shots.p1.lotes[0].current,shots.p1.lotes[0].pending],[2,true]);assert.deepEqual(shots.p1.lotes[0].attempts.map(a=>a.current),[false,true]);
+ assert.deepEqual([shots.p3.lotes[1].current,shots.p3.lotes[1].pending],[null,false]);
+ assert.deepEqual(productionIndex(),{shots:{},skipped:[]});assert.deepEqual(productionIndex({lotes:null,anim3d:null,live:null}),{shots:{},skipped:[]});
+ const odd=productionIndex({lotes:[null,{id:'x',plan:[null,{id:'b',parts:[null,{},{shot:''},{shot:'q'}]},{id:'c'}],attempts:{b:[null]},cuts:[null,{blocks:null}]}],anim3d:[null,{entries:[null,{shot:'q'}]}]});
+ assert.deepEqual(Object.keys(odd.shots),['q']);assert.deepEqual(odd.shots.q.lotes[0].part,3);assert.equal(odd.shots.q.orphan,true);
+ const f=fixture(),copy=structuredClone(f);productionIndex({...f,has});assert.deepEqual(f,copy);});
+test('montajeStart: lote de la ruta, recordado o el primero; block solo con su lote; missing',()=>{
+ const lotes=[{id:'a'},{id:'b'},{id:'c'}];
+ assert.deepEqual(montajeStart(lotes,{lote:'b',block:'b2'},'c'),{lote:'b',block:'b2',missing:null});
+ assert.deepEqual(montajeStart(lotes,{},'c'),{lote:'c',block:null,missing:null});
+ assert.deepEqual(montajeStart(lotes,{block:'b2'},'c'),{lote:'c',block:null,missing:null});
+ assert.deepEqual(montajeStart(lotes,{lote:'nope',block:'b2'},'c'),{lote:'c',block:null,missing:'nope'});
+ assert.deepEqual(montajeStart(lotes,{lote:'nope'},'zz'),{lote:'a',block:null,missing:'nope'});
+ assert.deepEqual(montajeStart(lotes,null,null),{lote:'a',block:null,missing:null});
+ assert.deepEqual(montajeStart([],{lote:'x'},'y'),{lote:null,block:null,missing:'x'});});
+
+// Lector sobre un proyecto en DATA (test/setup.mjs), como test/lotes.test.mjs.
+const P='produccion-test',base=path.join(DATA,P);
+const put=(rel,v)=>{const f=path.join(base,rel);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,typeof v==='string'?v:JSON.stringify(v,null,2)+'\n');};
+fs.rmSync(base,{recursive:true,force:true});
+put('assets/t01/plan.json',[{id:'b1',parts:[{shot:'p1',from:0,to:4,at:0},{shot:'p2',from:4,to:6,at:4}]},{id:'b2',parts:[{shot:'p1',from:6,to:8,at:0}]}]);
+put('assets/t01/lote.json',{episode:'e1',sequence:'s1',created:'2026-09-01T00:00:00.000Z'});
+put('assets/t01/b1/attempts.json',[{n:1,at:'x',status:'done',video:'generated-v01.mp4',verdict:'accepted'}]);put('assets/t01/b1/generated-v01.mp4','');
+put('assets/t02/plan.json',[{id:'b1',length:4,parts:[{shot:'p3'}]}]);put('assets/t02/lote.json',{episode:'e1',sequence:'s1',created:'2026-09-02T00:00:00.000Z'});
+put('assets/t02/b1/attempts.json',[{n:1,at:'y',status:'done',video:'generated-v01.mp4',verdict:null}]);put('assets/t02/b1/generated-v01.mp4','');
+put('assets/t02/montaje/corte.cut.json',{at:'z',duration:4,blocks:[{block:'b1',at:0,length:4}]});put('assets/t02/montaje/corte.mp4','');
+put('assets/viejo/plan.json',{id:'x',sequences:[]});put('assets/sin-plan/nada.txt','');
+put('storyboards/borrado/animacion-3d/index.json',{entries:[{file:'storyboards/borrado/animacion-3d/v-v01.mp4',version:1,at:'w',duration:2,storyboardShot:'v1',shot:'p4'}]});put('storyboards/borrado/animacion-3d/v-v01.mp4','');
+put('storyboards/roto/animacion-3d/index.json','{no');put('storyboards/sin-anim/nada.json',{});
+const liveP={id:P,episodes:[{id:'e1',sequences:[{id:'s1',shots:[{id:'p1'},{id:'p2'},{id:'p3'}]}]}],storyboards:[]};
+const snap=dir=>{const out=[];const walk=d=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=path.join(d,e.name);if(e.isDirectory())walk(f);else{const s=fs.statSync(f);out.push([path.relative(base,f),s.size,s.mtimeMs]);}}};walk(dir);return out.sort((a,b)=>a[0].localeCompare(b[0]));};
+
+test('productionFor lee los lotes válidos, deja el antiguo en skipped y lee todos los index.json de storyboards/',()=>{
+ const before=L.listLotes(P),warn=console.warn,said=[];console.warn=(...a)=>said.push(a.join(' '));let r;try{r=L.productionFor(P,liveP);}finally{console.warn=warn;}
+ assert.deepEqual(said,[],'productionFor no avisa por consola');
+ assert.deepEqual(r.skipped,[{lote:'viejo',reason:'Lote no válido: plan.json no es una lista de bloques'}]);
+ assert.deepEqual(r.shots.p1.lotes.map(x=>[x.lote,x.block,x.part,x.current]),[['t01','b1',0,1],['t01','b2',0,null]]);
+ assert.deepEqual(r.shots.p1.lotes[0].attempts,[{n:1,at:'x',verdict:'accepted',video:'assets/t01/b1/generated-v01.mp4',current:true}]);
+ assert.deepEqual(r.shots.p3.lotes[0].cuts,[{name:'corte',file:'assets/t02/montaje/corte.mp4',start:0,end:4}]);assert.equal(r.shots.p3.lotes[0].pending,true);
+ assert.deepEqual(r.shots.p4,{lotes:[],anim3d:[{file:'storyboards/borrado/animacion-3d/v-v01.mp4',version:1,at:'w',duration:2,storyboard:'borrado',storyboardShot:'v1'}],orphan:true});
+ assert.deepEqual(L.anim3dIndexes(P).map(x=>x.storyboard),['borrado'],'index.json ilegible se omite');
+ assert.deepEqual(before.map(l=>l.id),['t02','t01']);assert.deepEqual(L.listLotes(P),before);
+ assert.deepEqual(L.productionFor('produccion-nada',liveP),{shots:{},skipped:[]});});
+test('productionFor no escribe',()=>{const a=snap(base);L.productionFor(P,liveP);L.productionFor(P,liveP);assert.deepEqual(snap(base),a);});
+test('lib/lotes.mjs sigue sin importar app/store.mjs',()=>{const src=fs.readFileSync(new URL('../lib/lotes.mjs',import.meta.url),'utf8');assert.doesNotMatch(src,/store\.mjs'/);assert.match(src,/import \{readAnim3dIndex\} from '\.\/animacion3d\.mjs'/);});

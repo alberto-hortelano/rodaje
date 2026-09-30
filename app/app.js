@@ -246,8 +246,10 @@ ${l3.spokenText || l3.text}`;
 }
 
 // app/montaje.source.js
-import { storyboardShot, chosenAttempt, blockAt } from "./workflow.mjs";
-async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus = null }) {
+import { storyboardShot, chosenAttempt, blockAt, montajeStart } from "./workflow.mjs";
+async function mountMontaje(root, { project: p2, api: api2, toast: toast2, route = {}, onRoute = () => {
+}, onWrite = () => {
+} }) {
   const esc3 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const media2 = (f2) => "/api/asset?project=" + p2.id + "&file=" + encodeURIComponent(f2);
   const fmt = (s) => Number.isFinite(s) ? `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0")}` : "\u2013";
@@ -262,9 +264,17 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus
   if (!lotes.length) {
     root.innerHTML = '<div class="empty"><h2>A\xFAn no hay lotes</h2><p>Un lote aparece aqu\xED cuando <code>scripts/bloques/planificar.mjs</code> crea su <code>plan.json</code>; el montaje, al pasar <code>montar.mjs</code>.</p></div>';
     return { dispose() {
-    } };
+    }, route: () => ({ lote: null, block: null }) };
   }
-  let lote, cut, timeline = [], current2 = null, selected = null, take = null, poll = null, disposed = false, rangeDraft = null;
+  let lote, cut, timeline = [], current2 = null, selected = null, take = null, poll = null, disposed = false, rangeDraft = null, ready = false, reported = null;
+  const inUse = () => ({ lote: lote?.id ?? null, block: selected ?? null });
+  function report() {
+    if (!ready || disposed) return;
+    const r = inUse();
+    if (r.lote === reported?.lote && r.block === reported?.block) return;
+    reported = r;
+    onRoute({ ...r });
+  }
   const model = (e) => /h3-max/.test(e || "") ? "H3 Max" : /minimax\/h3\//.test(e || "") ? "H3" : (e || "").split("/").slice(-2).join("/");
   const seqOf = () => p2.episodes.find((e) => e.id === lote.meta.episode)?.sequences.find((s) => s.id === lote.meta.sequence);
   const episodeOf = () => p2.episodes.find((e) => e.id === lote.meta.episode);
@@ -305,8 +315,9 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus
   <aside class="mt-side" data-mt="side"></aside></div>
   <section class="mt-editor panel" data-mt="editor"></section></div>`;
   const $3 = (s) => root.querySelector(`[data-mt="${s}"]`), video = $3("video");
-  const lastLote = lotes.some((l3) => l3.id === focus?.lote) ? focus.lote : store("lote");
-  $3("lote").value = lotes.some((l3) => l3.id === lastLote) ? lastLote : lotes[0].id;
+  const start = montajeStart(lotes, route, store("lote"));
+  if (start.missing) toast2(`No existe el lote ${start.missing}: se abre ${start.lote}`);
+  $3("lote").value = start.lote;
   function renderBar() {
     $3("cut").innerHTML = lote.cuts.length ? lote.cuts.map((c) => `<option value="${esc3(c.name)}" ${c === cut ? "selected" : ""}>${esc3(c.name)} \xB7 ${fmt(c.duration)}</option>`).join("") : "<option>Sin montar</option>";
     const changed = lote.blocks.filter(stale).length, counts = lote.blocks.reduce((n, b2) => (n[stateOf(b2)]++, n), { accepted: 0, pending: 0, missing: 0 }), m2 = lote.montando;
@@ -372,6 +383,7 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus
     rangeDraft = null;
     renderEditor();
     root.querySelectorAll(".mt-seg").forEach((el) => el.classList.toggle("selected", el.dataset.seg === id3));
+    report();
   }
   function renderEditor() {
     const el = $3("editor"), b2 = selected && blockById(selected);
@@ -432,6 +444,7 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus
       const rules = [...el.querySelectorAll(".mt-rule input:checked")].map((i2) => i2.value);
       try {
         b2.attempts = await api2("/api/lote-review", { project: p2.id, lote: lote.id, block: b2.id, attempt: a.n, verdict, rules: verdict === "rejected" ? rules : [], notes: q("notes").value.trim(), range: verdict === "accepted" && rangeDraft ? rangeDraft : void 0 });
+        onWrite();
         toast2(verdict === "accepted" ? `v${a.n} aceptada para ${sb?.code || b2.id}` : verdict === "rejected" ? `v${a.n} rechazada` : "Veredicto quitado");
         rangeDraft = null;
         renderBar();
@@ -474,6 +487,7 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus
     tick();
     if (!current2) renderSide();
     select2(selected && blockById(selected) ? selected : lote.blocks[0].id);
+    report();
     watch();
   }
   function watch() {
@@ -485,6 +499,7 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus
       const fresh = await api2(`/api/lote?project=${p2.id}&lote=${encodeURIComponent(lote.id)}`).catch(() => null);
       if (!fresh || fresh.montando?.state === "running") return;
       clearInterval(poll);
+      onWrite();
       if (fresh.montando?.state === "failed") {
         lote = fresh;
         renderBar();
@@ -546,22 +561,24 @@ async function mountMontaje(root, { project: p2, api: api2, toast: toast2, focus
   };
   document.addEventListener("keydown", keys);
   await open($3("lote").value);
-  if (focus?.block && lote.id === focus.lote && blockById(focus.block)) {
-    const c = timeline.find((x2) => x2.block === focus.block);
+  if (start.block && lote.id === start.lote && blockById(start.block)) {
+    const c = timeline.find((x2) => x2.block === start.block);
     if (c) {
       video.currentTime = c.start + 0.01;
       tick();
     }
-    select2(focus.block);
+    select2(start.block);
     $3("editor").scrollIntoView({ behavior: "smooth" });
   }
+  reported = inUse();
+  ready = true;
   return { dispose() {
     disposed = true;
     clearInterval(poll);
     document.removeEventListener("keydown", keys);
     video.removeAttribute("src");
     video.load();
-  } };
+  }, route: inUse };
 }
 
 // app/anim.source.js
@@ -29555,7 +29572,8 @@ var esc2 = (v2) => String(v2 ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", 
 var renderedRoute = null;
 var renderGeneration = 0;
 var sbMedia = null;
-var montajeFocus = null;
+var montajeLote = null;
+var montajeBlock = null;
 var lazy = lazyGroup(api);
 var shotStatesIndex = lazy.index((id3) => "/api/shot-states?project=" + encodeURIComponent(id3));
 var fromHistory2 = false;
@@ -29567,7 +29585,7 @@ var sbPlayers = /* @__PURE__ */ new Map();
 var filt = { q: "", f: {} };
 var filterMount = null;
 var filterOpen = null;
-var currentRoute = () => ({ project: p?.id || null, view, episode: episodeId, sequence: view === "shots" ? shotsFocus : sequenceId, shot: shotId, storyboard: storyboardId, environment: environmentId, character: characterId, location: locationId, at: view === "character" || view === "location" ? apAt : null, scene: sceneId, panel: panelId, node: treeNode, q: hasFilters(view) ? filt.q || null : null, f: hasFilters(view) ? filtersParam(filt.f) || null : null });
+var currentRoute = () => ({ project: p?.id || null, view, episode: episodeId, sequence: view === "shots" ? shotsFocus : sequenceId, shot: shotId, storyboard: storyboardId, environment: environmentId, character: characterId, location: locationId, at: view === "character" || view === "location" ? apAt : null, scene: sceneId, panel: panelId, node: treeNode, lote: view === "montaje" ? montajeLote : null, block: view === "montaje" ? montajeBlock : null, q: hasFilters(view) ? filt.q || null : null, f: hasFilters(view) ? filtersParam(filt.f) || null : null });
 function applyRoute(r) {
   view = r.view;
   if (view === "shot" || view === "anim") {
@@ -29584,6 +29602,8 @@ function applyRoute(r) {
   sceneId = view === "storyboard" && r.scene || null;
   panelId = view === "storyboard" && r.panel || null;
   treeNode = view === "tree" && r.node || null;
+  montajeLote = view === "montaje" && r.lote || null;
+  montajeBlock = view === "montaje" && r.block || null;
   shotsFocus = view === "shots" && r.sequence || null;
   const f2 = shotsFocus ? ["shots-seq", shotsFocus] : null;
   pendingFocus = f2 ? `[data-${f2[0]}="${CSS.escape(f2[1])}"]` : null;
@@ -30377,14 +30397,17 @@ y ${list.length - 20} m\xE1s` : "");
     } });
   }
   if (view === "montaje") {
-    const focus = montajeFocus;
-    montajeFocus = null;
-    const m2 = await mountMontaje($2("#montaje"), { project: p, api, toast, focus });
+    const m2 = await mountMontaje($2("#montaje"), { project: p, api, toast, route: { lote: montajeLote, block: montajeBlock }, onRoute: (r) => {
+      montajeLote = r.lote;
+      montajeBlock = r.block;
+      syncRoute();
+    }, onWrite: () => lazy.invalidate(p.id) });
     if (generation !== renderGeneration) {
       m2?.dispose?.();
       return;
     }
     stage = m2;
+    ({ lote: montajeLote, block: montajeBlock } = m2.route());
   }
   if (view === "anim") {
     try {
@@ -30867,12 +30890,7 @@ async function act(action) {
     return;
   }
   if (a === "storyboard") return goRoute({ view: "storyboard", storyboard: b2, scene: c || null });
-  if (a === "sb-montaje") {
-    if (dirty) await save();
-    montajeFocus = { lote: b2, block: c || null };
-    view = "montaje";
-    return render();
-  }
+  if (a === "sb-montaje") return goRoute({ view: "montaje", lote: b2, block: c || null });
   if (a === "new-storyboard" || a === "edit-storyboard") {
     const b0 = (p.storyboards ??= []).find((x2) => x2.id === b2) || { id: id2(), title: "", subtitle: "", description: "", notes: "", style: "", sequences: [] };
     modal("Storyboard", input("T\xEDtulo", "title", b0.title) + input("Subt\xEDtulo", "subtitle", b0.subtitle || "") + area("Planteamiento", "description", b0.description || "") + area("Notas de mundo y tono", "notes", b0.notes || "") + area("Estilo de imagen que se a\xF1ade a los prompts (opcional)", "style", b0.style || ""), async (f2) => {

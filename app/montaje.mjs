@@ -1,8 +1,9 @@
 // Vista Montaje: lotes de assets/<lote>/ (lecturas en lib/lotes.mjs); veredictos y remontaje (scripts/bloques/montar.mjs).
 // storyboardMediaFor: tomas y montajes de un storyboard para la vista Storyboards (solo lectura); listAnimatics y listAnim3d, sus animáticas y vídeos 3D.
+// productionFor: producción por plano (#65, GET /api/production; solo lectura).
 import path from 'node:path';import {execFile} from 'node:child_process';
-import {ROOT} from '../lib/paths.mjs';import {loteDir,reviewBlock,listLotes,storyboardMediaFor,loteDetail as readLoteDetail} from '../lib/lotes.mjs';
-export {listLotes,storyboardMediaFor};export {listAnimatics} from '../lib/animaticas.mjs';export {listAnim3d} from '../lib/animacion3d.mjs';
+import {ROOT} from '../lib/paths.mjs';import {loteDir,reviewBlock,listLotes,storyboardMediaFor,productionFor,loteDetail as readLoteDetail} from '../lib/lotes.mjs';
+export {listLotes,storyboardMediaFor,productionFor};export {listAnimatics} from '../lib/animaticas.mjs';export {listAnim3d} from '../lib/animacion3d.mjs';
 const running=new Map();
 const status=(project,lote)=>running.get(project+'/'+lote)||null;
 export function loteDetail(project,lote){return readLoteDetail(project,lote,status(project,lote));}

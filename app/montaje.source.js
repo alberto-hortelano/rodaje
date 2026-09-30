@@ -1,14 +1,18 @@
-import {storyboardShot,chosenAttempt,blockAt} from './workflow.mjs';
+import {storyboardShot,chosenAttempt,blockAt,montajeStart} from './workflow.mjs';
 // Vista Montaje: el corte de un lote con, en cada momento, su bloque, la toma, la viñeta del storyboard y la escena.
 // Debajo, el editor del bloque: tomas generadas, tramo usado, veredicto y prompt. «Volver a montar» lanza montar.mjs.
-// focus {lote, block} (botón «Montaje →» de la vista Storyboards): abre ese lote en vez del último usado y edita ese bloque.
-export async function mountMontaje(root,{project:p,api,toast,focus=null}){
+// route {lote, block} de la URL (#65): abre ese lote (si no, el último usado) y edita ese bloque. Elegir otro lote o bloque llama a onRoute
+// (la app reemplaza la entrada); route() da el par en uso. onWrite: tras un veredicto o un montaje terminado (invalida la caché de la app).
+export async function mountMontaje(root,{project:p,api,toast,route={},onRoute=()=>{},onWrite=()=>{}}){
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const media=f=>'/api/asset?project='+p.id+'&file='+encodeURIComponent(f);const fmt=s=>Number.isFinite(s)?`${Math.floor(s/60)}:${(s%60).toFixed(1).padStart(4,'0')}`:'–';
  const store=(k,v)=>{try{if(v===undefined)return localStorage.getItem('rodaje-montaje-'+p.id+'-'+k);localStorage.setItem('rodaje-montaje-'+p.id+'-'+k,v);}catch{}};
  const lotes=await api('/api/lotes?project='+p.id);
- if(!lotes.length){root.innerHTML='<div class="empty"><h2>Aún no hay lotes</h2><p>Un lote aparece aquí cuando <code>scripts/bloques/planificar.mjs</code> crea su <code>plan.json</code>; el montaje, al pasar <code>montar.mjs</code>.</p></div>';return {dispose(){}};}
- let lote,cut,timeline=[],current=null,selected=null,take=null,poll=null,disposed=false,rangeDraft=null;
+ if(!lotes.length){root.innerHTML='<div class="empty"><h2>Aún no hay lotes</h2><p>Un lote aparece aquí cuando <code>scripts/bloques/planificar.mjs</code> crea su <code>plan.json</code>; el montaje, al pasar <code>montar.mjs</code>.</p></div>';return {dispose(){},route:()=>({lote:null,block:null})};}
+ let lote,cut,timeline=[],current=null,selected=null,take=null,poll=null,disposed=false,rangeDraft=null,ready=false,reported=null;
+ const inUse=()=>({lote:lote?.id??null,block:selected??null});
+ // Solo tras montar la vista y si cambia el par: los select(id,false) de la reproducción no escriben la URL si el bloque es el mismo.
+ function report(){if(!ready||disposed)return;const r=inUse();if(r.lote===reported?.lote&&r.block===reported?.block)return;reported=r;onRoute({...r});}
  const model=e=>/h3-max/.test(e||'')?'H3 Max':/minimax\/h3\//.test(e||'')?'H3':(e||'').split('/').slice(-2).join('/');
  const seqOf=()=>p.episodes.find(e=>e.id===lote.meta.episode)?.sequences.find(s=>s.id===lote.meta.sequence);
  const episodeOf=()=>p.episodes.find(e=>e.id===lote.meta.episode);
@@ -28,7 +32,7 @@ export async function mountMontaje(root,{project:p,api,toast,focus=null}){
   <aside class="mt-side" data-mt="side"></aside></div>
   <section class="mt-editor panel" data-mt="editor"></section></div>`;
  const $=s=>root.querySelector(`[data-mt="${s}"]`),video=$('video');
- const lastLote=lotes.some(l=>l.id===focus?.lote)?focus.lote:store('lote');$('lote').value=lotes.some(l=>l.id===lastLote)?lastLote:lotes[0].id;
+ const start=montajeStart(lotes,route,store('lote'));if(start.missing)toast(`No existe el lote ${start.missing}: se abre ${start.lote}`);$('lote').value=start.lote;
  function renderBar(){$('cut').innerHTML=lote.cuts.length?lote.cuts.map(c=>`<option value="${esc(c.name)}" ${c===cut?'selected':''}>${esc(c.name)} · ${fmt(c.duration)}</option>`).join(''):'<option>Sin montar</option>';
   const changed=lote.blocks.filter(stale).length,counts=lote.blocks.reduce((n,b)=>(n[stateOf(b)]++,n),{accepted:0,pending:0,missing:0}),m=lote.montando;
   root.querySelector('.mt-bar-info').innerHTML=`<span class="pill ok">${counts.accepted} aceptados</span> <span class="pill warn">${counts.pending} sin revisar</span>${counts.missing?` <span class="pill">${counts.missing} sin toma</span>`:''}${changed?` <span class="pill mt-stale-pill">${changed} cambiados desde este corte</span>`:''}${m?.state==='running'?' <span class="pill">Montando…</span>':m?.state==='failed'?` <span class="pill warn" title="${esc(m.error)}">El montaje falló</span>`:''}`;
@@ -50,7 +54,7 @@ export async function mountMontaje(root,{project:p,api,toast,focus=null}){
    </dl><button data-mt="edit-current">Editar este plano ↓</button></div>`;
   el.querySelector('[data-mt="edit-current"]').onclick=()=>{select(current.block);$('editor').scrollIntoView({behavior:'smooth'});};}
  function tick(){const c=blockAt(timeline,video.currentTime);moveHead();if(c!==current){current=c;renderSide();if(video.paused&&c)select(c.block,false);}else if(current)root.querySelector('.mt-now .tiny').textContent=`Bloque ${current.block} · ${fmt(video.currentTime-current.start)} de ${fmt(current.end-current.start)} · montaje ${fmt(video.currentTime)}`;}
- function select(id,force=true){if(!force&&selected===id)return;selected=id;const b=blockById(id);const {attempt}=chosenAttempt(b.attempts);take=(attempt||b.attempts.filter(a=>a.video).at(-1))?.n??null;rangeDraft=null;renderEditor();root.querySelectorAll('.mt-seg').forEach(el=>el.classList.toggle('selected',el.dataset.seg===id));}
+ function select(id,force=true){if(!force&&selected===id)return;selected=id;const b=blockById(id);const {attempt}=chosenAttempt(b.attempts);take=(attempt||b.attempts.filter(a=>a.video).at(-1))?.n??null;rangeDraft=null;renderEditor();root.querySelectorAll('.mt-seg').forEach(el=>el.classList.toggle('selected',el.dataset.seg===id));report();}
  function renderEditor(){const el=$('editor'),b=selected&&blockById(selected);if(!b){el.innerHTML='<p class="tiny">Elige un plano en la línea de tiempo.</p>';return;}const sb=sbOf(b),a=b.attempts.find(x=>x.n===take),f=frameOf(b),dirOf=b.direccion;
   const range=rangeDraft||a?.usedRange||null,dur=a?.durationReturned||a?.durationRequested||b.length;
   el.innerHTML=`<div class="row between"><div><div class="eyebrow">Editar plano</div><h2>${esc(sb?.code||b.id)} · ${esc(sb?.title||'')} <span class="tiny">bloque ${esc(b.id)} · ${b.length} s en el plan</span></h2></div><div class="row"><button data-ed="prev">← Anterior</button><button data-ed="next">Siguiente →</button></div></div>
@@ -75,12 +79,12 @@ export async function mountMontaje(root,{project:p,api,toast,focus=null}){
   q('in').onclick=()=>{const [,y]=cur(),x=Math.round(tv.currentTime*100)/100;setRange([[x,y>x?y:Math.min(dur,x+b.length)]]);};
   q('out').onclick=()=>{const [x]=cur(),y=Math.round(tv.currentTime*100)/100;if(y<=x)return toast('La salida tiene que ir después de la entrada');setRange([[x,y]]);};
   q('full').onclick=()=>setRange([[0,Math.round(Math.min(dur,b.length)*100)/100]]);
-  const send=async verdict=>{const rules=[...el.querySelectorAll('.mt-rule input:checked')].map(i=>i.value);try{b.attempts=await api('/api/lote-review',{project:p.id,lote:lote.id,block:b.id,attempt:a.n,verdict,rules:verdict==='rejected'?rules:[],notes:q('notes').value.trim(),range:verdict==='accepted'&&rangeDraft?rangeDraft:undefined});toast(verdict==='accepted'?`v${a.n} aceptada para ${sb?.code||b.id}`:verdict==='rejected'?`v${a.n} rechazada`:'Veredicto quitado');rangeDraft=null;renderBar();renderTimeline();renderSide();renderEditor();}catch(e){toast(e.message);}};
+  const send=async verdict=>{const rules=[...el.querySelectorAll('.mt-rule input:checked')].map(i=>i.value);try{b.attempts=await api('/api/lote-review',{project:p.id,lote:lote.id,block:b.id,attempt:a.n,verdict,rules:verdict==='rejected'?rules:[],notes:q('notes').value.trim(),range:verdict==='accepted'&&rangeDraft?rangeDraft:undefined});onWrite();toast(verdict==='accepted'?`v${a.n} aceptada para ${sb?.code||b.id}`:verdict==='rejected'?`v${a.n} rechazada`:'Veredicto quitado');rangeDraft=null;renderBar();renderTimeline();renderSide();renderEditor();}catch(e){toast(e.message);}};
   q('accept').onclick=()=>send('accepted');q('reject').onclick=()=>send('rejected');if(q('clear'))q('clear').onclick=()=>send(null);
   q('prompt').ontoggle=async e=>{if(!e.target.open||e.target.dataset.loaded)return;e.target.dataset.loaded=1;const r=await fetch(media(`assets/${lote.id}/${b.id}/${a.prompt||'prompt.txt'}`));e.target.querySelector('pre').textContent=r.ok?await r.text():'No se encuentra el prompt.';};}
  function step(d){const i=lote.blocks.findIndex(b=>b.id===selected),n=lote.blocks[Math.max(0,Math.min(lote.blocks.length-1,i+d))];if(!n)return;const c=timeline.find(x=>x.block===n.id);if(c&&video.paused){video.currentTime=c.start+.01;tick();}select(n.id);}
- async function open(id,cutName){await load(id);pickCut(cutName);$('lote').value=id;renderBar();video.src=cut?media(cut.file):'';current=null;renderTimeline();video.currentTime=0;tick();if(!current)renderSide();select(selected&&blockById(selected)?selected:lote.blocks[0].id);watch();}
- function watch(){clearInterval(poll);if(lote.montando?.state!=='running')return;poll=setInterval(async()=>{if(disposed)return clearInterval(poll);const before=lote.cuts.length;const fresh=await api(`/api/lote?project=${p.id}&lote=${encodeURIComponent(lote.id)}`).catch(()=>null);if(!fresh||fresh.montando?.state==='running')return;clearInterval(poll);if(fresh.montando?.state==='failed'){lote=fresh;renderBar();return toast('El montaje falló: '+fresh.montando.error);}toast(fresh.montando?.output||'Montaje terminado');const keep=selected;await open(lote.id,fresh.cuts.at(-1)?.name);if(keep&&fresh.cuts.length>before)select(keep);},3000);}
+ async function open(id,cutName){await load(id);pickCut(cutName);$('lote').value=id;renderBar();video.src=cut?media(cut.file):'';current=null;renderTimeline();video.currentTime=0;tick();if(!current)renderSide();select(selected&&blockById(selected)?selected:lote.blocks[0].id);report();watch();}
+ function watch(){clearInterval(poll);if(lote.montando?.state!=='running')return;poll=setInterval(async()=>{if(disposed)return clearInterval(poll);const before=lote.cuts.length;const fresh=await api(`/api/lote?project=${p.id}&lote=${encodeURIComponent(lote.id)}`).catch(()=>null);if(!fresh||fresh.montando?.state==='running')return;clearInterval(poll);onWrite();if(fresh.montando?.state==='failed'){lote=fresh;renderBar();return toast('El montaje falló: '+fresh.montando.error);}toast(fresh.montando?.output||'Montaje terminado');const keep=selected;await open(lote.id,fresh.cuts.at(-1)?.name);if(keep&&fresh.cuts.length>before)select(keep);},3000);}
  $('lote').onchange=e=>{selected=null;open(e.target.value).catch(err=>toast(err.message));};
  $('cut').onchange=e=>{pickCut(e.target.value);video.src=media(cut.file);current=null;renderBar();renderTimeline();tick();};
  $('montar').onclick=async()=>{try{lote.montando=await api('/api/montar',{project:p.id,lote:lote.id});renderBar();toast('Montando: se crea un corte nuevo; los planos sin cambios no se vuelven a codificar.');watch();}catch(e){toast(e.message);}};
@@ -88,5 +92,6 @@ export async function mountMontaje(root,{project:p,api,toast,focus=null}){
  const keys=e=>{if(e.target.closest?.('input,textarea,select')||!root.isConnected)return;if(e.key===' '&&!e.target.closest?.('video,button')){e.preventDefault();video.paused?video.play():video.pause();}else if(e.key==='ArrowRight'||e.key==='ArrowLeft'){if(e.target.closest?.('video'))return;e.preventDefault();const i=timeline.indexOf(current),c=timeline[Math.max(0,Math.min(timeline.length-1,i+(e.key==='ArrowRight'?1:-1)))];if(c){video.currentTime=c.start+.01;tick();select(c.block);}}else if(e.key==='e'||e.key==='E'){if(current){select(current.block);$('editor').scrollIntoView({behavior:'smooth'});}}};
  document.addEventListener('keydown',keys);
  await open($('lote').value);
- if(focus?.block&&lote.id===focus.lote&&blockById(focus.block)){const c=timeline.find(x=>x.block===focus.block);if(c){video.currentTime=c.start+.01;tick();}select(focus.block);$('editor').scrollIntoView({behavior:'smooth'});}
- return {dispose(){disposed=true;clearInterval(poll);document.removeEventListener('keydown',keys);video.removeAttribute('src');video.load();}};}
+ if(start.block&&lote.id===start.lote&&blockById(start.block)){const c=timeline.find(x=>x.block===start.block);if(c){video.currentTime=c.start+.01;tick();}select(start.block);$('editor').scrollIntoView({behavior:'smooth'});}
+ reported=inUse();ready=true;
+ return {dispose(){disposed=true;clearInterval(poll);document.removeEventListener('keydown',keys);video.removeAttribute('src');video.load();},route:inUse};}

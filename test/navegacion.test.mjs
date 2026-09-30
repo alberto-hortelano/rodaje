@@ -27,9 +27,9 @@ test('rutas: sin vista, library o desconocida → árbol; sin proyecto, library 
 
 test('rutas: solo los parámetros de la vista; el resto null',()=>{
  const all='&episode=e&sequence=s&shot=t&storyboard=b&environment=n&character=h&location=l&scene=c&panel=v&node=k';
- assert.deepEqual(parseRoute('?project=x&view=storyboard'+all),{project:'x',view:'storyboard',episode:null,sequence:null,shot:null,storyboard:'b',environment:null,character:null,location:null,scene:'c',panel:'v',node:null,q:null,f:null,at:null});
- assert.deepEqual(parseRoute('?project=x&view=shot'+all),{project:'x',view:'shot',episode:'e',sequence:'s',shot:'t',storyboard:null,environment:null,character:null,location:null,scene:null,panel:null,node:null,q:null,f:null,at:null});
- assert.deepEqual(parseRoute('?project=x&view=shots'+all),{project:'x',view:'shots',episode:null,sequence:'s',shot:null,storyboard:null,environment:null,character:null,location:null,scene:null,panel:null,node:null,q:null,f:null,at:null});
+ assert.deepEqual(parseRoute('?project=x&view=storyboard'+all),{project:'x',view:'storyboard',episode:null,sequence:null,shot:null,storyboard:'b',environment:null,character:null,location:null,scene:'c',panel:'v',node:null,q:null,f:null,at:null,lote:null,block:null});
+ assert.deepEqual(parseRoute('?project=x&view=shot'+all),{project:'x',view:'shot',episode:'e',sequence:'s',shot:'t',storyboard:null,environment:null,character:null,location:null,scene:null,panel:null,node:null,q:null,f:null,at:null,lote:null,block:null});
+ assert.deepEqual(parseRoute('?project=x&view=shots'+all),{project:'x',view:'shots',episode:null,sequence:'s',shot:null,storyboard:null,environment:null,character:null,location:null,scene:null,panel:null,node:null,q:null,f:null,at:null,lote:null,block:null});
  assert.equal(parseRoute('?project=x&view=tree'+all).node,'k');assert.equal(parseRoute('?project=x&view=environment'+all).environment,'n');assert.equal(parseRoute('?project=x&view=rehearsal'+all).episode,'e');
  assert.deepEqual(Object.values(parseRoute('?project=x&view=overview'+all)).filter(Boolean),['x','overview']);
  assert.equal(parseRoute('?project=x&view=storyboard&storyboard=b&scene=').scene,null);assert.equal(parseRoute('?project=x&view=storyboard&storyboard=b&panel=').panel,null);});
@@ -59,8 +59,8 @@ test('navActive: vistas de detalle marcan su lista',()=>{
 
 test('rutas: páginas de personaje y de ambiente (#60)',()=>{
  const all='&episode=e&sequence=s&shot=t&storyboard=b&environment=n&character=h&location=l&scene=c&panel=v&node=k&at=seq/f1';
- assert.deepEqual(parseRoute('?project=x&view=character'+all),{project:'x',view:'character',episode:null,sequence:null,shot:null,storyboard:null,environment:null,character:'h',location:null,scene:null,panel:null,node:null,q:null,f:null,at:'seq/f1'});
- assert.deepEqual(parseRoute('?project=x&view=location'+all),{project:'x',view:'location',episode:null,sequence:null,shot:null,storyboard:null,environment:null,character:null,location:'l',scene:null,panel:null,node:null,q:null,f:null,at:'seq/f1'});
+ assert.deepEqual(parseRoute('?project=x&view=character'+all),{project:'x',view:'character',episode:null,sequence:null,shot:null,storyboard:null,environment:null,character:'h',location:null,scene:null,panel:null,node:null,q:null,f:null,at:'seq/f1',lote:null,block:null});
+ assert.deepEqual(parseRoute('?project=x&view=location'+all),{project:'x',view:'location',episode:null,sequence:null,shot:null,storyboard:null,environment:null,character:null,location:'l',scene:null,panel:null,node:null,q:null,f:null,at:'seq/f1',lote:null,block:null});
  for(const v of ['tree','storyboard','shot','characters','locations','environment'])assert.deepEqual([parseRoute('?project=x&view='+v+all).character,parseRoute('?project=x&view='+v+all).location,parseRoute('?project=x&view='+v+all).at],[null,null,null],v);
  assert.equal(parseRoute('?project=x&view=character&character=').character,null);assert.equal(parseRoute('?view=character&character=h').view,'library');
  for(const q of ['?project=x&view=character&character=ana','?project=x&view=location&location=plaza%20mayor','?project=x&view=character'])assert.equal(routeQuery(parseRoute(q)),q);
@@ -238,3 +238,16 @@ test('historial: fuente',()=>{
  for(const f of ['mountAnim(','mountRehearsal(','mountMontaje(','mountEnvironment(','mountGlb(','createStage(']){const i=src.indexOf('await '+(['mountEnvironment(','mountGlb('].includes(f)?'module.':'')+f);assert.ok(i>0,f);
   const rest=src.slice(i),g=rest.indexOf('generation!==renderGeneration'),a=rest.indexOf('stage=');assert.ok(g>0&&g<a,'guarda antes de stage= tras '+f);}
  assert.match(src,/commitRoute\(fromHistory\|\|replaceNext\?'replace':'auto'\);replaceNext=false;/);assert.match(src,/async function act\(action\)\{fromHistory=false;/);});
+
+test('rutas: Montaje con lote y block (#65)',()=>{
+ const q='?project=x&view=montaje&lote=l1&block=b2',r=parseRoute(q);assert.deepEqual([r.lote,r.block],['l1','b2']);assert.equal(routeQuery(r),q);
+ assert.equal(routeQuery({project:'x',view:'montaje',lote:'l1',block:null}),'?project=x&view=montaje&lote=l1');
+ const k=s=>routeKey(parseRoute(s));assert.equal(k(q),k('?project=x&view=montaje&lote=l1&block=b9'));assert.equal(k(q),k('?project=x&view=montaje&lote=l1'));assert.notEqual(k(q),k('?project=x&view=montaje&lote=l2&block=b2'));
+ assert.equal(parseRoute('?project=x&view=tree&lote=a').lote,null);assert.equal(parseRoute('?project=x&view=shots&block=a').block,null);
+ assert.equal(historyStep('?project=x&view=tree',r).method,'push');assert.equal(historyStep('?project=x&view=montaje&lote=l1&block=b1',r).method,'push','block en la ruta: la app reemplaza con syncRoute, no historyStep');
+ assert.deepEqual(ROUTE_PARAMS.montaje,['lote','block']);assert.deepEqual(ROUTE_KEYS.slice(-2),['lote','block']);});
+
+test('fuente: Montaje por ruta, sin montajeFocus (#65)',()=>{
+ assert.ok(!src.includes('montajeFocus'));assert.ok(src.includes("goRoute({view:'montaje',lote:b"));assert.ok(src.includes('onWrite:()=>lazy.invalidate(p.id)'));assert.ok(src.includes('({lote:montajeLote,block:montajeBlock}=m.route())'));
+ for(const x of ['montajeStart(','onRoute(','onWrite();','route:inUse'])assert.ok(mont.includes(x),'falta '+x);assert.ok(!mont.includes('focus?.lote'));
+ assert.match(mont,/send=async verdict=>\{[^]*?b\.attempts=await api\('\/api\/lote-review'[^]*?onWrite\(\);/,'send llama a onWrite tras un veredicto correcto');});

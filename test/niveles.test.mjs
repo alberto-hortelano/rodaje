@@ -73,7 +73,7 @@ test('levelCrumbs y levelKey no mutan y aceptan el modelo ya construido',()=>{
 
 test('rutas: node, scene y panel son página',()=>{
  const k=q=>routeKey(parseRoute(q));
- assert.deepEqual(FOCUS_PARAMS,{shots:['sequence']});
+ assert.deepEqual(FOCUS_PARAMS,{shots:['sequence'],montaje:['block']});
  assert.notEqual(k('?project=x&view=tree&node=seq/a'),k('?project=x&view=tree'));assert.notEqual(k('?project=x&view=tree&node=seq/a'),k('?project=x&view=tree&node=act/e1'));
  const sb='?project=x&view=storyboard&storyboard=b';assert.equal(new Set([sb,sb+'&scene=c',sb+'&scene=c&panel=v']).size,3);assert.equal(new Set([k(sb),k(sb+'&scene=c'),k(sb+'&scene=c&panel=v')]).size,3);
  assert.equal(routeQuery(parseRoute(sb+'&scene=c&panel=v')),sb+'&scene=c&panel=v');assert.equal(routeQuery(parseRoute(sb+'&panel=v&scene=c')),sb+'&scene=c&panel=v');

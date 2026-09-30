@@ -270,11 +270,12 @@ export function modelSpaceEnvironment(p,modelSpace){const m=modelSpace?.model;re
 // Rutas de la app (#57): ?project=…&view=…&<parámetros de la vista>. Los alias (outline, episodes, ship) llevan a la vista que los sustituye;
 // con proyecto, una vista desconocida, library o ninguna llevan al árbol. sequence de shots enfoca y no cuenta para el scroll; node es la página de la Escaleta;
 // scene y panel del storyboard son páginas (#68): la escena y la viñeta; at de personaje y ambiente es el nivel de sus Apariciones (#69).
+// lote y block de Montaje (#65): el lote es página; block enfoca (no cuenta para el scroll) y los cambios dentro de la vista reemplazan la entrada.
 export const VIEWS=['tree','overview','ideas','characters','locations','environments','environment','character','location','storyboards','storyboard','shots','shot','rehearsal','anim','montaje','issues','jobs'];
 export const VIEW_ALIASES={outline:'tree',episodes:'shots',ship:'environments'};
-export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene','panel'],environment:['environment'],character:['character','at'],location:['location','at'],tree:['node'],shots:['sequence','q','f'],storyboards:['q','f'],characters:['q','f'],locations:['q','f'],environments:['q','f']};
-export const FOCUS_PARAMS={shots:['sequence']};
-export const ROUTE_KEYS=['episode','sequence','shot','storyboard','environment','character','location','scene','panel','node','q','f','at'];
+export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene','panel'],environment:['environment'],character:['character','at'],location:['location','at'],tree:['node'],shots:['sequence','q','f'],storyboards:['q','f'],characters:['q','f'],locations:['q','f'],environments:['q','f'],montaje:['lote','block']};
+export const FOCUS_PARAMS={shots:['sequence'],montaje:['block']};
+export const ROUTE_KEYS=['episode','sequence','shot','storyboard','environment','character','location','scene','panel','node','q','f','at','lote','block'];
 // Buscador y facetas (#59): q y f no cuentan para el scroll; en la URL, f conserva ':' y ',' legibles (f=act:e1,cast:ana).
 export const FILTER_PARAMS=['q','f'];
 const routeValue=(k,v)=>FILTER_PARAMS.includes(k)?encodeURIComponent(v).replace(/%3A/g,':').replace(/%2C/g,','):encodeURIComponent(v);
@@ -344,6 +345,27 @@ export function storyboardMedia(storyboard,lotes,has=()=>true){const ids=new Set
  const sequences={};for(const s of storyboard?.sequences||[]){const found=withCuts.flatMap(({l})=>l.cuts.flatMap(c=>(c.sequences||[]).filter(x=>x.storyboard===storyboard.id&&x.sequence===s.id).map(x=>({lote:l.id,cut:c.name,file:x.file,at:x.at,duration:x.duration,blocks:x.blocks||[]}))));
   if(found.length)sequences[s.id]={current:found.filter(x=>x.lote===found[0].lote).at(-1),list:found};}
  return {storyboard:storyboard?.id,lotes:info,shots,sequences,cuts};}
+// Producción por plano (#65), sin E/S. lotes en el orden de listLotes (del más reciente al más antiguo): válidos
+// {id, created, plan:[{id, parts:[{shot, from, to, at}]}], attempts:{bloque:[intento]}, cuts:[{name, file, blocks:[{block, start, end}]}]} o
+// inválidos {id, error}, que van a skipped. anim3d: [{storyboard, entries}] de todos los index.json. live: proyecto vivo (orphan si el plano no está).
+// has(file): el fichero (relativo al proyecto) existe. Por plano: una entrada por lote, bloque y parte, con todos los intentos (video solo si está
+// descargado y existe; current y pending como chosenAttempt) y los cortes cuyo timeline incluye el bloque; y sus vídeos 3D, de mayor a menor versión.
+export function productionIndex({lotes,anim3d,live,has=()=>true}={}){const shots={},skipped=[],entry=id=>shots[id]??={lotes:[],anim3d:[]};
+ const alive=new Set((live?.episodes||[]).flatMap(e=>(e?.sequences||[]).flatMap(s=>(s?.shots||[]).map(t=>t?.id))));
+ for(const l of Array.isArray(lotes)?lotes:[]){if(!l)continue;if(l.error!==undefined||!Array.isArray(l.plan)){skipped.push({lote:l.id??null,reason:String(l.error??'Lote no válido')});continue;}
+  for(const b of l.plan){if(!b?.id)continue;const list=(Array.isArray(l.attempts?.[b.id])?l.attempts[b.id]:[]).filter(Boolean),file=a=>`assets/${l.id}/${b.id}/${a.video}`,ok=a=>has(file(a)),c=chosenAttempt(list,ok);
+   const cuts=(Array.isArray(l.cuts)?l.cuts:[]).flatMap(x=>{const t=(Array.isArray(x?.blocks)?x.blocks:[]).find(y=>y?.block===b.id);return t?[{name:x.name,file:x.file,start:t.start,end:t.end}]:[];});
+   (Array.isArray(b.parts)?b.parts:[]).forEach((x,part)=>{if(!x?.shot)return;entry(x.shot).lotes.push({lote:l.id,created:l.created??null,block:b.id,part,from:x.from??null,to:x.to??null,at:x.at??null,
+    attempts:list.map(a=>({n:a.n,at:a.at??null,verdict:a.verdict??null,video:isDownloaded(a)&&ok(a)?file(a):null,current:a===c.attempt})),current:c.attempt?.n??null,pending:c.pending,cuts:cuts.map(y=>({...y}))});});}}
+ for(const g of Array.isArray(anim3d)?anim3d:[])for(const e of Array.isArray(g?.entries)?g.entries:[]){if(!e?.shot||!e.file||!has(e.file))continue;
+  entry(e.shot).anim3d.push({file:e.file,version:e.version??null,at:e.at??null,duration:e.duration??null,storyboard:g.storyboard??null,storyboardShot:e.storyboardShot??null});}
+ for(const [id,s] of Object.entries(shots)){s.anim3d.sort((a,b)=>(b.version||0)-(a.version||0)||String(b.at||'').localeCompare(String(a.at||'')));if(!alive.has(id))s.orphan=true;}
+ return {shots,skipped};}
+// Lote y bloque con que abre Montaje (#65). lotes: [{id}] de /api/lotes; route: {lote, block} de la URL; remembered: el último lote usado.
+// block solo vale con su lote (la vista lo valida contra el plan); missing: el lote de la URL que no existe, para el aviso.
+export function montajeStart(lotes,route,remembered){const ids=(Array.isArray(lotes)?lotes:[]).map(l=>l?.id),want=route?.lote||null;
+ const lote=want&&ids.includes(want)?want:remembered&&ids.includes(remembered)?remembered:ids[0]??null;
+ return {lote,block:lote&&lote===want?route?.block||null:null,missing:want&&!ids.includes(want)?want:null};}
 // Reproductor único de la vista Storyboard (#55): anim = {paso:{current,list}} de las animáticas; cut = {current,list} de los montajes (paso «montaje»).
 // Pasos en orden fijo, solo los que tienen vigente; list vacía o ausente → [current]. Inicial: montaje si lo hay, si no el último. No muta.
 export const STORYBOARD_PLAYER_STEPS=[['3d','Ensayo 3D'],['fotogramas','Fotogramas'],['voces','Con voces'],['montaje','Montaje']];

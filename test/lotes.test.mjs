@@ -26,7 +26,7 @@ test('sceneNumber: el de la secuencia si es entero > 0; si no, sourceScene del p
  b.sceneNumber=3;assert.equal(L.sceneNumber(e,b),3);a.sceneNumber=5;assert.equal(L.sceneNumber(e,a),5);
  for(const bad of [0,-1,2.5,'4',null]){a.sceneNumber=bad;assert.equal(L.sceneNumber(e,a),1,String(bad));}
  e.sequences.unshift({id:'ficha',shots:[]});a.sceneNumber=1;assert.equal(L.sceneNumber(e,a),1,'una ficha insertada delante no la mueve');});
-test('lib/lotes solo importa node:*, ./paths, ./json y ../app/workflow',()=>{const src=fs.readFileSync(new URL('../lib/lotes.mjs',import.meta.url),'utf8');const from=[...src.matchAll(/from '([^']+)'/g)].map(m=>m[1]);assert.deepEqual(from.filter(f=>!f.startsWith('node:')).sort(),['../app/workflow.mjs','./json.mjs','./paths.mjs']);});
+test('lib/lotes solo importa node:*, ./paths, ./json, ./animacion3d y ../app/workflow',()=>{const src=fs.readFileSync(new URL('../lib/lotes.mjs',import.meta.url),'utf8');const from=[...src.matchAll(/from '([^']+)'/g)].map(m=>m[1]);assert.deepEqual(from.filter(f=>!f.startsWith('node:')).sort(),['../app/workflow.mjs','./animacion3d.mjs','./json.mjs','./paths.mjs']);});
 test('nombres de lote y bloque: rechaza vacío, punto, dos puntos, barras y no cadenas',()=>{
  for(const bad of ['','.','..','a/b','../x','a\\b',undefined,null,3])assert.throws(()=>L.lotePaths(P,bad),/Lote no válido/,String(bad));
  for(const ok of ['ep01-s01-v02','a.b','_x','-y'])assert.equal(L.isLoteName(ok),true,ok);
