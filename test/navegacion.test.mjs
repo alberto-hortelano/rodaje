@@ -86,7 +86,7 @@ test('rutas: q y f del buscador (#59, #62) solo en las vistas con buscador, fuer
 test('fuente: buscador de Storyboards y Planos (#59)',()=>{
  const filt=fs.readFileSync(new URL('../app/filtros.source.js',import.meta.url),'utf8');
  assert.match(src,/import \{filterBarHTML,mountFilters,loadFilters,saveFilters\} from '\.\/filtros\.source\.js'/);
- for(const x of ['filterMount?.dispose();filterMount=null;','data-filter-results','storyboardItems(p)','shotItems(p)','filterShotGroups(shotGroups(p),','La secuencia enfocada queda oculta por los filtros',"btn('+ Storyboard','new-storyboard','primary')","btn('Importar JSON','import-storyboard')"])assert.ok(src.includes(x),'falta '+x);
+ for(const x of ['filterMount?.dispose();filterMount=null;','data-filter-results','storyboardItems(p)','shotItems(p,{states})','shotStatesIndex.get(p.id,p.revision)',"hold:['state']",'filterShotGroups(shotGroups(p),','La secuencia enfocada queda oculta por los filtros',"btn('+ Storyboard','new-storyboard','primary')","btn('Importar JSON','import-storyboard')"])assert.ok(src.includes(x),'falta '+x);
  for(const x of ["'rodaje-filtros-'",'role="search"','data-filter-q','aria-pressed','aria-live="polite"','e.isComposing','setTimeout(','data-filter-clear'])assert.ok(filt.includes(x),'falta '+x);
  assert.ok(!/\brender\(|\bsave\(|\bdirty\b|\bapi\(/.test(filt.replace(/^\/\/.*$/gm,'')),'filtrar no repinta la vista ni escribe');
  const rule=sel=>new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\{([^}]*)\\}').exec(css)?.[1]||'';

@@ -1,11 +1,12 @@
 // Buscador y facetas en el navegador (#59): teclear no repinta la vista (foco y cursor intactos), facetas en la URL y en la memoria por vista,
 // Storyboards agrupada con coincidencias de viñeta, Planos con reparto heredado y numeración original, filtrar sin escribir y móvil a 390 px;
 // Personajes, Ambientes y Entornos 3D (#62) con las mismas tarjetas, memoria por vista, tarjeta filtrada viva y vista vacía sin barra.
-// Servidor con RODAJE_DATA temporal y el fixture de #56 migrado (textos inventados).
+// Planos con faceta Estado y píldoras (#64), también sin /api/shot-states. Servidor con RODAJE_DATA temporal y el fixture de #56 migrado (textos inventados).
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';import {spawnServer} from './fixtures/hijos.mjs';
 import {withChrome,newRenderContext,chromePath,VIEWPORTS} from '../lib/chrome.mjs';
 import {storyMigrationPlan} from '../app/workflow.mjs';
 import {storysProject,storysSpec} from './fixtures/escaleta-storys.mjs';
+const {digest}=await import('../app/store.mjs');
 const ROOT=path.resolve(import.meta.dirname,'..'),DATA=fs.mkdtempSync(path.join(os.tmpdir(),'rodaje-filtros-')),id='filtros-'+process.pid;
 const SIN_CHROME=!fs.existsSync(chromePath())&&'sin Chrome';
 const port=await new Promise(r=>{const s=net.createServer().listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>r(p));});});
@@ -20,6 +21,10 @@ const vacio=structuredClone(p);vacio.id=id+'-vacio';
 p.characters.push({id:'voz',name:'Megafonía',kind:'voice',description:'Aviso lejano',sample:'voz.mp3'});Object.assign(p.characters[0],{description:'Maestra de escuela',image:'a1.png',images:['a1.png','a2.png']});
 Object.assign(p.locations[0],{kind:'interior',zone:'norte'});p.locations[1].environment='env-c';
 p.environments=[{id:'env-c',name:'Casa',builder:'m/c.js',data:'m/c.json'},{id:'env-g',name:'Hangar',glb:'m/h.glb'}];
+// #64: p1 aprobado con final vigente, p2 aprobado, p3 con preview vigente, p4 con preview de otro digest; el resto, sin preview (ambiente sin entorno).
+{const T=id=>p.episodes[0].sequences.flatMap(s=>s.shots).find(t=>t.id===id),pv=id=>{T(id).preview={job:'j-'+id,hash:digest(p,id)};};
+ for(const x of ['p1','p2','p3'])pv(x);for(const x of ['p1','p2'])T(x).approval={hash:digest(p,x),preview:'j-'+x};T('p1').final={hash:digest(p,'p1'),file:'f.mp4'};
+ T('p4').preview={job:'j-p4',hash:'0'.repeat(64)};}
 for(const x of [p,vacio]){fs.mkdirSync(path.join(DATA,x.id),{recursive:true});fs.writeFileSync(path.join(DATA,x.id,'proyecto.json'),JSON.stringify(x));}
 let child;
 test.before(()=>new Promise((resolve,reject)=>{child=spawnServer(process.execPath,[path.join(ROOT,'app/server.mjs')],{cwd:ROOT,env:{...process.env,PORT:String(port),RODAJE_DATA:DATA,RODAJE_LAN:'',RODAJE_TLS_CERT:'',RODAJE_TLS_KEY:''},stdio:['ignore','pipe','pipe']});let out='';
@@ -93,6 +98,60 @@ test('Planos: personaje heredado deja sus planos con su número original; sin ac
  await load(page,'&view=shots&sequence=x-v1&f=cast:bea');assert.match(await page.$eval('[data-filter-results]',e=>e.textContent),/La secuencia enfocada queda oculta por los filtros/);
  await page.click('.filter-hidden [data-filter-clear]');assert.equal(params(page).f,undefined);assert.ok(await page.$('[data-shots-seq="x-v1"]'));
  assert.equal(await revision(page),r0);}));
+
+// #64: estados de /api/shot-states. Las peticiones se cuentan desde Node (page.on) y se esperan con plazo, sin waitForFunction asíncronas.
+const shotStateCalls=page=>{const n={count:0};page.on('request',r=>{if(new URL(r.url()).pathname==='/api/shot-states')n.count++;});return n;};
+const until=async(fn,ms=8000)=>{const end=Date.now()+ms;while(Date.now()<end){if(await fn())return true;await new Promise(r=>setTimeout(r,100));}return false;};
+const shotTiles=page=>page.$$eval('[data-filter-results] .tile-shot',l=>l.map(a=>[new URL(a.querySelector('.tile-link').href).searchParams.get('shot'),[...a.querySelectorAll('.pill.ok')].map(x=>x.textContent)]));
+const stateChips=page=>page.$$eval('[data-facet="state"]',l=>l.map(b=>[b.dataset.value,b.textContent.trim()]));
+
+test('Planos (#64): faceta Estado con recuentos, filtro en la URL y la recarga, y píldoras de aprobado y final',{skip:SIN_CHROME},()=>session(async page=>{
+ await load(page,'&view=shots');const r0=await revision(page);
+ assert.deepEqual(await stateChips(page),[['preview-none','Sin preview 4'],['preview-stale','Preview desactualizada 1'],['preview-current','Preview vigente 3'],['approved','Aprobado 2'],['final','Final vigente 1']]);
+ const legends=await page.$$eval('[data-filter-chips] legend',l=>l.map(x=>x.textContent));assert.equal(legends.indexOf('Estado'),legends.indexOf('Tipo')+1,legends.join());
+ const all=Object.fromEntries(await shotTiles(page));assert.deepEqual([all.p1,all.p2,all.p3,all.p4,all.p5],[['Final vigente'],['Aprobado'],[],[],[]]);
+ await page.click(chip('state','approved'));assert.equal(params(page).f,'state:approved');
+ assert.deepEqual(await shotTiles(page),[['p1',['Final vigente']],['p2',['Aprobado']]]);
+ await page.reload();await page.waitForSelector(chip('state','approved'));assert.equal(await pressed(page,'state','approved'),'true');
+ assert.deepEqual((await shotTiles(page)).map(x=>x[0]),['p1','p2']);
+ await page.click(chip('state','preview-stale'));assert.equal(params(page).f,'state:approved,state:preview-stale');assert.deepEqual((await shotTiles(page)).map(x=>x[0]),['p1','p2','p4']);
+ await load(page,'&view=tree&node=seq/x-v1');assert.equal(await page.$$eval('#workspace .pill.ok',l=>l.filter(x=>/Aprobado|Final vigente/.test(x.textContent)).length),0,'la Escaleta no pinta estados');
+ assert.equal(await revision(page),r0,'los estados no escriben');}));
+
+test('Planos (#64) sin estados: sin faceta ni píldoras, y el filtro guardado sobrevive hasta que vuelven',{skip:SIN_CHROME},()=>session(async page=>{
+ await page.route('**/api/shot-states*',r=>r.abort());await load(page);const key='rodaje-filtros-'+id+'-shots';
+ await page.evaluate(([k])=>localStorage.setItem(k,JSON.stringify({q:'',f:{state:['approved']}})),[key]);
+ await load(page,'&view=shots');await page.waitForSelector('[data-filter-results] .tile-shot');
+ assert.equal(await page.$('[data-facet="state"]'),null);assert.equal((await shotTiles(page)).length,8);assert.equal(await page.$$eval('[data-filter-results] .pill.ok',l=>l.length),0);
+ assert.equal(await page.$eval('[data-filter-count]',e=>e.textContent),'8 planos');
+ await page.click('[data-filter-q]');await page.keyboard.type('p');await page.waitForFunction(()=>new URLSearchParams(location.search).get('q')==='p');
+ assert.equal(params(page).f,'state:approved');assert.deepEqual(await page.evaluate(k=>JSON.parse(localStorage.getItem(k)),key),{q:'p',f:{state:['approved']}});
+ await page.click(chip('panel','no'));assert.equal(params(page).f,'panel:no,state:approved','el retenido va detrás');await page.click(chip('panel','no'));assert.equal(params(page).f,'state:approved');
+ await page.unroute('**/api/shot-states*');await page.reload();await page.waitForSelector(chip('state','approved'));
+ assert.equal(await pressed(page,'state','approved'),'true');assert.deepEqual((await shotTiles(page)).map(x=>x[0]),['p1','p2']);
+ await page.click('.filter-bar [data-filter-clear]');assert.deepEqual([params(page).q,params(page).f],[undefined,undefined]);
+ assert.equal(await page.evaluate(k=>localStorage.getItem(k),key),null);assert.equal((await shotTiles(page)).length,8);}));
+
+test('Planos (#64): una petición de estados por revisión; «Actualizar» invalida',{skip:SIN_CHROME},()=>session(async page=>{
+ const n=shotStateCalls(page);await load(page,'&view=shots');assert.ok(await until(()=>n.count===1));
+ await page.click('.sidebar [data-action="nav:characters"]');await page.waitForSelector('.tile-character');
+ await page.click('.sidebar [data-action="nav:shots"]');await page.waitForSelector('[data-shots-seq]');
+ await page.click('[data-filter-q]');await page.keyboard.type('p1');await page.waitForFunction(()=>new URLSearchParams(location.search).get('q')==='p1');
+ await page.waitForTimeout(300);assert.equal(n.count,1,'volver y teclear no repiten la petición');
+ await page.click('.topbar [data-action="refresh"]');assert.ok(await until(()=>n.count===2),'Actualizar: '+n.count);await page.waitForSelector('[data-shots-seq]');
+ await page.click('.filter-bar [data-filter-clear]');const r0=await revision(page);
+ await page.click('[data-shots-seq="x-cruce"] [data-action="new-shot:e1:x-cruce"]');await page.waitForFunction(()=>new URLSearchParams(location.search).get('view')==='shot');
+ assert.ok(await until(async()=>await revision(page)>r0),'+ Plano guarda');
+ await page.click('.sidebar [data-action="nav:shots"]');await page.waitForSelector('[data-shots-seq]');assert.ok(await until(()=>n.count===3),'revisión nueva: '+n.count);
+ await page.waitForTimeout(300);assert.equal(n.count,3);}));
+
+test('Planos (#64): terminar un trabajo del proyecto invalida los estados',{skip:SIN_CHROME},()=>session(async page=>{
+ let status='running',served=0;const n=shotStateCalls(page);
+ await page.route('**/api/state',async r=>{const res=await r.fetch(),j=await res.json();j.jobs.push({id:'falso-64',project:id,type:'preview',target:'p8',status,created:'2026-01-01T00:00:00.000Z'});if(status==='done')served++;await r.fulfill({response:res,json:j});});
+ await load(page,'&view=shots');assert.ok(await until(()=>n.count===1));status='done';
+ assert.ok(await until(()=>served>0,10000),'el sondeo de 6 s ve el trabajo terminado');await page.waitForTimeout(200);assert.equal(n.count,1,'no repinta Planos por su cuenta');
+ await page.click('.sidebar [data-action="nav:characters"]');await page.waitForSelector('.tile-character');
+ await page.click('.sidebar [data-action="nav:shots"]');await page.waitForSelector('[data-shots-seq]');assert.ok(await until(()=>n.count===2),'petición nueva: '+n.count);}));
 
 test('móvil (390×844): sin desbordes, entrada de 16 px y barra pegada en las vistas con buscador',{skip:SIN_CHROME},()=>session(async page=>{
  for(const v of ['storyboards','shots','characters']){await load(page,'&view='+v);await page.evaluate(()=>{document.querySelector('[data-filter-facets]').open=true;});await page.waitForTimeout(100);

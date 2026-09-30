@@ -29396,7 +29396,7 @@ function mountMarkdown(dialog, value) {
 import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, routeHref, historyStep, historyState, entryScroll, navActive, sequenceRole, treeModel, levelCrumbs, levelResolve, levelRoute, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, nodeImage, firstNodeImage, cardColumns, appearanceTree, appearanceEnvironments, relationLinks, relationLine, appearanceLevel, appearanceCrumbs, APPEARANCE_LEVELS, shotLabel, voiceStatusLabel, storyboardItems, viewItems, storyboardResultSections, storyboardPage, storyScenes, movePanel, panelSceneOptions, shotItems, filterShotGroups, filterView as filterView2, hasFilters, parseFilters, filtersParam } from "./workflow.mjs";
 
 // app/filtros.source.js
-import { filterView, toggleFilter } from "./workflow.mjs";
+import { filterView, toggleFilter, heldFilters } from "./workflow.mjs";
 var esc = (v2) => String(v2 ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 var filterStorageKey = (projectId, view2) => "rodaje-filtros-" + projectId + "-" + view2;
 function loadFilters(projectId, view2) {
@@ -29430,8 +29430,8 @@ function mountFilters({ bar, results, ctx, state: state2, bind: bind2, onChange,
   };
   const refresh = (changed = true) => {
     if (!alive) return;
-    const m2 = filterView(ctx.items, ctx.defs, state2.q, state2.f);
-    state2.f = m2.filters;
+    const keep = heldFilters(state2.f, ctx.hold, ctx.defs), m2 = filterView(ctx.items, ctx.defs, state2.q, state2.f);
+    state2.f = { ...m2.filters, ...keep };
     results.innerHTML = m2.shown || !m2.active ? ctx.paint(m2) : emptyHTML(ctx.empty);
     chips.innerHTML = chipsHTML(m2.facets) || '<p class="tiny">No hay filtros para estos datos.</p>';
     const [one, many] = ctx.noun, n = m2.active - (String(state2.q || "").trim() ? 1 : 0);
@@ -29495,6 +29495,38 @@ function mountFilters({ bar, results, ctx, state: state2, bind: bind2, onChange,
   } };
 }
 
+// app/carga.source.js
+function lazyGroup(fetchJSON) {
+  const indexes = [];
+  function index(urlFor) {
+    const cache2 = /* @__PURE__ */ new Map();
+    indexes.push(cache2);
+    const get = (project, revision, params) => {
+      const url = urlFor(project, params), hit = cache2.get(url);
+      if (hit && hit.revision === revision) return hit.promise;
+      const entry = { project, revision, data: void 0, promise: null };
+      cache2.set(url, entry);
+      entry.promise = Promise.resolve().then(() => fetchJSON(url)).then((data2) => {
+        if (cache2.get(url) === entry) entry.data = data2;
+        return data2;
+      }, () => {
+        if (cache2.get(url) === entry) cache2.delete(url);
+        return null;
+      });
+      return entry.promise;
+    };
+    const peek = (project, revision, params) => {
+      const hit = cache2.get(urlFor(project, params));
+      return hit && hit.revision === revision ? hit.data : void 0;
+    };
+    return { get, peek };
+  }
+  function invalidate(project) {
+    for (const cache2 of indexes) for (const [url, e] of cache2) if (project === void 0 || e.project === project) cache2.delete(url);
+  }
+  return { index, invalidate };
+}
+
 // app/app.source.js
 import { createStage as createStage3 } from "./stage.js";
 var state;
@@ -29524,6 +29556,8 @@ var renderedRoute = null;
 var renderGeneration = 0;
 var sbMedia = null;
 var montajeFocus = null;
+var lazy = lazyGroup(api);
+var shotStatesIndex = lazy.index((id3) => "/api/shot-states?project=" + encodeURIComponent(id3));
 var fromHistory2 = false;
 var replaceNext = false;
 var committedHref = null;
@@ -29772,7 +29806,7 @@ var shotTile = (l3) => {
     alt: L2.label,
     label: L2.code,
     head: `<span class="tree-code">${esc2(L2.code)}</span><b class="tile-title">${esc2(L2.title || t2.title || t2.id)}</b>`,
-    meta: (t2.duration ? levelPill(t2.duration + " s") : "") + (t2.lines?.length ? levelPill(plural(t2.lines.length, "di\xE1logo", "di\xE1logos")) : "") + (l3.role === "test" ? levelPill("prueba") : ""),
+    meta: (t2.duration ? levelPill(t2.duration + " s") : "") + (t2.lines?.length ? levelPill(plural(t2.lines.length, "di\xE1logo", "di\xE1logos")) : "") + (l3.role === "test" ? levelPill("prueba") : "") + (l3.state?.final === "current" ? levelPill("Final vigente", "ok") : l3.state?.approved ? levelPill("Aprobado", "ok") : ""),
     body: (d2 ? `<p class="tile-text">${esc2(clip2(d2, 90))}</p>` : "") + relHTML("shot/" + t2.id, { max: 4 }) + `<span class="tree-actions">${btn("Abrir estudio \u2192", "shot:" + shotIds(l3))}${btn("Animaci\xF3n", "anim:" + shotIds(l3))}</span>`
   });
 };
@@ -30295,12 +30329,14 @@ y ${list.length - 20} m\xE1s` : "");
     html3 = treeNode ? levelPage(treeData.index.get(treeNode).node, heading2) : levelRootPage(heading2);
   }
   if (view === "shots") {
+    const states = (await shotStatesIndex.get(p.id, p.revision))?.shots || null;
+    if (generation !== renderGeneration) return;
     const GT = { container: "Planos de storys", outline: "Planos propios", test: "Pruebas" }, seqHTML = (e, x2) => {
       const s = x2.sequence;
-      return `<div class="shots-seq" data-shots-seq="${esc2(s.id)}"><div class="row between"><div><h3>${esc2(s.title)} <span class="tiny">${x2.shots.length !== s.shots.length ? x2.shots.length + " de " : ""}${plural(s.shots.length, "plano", "planos")} \xB7 ${esc2(p.locations.find((l3) => l3.id === s.location)?.name || "Sin ambiente")}</span></h3>${x2.storyboard ? `<p class="tiny">Story v${x2.version} de ${x2.ficha ? `<a href="${esc2(routeQuery({ project: p.id, view: "tree", node: "seq/" + x2.ficha.id }))}" data-route>\xAB${esc2(x2.ficha.title)}\xBB</a>` : "su secuencia"}</p>` : ""}</div>${btn("+ Plano", "new-shot:" + e.id + ":" + s.id)}</div>${tiles("shot", x2.shots.map(({ shot: t2, index: i2 }) => shotTile({ episode: e, sequence: s, shot: t2, number: i2 + 1, role: x2.role || sequenceRole(p, s) })))}</div>`;
-    }, groupsHTML = (list) => list.map(({ episode: e, groups, empty }) => `<div class="panel"><div class="row between"><div><span class="eyebrow">${p.type === "serie" ? "CAP\xCDTULO" : "ACTO"}</span><h2>${esc2(e.title)}</h2><p>${esc2(e.synopsis)}</p></div><div class="row">${e.rehearsal ? btn("\u25B6 Ensayar 3D \xB7 voz del navegador", "rehearsal:" + e.id, "primary") : ""}${btn("Editar", "episode:" + e.id)}${btn("+ Secuencia", "new-sequence:" + e.id)}${btn(p.type === "serie" ? "Montar cap\xEDtulo" : "Montar acto", "export:" + e.id)}</div></div>${groups.map((g) => `<section class="shots-group">${groups.length === 1 && g.role === "outline" ? "" : `<div class="eyebrow">${GT[g.role]}</div>`}${g.sequences.map((x2) => seqHTML(e, x2)).join("")}</section>`).join("")}${empty.length ? `<details class="shots-empty"><summary>${plural(empty.length, "secuencia sin planos", "secuencias sin planos")}</summary>${empty.map((s) => `<div class="row between"><span>${esc2(s.title)}</span>${btn("+ Plano", "new-shot:" + e.id + ":" + s.id)}</div>`).join("")}</details>` : ""}${e.exports?.length ? `<div class="actions">${e.exports.map((x2, i2) => `<a href="${media(x2.file)}" target="_blank">Montaje v${i2 + 1} \u2197</a>`).join(" \xB7 ")}</div>` : ""}</div>`).join(""), { items, defs } = shotItems(p);
+      return `<div class="shots-seq" data-shots-seq="${esc2(s.id)}"><div class="row between"><div><h3>${esc2(s.title)} <span class="tiny">${x2.shots.length !== s.shots.length ? x2.shots.length + " de " : ""}${plural(s.shots.length, "plano", "planos")} \xB7 ${esc2(p.locations.find((l3) => l3.id === s.location)?.name || "Sin ambiente")}</span></h3>${x2.storyboard ? `<p class="tiny">Story v${x2.version} de ${x2.ficha ? `<a href="${esc2(routeQuery({ project: p.id, view: "tree", node: "seq/" + x2.ficha.id }))}" data-route>\xAB${esc2(x2.ficha.title)}\xBB</a>` : "su secuencia"}</p>` : ""}</div>${btn("+ Plano", "new-shot:" + e.id + ":" + s.id)}</div>${tiles("shot", x2.shots.map(({ shot: t2, index: i2 }) => shotTile({ episode: e, sequence: s, shot: t2, number: i2 + 1, role: x2.role || sequenceRole(p, s), state: states?.[t2.id] })))}</div>`;
+    }, groupsHTML = (list) => list.map(({ episode: e, groups, empty }) => `<div class="panel"><div class="row between"><div><span class="eyebrow">${p.type === "serie" ? "CAP\xCDTULO" : "ACTO"}</span><h2>${esc2(e.title)}</h2><p>${esc2(e.synopsis)}</p></div><div class="row">${e.rehearsal ? btn("\u25B6 Ensayar 3D \xB7 voz del navegador", "rehearsal:" + e.id, "primary") : ""}${btn("Editar", "episode:" + e.id)}${btn("+ Secuencia", "new-sequence:" + e.id)}${btn(p.type === "serie" ? "Montar cap\xEDtulo" : "Montar acto", "export:" + e.id)}</div></div>${groups.map((g) => `<section class="shots-group">${groups.length === 1 && g.role === "outline" ? "" : `<div class="eyebrow">${GT[g.role]}</div>`}${g.sequences.map((x2) => seqHTML(e, x2)).join("")}</section>`).join("")}${empty.length ? `<details class="shots-empty"><summary>${plural(empty.length, "secuencia sin planos", "secuencias sin planos")}</summary>${empty.map((s) => `<div class="row between"><span>${esc2(s.title)}</span>${btn("+ Plano", "new-shot:" + e.id + ":" + s.id)}</div>`).join("")}</details>` : ""}${e.exports?.length ? `<div class="actions">${e.exports.map((x2, i2) => `<a href="${media(x2.file)}" target="_blank">Montaje v${i2 + 1} \u2197</a>`).join(" \xB7 ")}</div>` : ""}</div>`).join(""), { items, defs } = shotItems(p, { states });
     html3 = heading2("Planos.", "Los planos de cada " + (p.type === "serie" ? "cap\xEDtulo" : "acto") + ": los de los storys, los propios de las secuencias y las pruebas. Cada uno se abre en su estudio o en Animaci\xF3n.", `<div class="row">${btn("Generar con IA", "outline")}${btn(p.type === "serie" ? "+ Cap\xEDtulo" : "+ Acto", "new-episode", "primary")}</div>`) + (items.length ? filterBarHTML({ view, query: filt.q, placeholder: "Buscar plano, descripci\xF3n o di\xE1logo", open: filterOpen ?? matchMedia("(min-width: 751px)").matches }) + "<div data-filter-results></div>" : groupsHTML(filterShotGroups(shotGroups(p), null)));
-    fctx = { view, items, defs, noun: ["plano", "planos"], empty: "Ning\xFAn plano coincide con la b\xFAsqueda y los filtros.", paint: (m2) => {
+    fctx = { view, items, defs, hold: ["state"], noun: ["plano", "planos"], empty: "Ning\xFAn plano coincide con la b\xFAsqueda y los filtros.", paint: (m2) => {
       const keep = m2.active ? new Set(m2.results.map((r) => r.item.id)) : null, G2 = filterShotGroups(shotGroups(p), keep), hidden = keep && shotsFocus && !G2.some((x2) => x2.groups.some((g) => g.sequences.some((y2) => y2.sequence.id === shotsFocus)));
       return (hidden ? '<p class="note filter-hidden">La secuencia enfocada queda oculta por los filtros. <button type="button" data-filter-clear>Limpiar</button></p>' : "") + groupsHTML(G2);
     } };
@@ -30650,6 +30686,7 @@ async function act(action) {
   if (a === "refresh") {
     if (dirty) await save();
     sbMedia = null;
+    lazy.invalidate(p?.id);
     state = await api("/api/state");
     if (p) await reload();
     return render();
@@ -31254,6 +31291,7 @@ setInterval(async () => {
     const next = await api("/api/state");
     const done = next.jobs.filter((j) => j.status === "done" && state.jobs.find((x2) => x2.id === j.id)?.status !== "done");
     state = next;
+    if (done.some((j) => j.project === p?.id)) lazy.invalidate(p.id);
     if (done.length) {
       if (view === "storyboard" && !dirty && done.some((j) => j.type === "anim3d" && j.project === p?.id)) {
         sbMedia = null;

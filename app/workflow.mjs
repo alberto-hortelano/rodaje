@@ -1367,12 +1367,19 @@ export function storyboardResultSections(results){const acts=new Map(),tests=[],
   if(!f){f={ficha:g.ficha,code:g.ficha.code,results:[]};a.fichas.push(f);}f.results.push(r);}
  return [...acts.values(),...(tests.length?[{kind:'tests',results:tests}]:[]),...(unlinked.length?[{kind:'unlinked',results:unlinked}]:[])];}
 // Planos: un ítem por plano (actos › secuencias › planos) con texto de título, descripción, líneas y secuencia; cast y loc del índice de relaciones.
-export function shotItems(p){const idx=relationIndexFor(p),items=[],seqs=[];
+// Faceta Estado de Planos (#64), de /api/shot-states: multivalor y acumulativa; sin estados (sin servidor), Planos no la tiene.
+export const SHOT_STATE_LABELS={'preview-none':'Sin preview','preview-stale':'Preview desactualizada','preview-current':'Preview vigente',approved:'Aprobado',final:'Final vigente'};
+export function shotStateValues(st){if(!isObj(st)||!['none','stale','current'].includes(st.preview))return [];return ['preview-'+st.preview,...(st.approved===true?['approved']:[]),...(st.final==='current'?['final']:[])];}
+// Filtros de las facetas de hold que no están en defs (su fuente no ha cargado): se conservan tal cual, sin filtrar ni contar.
+export function heldFilters(filters,hold,defs){const ids=new Set((Array.isArray(defs)?defs:[]).map(d=>d?.id));
+ return Object.fromEntries((Array.isArray(hold)?hold:[]).filter(id=>!ids.has(id)&&Array.isArray(filters?.[id])&&filters[id].length).map(id=>[id,[...filters[id]]]));}
+export function shotItems(p,opts){const idx=relationIndexFor(p),items=[],seqs=[],states=opts?.states,withStates=isObj(states);
  for(const {episode:e,sequence:s} of seqList(p)){if(!isObj(e))continue;const role=sequenceRole(p,s);seqs.push({value:s.id,label:s.title||s.id});
   (Array.isArray(s.shots)?s.shots:[]).forEach((t,index)=>{if(!isObj(t))return;const k=relKey('shot',t.id);
    items.push({key:k,kind:'shot',id:t.id,text:searchText([t.title,t.description,...(Array.isArray(t.lines)?t.lines:[]).map(l=>l?.text),s.title].filter(x=>typeof x==='string').join(' ')),
-    facets:{act:[e.id],role:[role],sequence:[s.id],loc:relIds(idx,k,['location']),cast:relIds(idx,k,['appears','speaks']),panel:[idx.shotPanel.has(k)?'yes':'no']},group:{episode:e.id,sequence:s.id,role},ref:{episode:e,sequence:s,shot:t,index}});});}
+    facets:{act:[e.id],role:[role],sequence:[s.id],loc:relIds(idx,k,['location']),cast:relIds(idx,k,['appears','speaks']),panel:[idx.shotPanel.has(k)?'yes':'no'],...(withStates?{state:shotStateValues(states[t.id])}:{})},group:{episode:e.id,sequence:s.id,role},ref:{episode:e,sequence:s,shot:t,index}});});}
  const defs=[{id:'act',label:actLabel(p),values:episodeValues(p)},{id:'role',label:'Tipo',values:[{value:'container',label:'De storys'},{value:'outline',label:'Propios'},{value:'test',label:'Pruebas'}]},
+  ...(withStates?[{id:'state',label:'Estado',values:Object.entries(SHOT_STATE_LABELS).map(([value,label])=>({value,label}))}]:[]),
   {id:'sequence',label:'Secuencia',values:seqs},{id:'loc',label:'Ambiente',values:entityValues(p?.locations)},{id:'cast',label:'Personaje',values:entityValues(p?.characters)},
   {id:'panel',label:'Viñeta',values:[{value:'yes',label:'Con viñeta'},{value:'no',label:'Sin viñeta'}]}];
  return {items,defs};}
@@ -1410,7 +1417,8 @@ export function environmentItems(p){const idx=relationIndexFor(p),list=environme
  return {items,defs};}
 // Vistas con buscador: toda vista con q en ROUTE_PARAMS (hasFilters) tiene aquí su constructor de ítems (test/filtros.test.mjs lo exige).
 export const FILTER_SOURCES={storyboards:storyboardItems,shots:shotItems,characters:characterItems,locations:locationItems,environments:environmentItems};
-export function viewItems(view,p){return Object.hasOwn(FILTER_SOURCES,view)?FILTER_SOURCES[view](p):null;}
+// opts va al constructor (shots: {states}); los demás lo ignoran.
+export function viewItems(view,p,opts){return Object.hasOwn(FILTER_SOURCES,view)?FILTER_SOURCES[view](p,opts):null;}
 // shotGroups con los planos que quedan ({shot, index} con su posición original). keep null: todos; un Set de ids: sin secuencias, grupos ni actos vacíos.
 export function filterShotGroups(groups,keep){return (groups||[]).map(({episode,groups:gs,empty})=>{
  const out=gs.map(g=>({role:g.role,sequences:g.sequences.map(x=>({...x,shots:(x.sequence.shots||[]).map((shot,index)=>({shot,index})).filter(y=>!keep||keep.has(y.shot?.id))})).filter(x=>!keep||x.shots.length)})).filter(g=>g.sequences.length);

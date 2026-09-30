@@ -1,7 +1,7 @@
 // Buscador y facetas (#59): normalización, filtrado por términos y facetas, recuentos, estado en la URL y los constructores de ítems de
 // Storyboards, Planos (#59), Personajes, Ambientes y Entornos 3D (#62) sobre los fixtures de #56 (escaleta → storys) y #58 (relaciones). Puro; textos inventados.
 import test from 'node:test';import assert from 'node:assert/strict';
-import {searchText,queryTerms,filterItems,itemHits,facets,filterView,parseFilters,filtersParam,toggleFilter,activeCount,hasFilters,storyboardItems,storyboardResultSections,shotItems,filterShotGroups,shotGroups,storyMigrationPlan,relationIndexFor,holders,characterItems,locationItems,environmentItems,ENVIRONMENT_KIND_LABELS,FILTER_SOURCES,viewItems,ROUTE_PARAMS} from '../app/workflow.mjs';
+import {searchText,queryTerms,filterItems,itemHits,facets,filterView,parseFilters,filtersParam,toggleFilter,activeCount,hasFilters,storyboardItems,storyboardResultSections,shotItems,filterShotGroups,shotGroups,storyMigrationPlan,relationIndexFor,holders,characterItems,locationItems,environmentItems,ENVIRONMENT_KIND_LABELS,FILTER_SOURCES,viewItems,ROUTE_PARAMS,SHOT_STATE_LABELS,shotStateValues,heldFilters} from '../app/workflow.mjs';
 import {storysProject,storysSpec,planShot} from './fixtures/escaleta-storys.mjs';
 import {relProject} from './fixtures/relaciones.mjs';
 
@@ -175,3 +175,42 @@ test('FILTER_SOURCES cubre toda vista con buscador',()=>{
  assert.deepEqual(Object.keys(ROUTE_PARAMS).filter(hasFilters).sort(),Object.keys(FILTER_SOURCES).sort());
  for(const [v,f] of Object.entries(FILTER_SOURCES))for(const x of [{},null,{characters:[1,null,{id:3}],locations:'x',environments:[{},null,{id:5}]}]){const r=f(x);assert.ok(Array.isArray(r.items)&&Array.isArray(r.defs),v);}
  const p=relProject();assert.equal(viewItems('tree',p),null);assert.equal(viewItems('__proto__',p),null);assert.deepEqual(viewItems('characters',p).items.map(i=>i.id),characterItems(p).items.map(i=>i.id));});
+
+// Faceta Estado de Planos (#64): valores de /api/shot-states, filtros guardados de facetas sin fuente y opts en viewItems.
+const ST=(preview,approved=false,final='none')=>({preview,approved,final});
+test('shotStateValues: acumulativo y robusto',()=>{
+ assert.deepEqual(shotStateValues(ST('none')),['preview-none']);assert.deepEqual(shotStateValues(ST('stale',false,'stale')),['preview-stale']);
+ assert.deepEqual(shotStateValues(ST('current')),['preview-current']);assert.deepEqual(shotStateValues(ST('current',true)),['preview-current','approved']);
+ assert.deepEqual(shotStateValues(ST('current',true,'current')),['preview-current','approved','final']);
+ for(const x of [undefined,null,{},{preview:'x'},'current',[1]])assert.deepEqual(shotStateValues(x),[],JSON.stringify(x));
+ assert.deepEqual(Object.keys(SHOT_STATE_LABELS),['preview-none','preview-stale','preview-current','approved','final']);});
+
+test('shotItems sin estados es idéntico al de hoy',()=>{const p=relProject(),base=shotItems(p);
+ for(const o of [undefined,null,{},{states:null},{states:'x'},{states:[1]}])assert.deepEqual(shotItems(p,o),base,JSON.stringify(o));
+ assert.ok(!base.defs.some(d=>d.id==='state'));assert.ok(base.items.every(i=>!('state' in i.facets)));});
+
+test('shotItems con estados: faceta Estado tras Tipo; un plano sin entrada tiene []',()=>{const p=relProject();
+ const states={t1:ST('current',true,'current'),t2:ST('current',true),t3:ST('stale'),t4:ST('none'),t5:ST('current')};
+ const {items,defs}=shotItems(p,{states}),by=id=>items.find(i=>i.id===id).facets.state;
+ assert.deepEqual(defs.map(d=>d.id),['act','role','state','sequence','loc','cast','panel']);assert.equal(defs[2].label,'Estado');
+ assert.deepEqual(defs[2].values.map(v=>v.label),['Sin preview','Preview desactualizada','Preview vigente','Aprobado','Final vigente']);
+ assert.deepEqual([by('t1'),by('t2'),by('t6')],[['preview-current','approved','final'],['preview-current','approved'],[]]);
+ assert.deepEqual(filterView(items,defs,'',{state:['approved']}).results.map(r=>r.item.id),['t1','t2']);
+ assert.deepEqual(filterView(items,defs,'',{state:['final','preview-none']}).results.map(r=>r.item.id),['t1','t4']);
+ const f=facets(items,'',{},defs).find(x=>x.id==='state');assert.deepEqual(f.values.map(v=>[v.value,v.count]),[['preview-none',1],['preview-stale',1],['preview-current',3],['approved',2],['final',1]]);
+ const same=Object.fromEntries(items.map(i=>[i.id,ST('stale',false,'stale')])),m=shotItems(p,{states:same});
+ assert.equal(facets(m.items,'',{},m.defs).find(x=>x.id==='state'),undefined,'todo con el mismo valor: oculta');});
+
+test('heldFilters: conserva las facetas retenidas que no están en defs',()=>{const defs=[{id:'act'},{id:'cast'}];
+ assert.deepEqual(heldFilters({state:['approved'],act:['e1']},['state'],defs),{state:['approved']});
+ assert.deepEqual(heldFilters({state:['approved'],act:['e1']},['state'],[...defs,{id:'state'}]),{});
+ assert.deepEqual(heldFilters({state:['approved']},[],defs),{});assert.deepEqual(heldFilters({state:['approved']},undefined,defs),{});
+ assert.deepEqual(heldFilters({state:[]},['state'],defs),{});assert.deepEqual(heldFilters({state:'approved'},['state'],defs),{});
+ for(const [f,h,d] of [[null,['state'],defs],[undefined,null,null],[{state:['a']},['state'],null],[{state:['a']},'state',defs]])assert.doesNotThrow(()=>heldFilters(f,h,d));
+ assert.deepEqual(heldFilters({state:['a']},['state'],null),{state:['a']});
+ const src={state:['a']},out=heldFilters(src,['state'],defs);out.state.push('b');assert.deepEqual(src.state,['a'],'copia');});
+
+test('viewItems pasa opts a shotItems; los demás constructores lo ignoran',()=>{const p=relProject(),states={t1:ST('current',true)};
+ assert.deepEqual(viewItems('shots',p,{states}),shotItems(p,{states}));assert.ok(viewItems('shots',p,{states}).defs.some(d=>d.id==='state'));
+ assert.deepEqual(viewItems('shots',p),shotItems(p));assert.deepEqual(viewItems('shots',p,null),shotItems(p));
+ for(const v of ['storyboards','characters','locations','environments'])assert.deepEqual(viewItems(v,p,{states}),FILTER_SOURCES[v](p),v);});
