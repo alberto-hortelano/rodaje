@@ -1,6 +1,6 @@
 // Producción por plano (#65): productionIndex (puro), montajeStart y el lector de disco productionFor (lib/lotes.mjs).
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';
-import {productionIndex,montajeStart,productionView,PRODUCTION_VERDICTS,levelShotIds,environmentUses,relationIndexFor,appearanceTree,appearanceLevel} from '../app/workflow.mjs';
+import {productionIndex,montajeStart,productionView,PRODUCTION_VERDICTS,PRODUCTION_COMPACT,productionSummary,productionGroups,levelShotIds,environmentUses,relationIndexFor,appearanceTree,appearanceLevel} from '../app/workflow.mjs';
 import {relProject} from './fixtures/relaciones.mjs';
 const {DATA}=await import('../lib/paths.mjs'),L=await import('../lib/lotes.mjs');
 
@@ -95,6 +95,36 @@ test('levelShotIds',()=>{
  assert.equal(f1.key,'seq/f1');assert.deepEqual(levelShotIds(f1),['t3','t4']);assert.deepEqual(levelShotIds({kind:'act',children:T.roots}),['t3','t4','t5']);
  assert.deepEqual(levelShotIds({kind:'act',children:[f1,f1,{kind:'shot',id:'t3',children:[]}]}),['t3','t4'],'un plano repetido sale una vez');
  assert.deepEqual(levelShotIds({kind:'shot',id:'x'}),['x']);assert.deepEqual(levelShotIds(null),[]);assert.deepEqual(levelShotIds({children:[null,1]}),[]);});
+// #71: resumen, grupos por secuencia y planos de un nivel de secuencia.
+test('productionSummary: suma N y mejor veredicto por plano',()=>{
+ const f=fixture();delete f.lotes[1].attempts.b1;const ids=['p1','p2','p3','p4','p5'],v=productionView(productionIndex({...f,has}),ids),r=productionSummary(v,ids);
+ assert.deepEqual(r.counts,{accepted:1,pending:2,rejected:0,none:0,nolote:2},'p1 (pending y none) sin revisar; p3 (accepted y rejected) aceptado; p4 y p5 sin lote');
+ assert.equal(r.total,5);assert.equal(Object.values(r.counts).reduce((a,b)=>a+b,0),r.total);
+ assert.equal(r.text,'5 planos · 1 aceptado · 2 sin revisar · 2 sin lote');
+ const g=fixture();g.lotes[1].attempts.b3=[];g.lotes[0].attempts.b1=[done(1,'rejected')];const w=productionView(productionIndex({...g,has}),['p1','p2','p3']);
+ assert.deepEqual(productionSummary(w,['p1','p2','p3']).text,'3 planos · 2 aceptados · 1 sin toma válida');
+ const one=productionView(productionIndex({...f,has}),['p2']);assert.equal(productionSummary(one,['p2']).text,'1 plano · 1 sin revisar');
+ const h=fixture();h.lotes[1].attempts={};h.lotes[0].attempts={};assert.equal(productionSummary(productionView(productionIndex({...h,has}),['p1','p3']),['p1','p3']).text,'2 planos · 2 pendientes');
+ assert.equal(PRODUCTION_COMPACT,12);});
+test('productionSummary: solo anim3d es sin lote; ids repetidos y raros; sin servidor',()=>{
+ const v=productionView(idx(),['p4']);assert.equal(v.shots.length,1);assert.deepEqual(productionSummary(v,['p4']).counts,{accepted:0,pending:0,rejected:0,none:0,nolote:1});
+ const r=productionSummary(productionView(idx(),['p1']),['p1','p1',null,7]);assert.equal(r.total,1);assert.equal(r.text,'1 plano · 1 aceptado');
+ assert.equal(productionSummary(productionView(null,['p1']),['p1']),null);assert.equal(productionSummary(null,['p1']),null);
+ assert.deepEqual(productionSummary({available:true,shots:null},null),{total:0,counts:{accepted:0,pending:0,rejected:0,none:0,nolote:0},text:'0 planos'});});
+test('productionGroups: una y varias secuencias, rol de prueba y orden',()=>{
+ const ix=relationIndexFor(relProject());
+ assert.deepEqual(productionGroups(ix,['t2','t1']),[{sequence:'seq/c1',id:'c1',title:'Planos v1',role:'container',ids:['t2','t1']}]);
+ const g=productionGroups(ix,['t3','t4','t1','t4','t3']);assert.deepEqual(g.map(x=>[x.sequence,x.role,x.ids]),[['seq/c2','container',['t3']],['seq/k1','test',['t4']],['seq/c1','container',['t1']]]);
+ assert.equal(g[1].title,'Prueba');
+ assert.deepEqual(productionGroups(ix,['t1','zz','t2','zz',null]),[{sequence:'seq/c1',id:'c1',title:'Planos v1',role:'container',ids:['t1','t2']},{sequence:null,id:null,title:'Sin secuencia',role:null,ids:['zz']}]);
+ assert.deepEqual(productionGroups(null,['a']),[{sequence:null,id:null,title:'Sin secuencia',role:null,ids:['a']}]);assert.deepEqual(productionGroups(ix,null),[]);});
+test('levelShotIds con T en un nodo de secuencia',()=>{
+ const ix=relationIndexFor(relProject()),T=appearanceTree(ix,'location/plaza',{current:false}),L=k=>appearanceLevel(T,k,ix).node;
+ assert.deepEqual(levelShotIds(L('seq/c1')),['t2'],'sin T, solo el subárbol');assert.deepEqual(levelShotIds(L('seq/c1'),T),['t1','t2'],'con T, t1 cuelga de la viñeta P1');
+ assert.deepEqual(levelShotIds(L('seq/k1')),[]);assert.deepEqual(levelShotIds(L('seq/k1'),T),['t4'],'la prueba recoge su plano de la viñeta de sb2');
+ assert.deepEqual(levelShotIds(L('sb/sb1'),T),levelShotIds(L('sb/sb1')),'un nodo que no es secuencia no cambia');assert.deepEqual(levelShotIds(L('seq/f1'),T),['t1','t2','t4']);
+ const B=appearanceTree(ix,'location/bosque',{current:false}),f2=appearanceLevel(B,'seq/f2',ix).node;assert.deepEqual(levelShotIds(f2,B),['t5','t6']);
+ assert.deepEqual(levelShotIds(null,T),[]);assert.deepEqual(levelShotIds(L('seq/c1'),{roots:null}),['t2']);});
 test('environmentUses',()=>{
  const ix=relationIndexFor(relProject()),a=environmentUses(ix,'env-a'),b=environmentUses(ix,'env-b');
  assert.deepEqual(a.map(u=>[u.id,u.name,u.via]),[['plaza','Plaza','environment']]);assert.deepEqual(b.map(u=>[u.id,u.name,u.via]),[['nave','Nave','modelSpace']]);

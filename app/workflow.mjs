@@ -383,6 +383,20 @@ export function productionView(prod,ids){const src=isObj(prod)&&isObj(prod.shots
    route:a.storyboard?{view:'storyboard',storyboard:a.storyboard,...(a.storyboardShot?{panel:a.storyboardShot}:{})}:null}));
   if(lotes.length||anim3d.length)shots.push({id,lotes,anim3d});}
  return {available:true,empty:!shots.length,shots};}
+// Nivel con varios planos (#71): más de PRODUCTION_COMPACT planos con producción → una fila plegable por plano.
+export const PRODUCTION_COMPACT=12;
+// Resumen de la sección (#71): cada plano distinto de ids cuenta una vez con el mejor veredicto de sus lotes (accepted > pending > rejected > none);
+// sin lotes (sin producción o solo animación 3D), nolote. text: «60 planos · 3 aceptados · …», sin las categorías a 0. null sin servidor.
+const PROD_RANK=['accepted','pending','rejected','none'],PROD_SUM=[['accepted','aceptado','aceptados'],['pending','sin revisar','sin revisar'],['rejected','sin toma válida','sin toma válida'],['none','pendiente','pendientes'],['nolote','sin lote','sin lote']];
+export function productionSummary(view,ids){if(!view?.available)return null;const uniq=[...new Set((Array.isArray(ids)?ids:[]).filter(x=>typeof x==='string'))],by=new Map((Array.isArray(view.shots)?view.shots:[]).filter(isObj).map(s=>[s.id,s]));
+ const counts={accepted:0,pending:0,rejected:0,none:0,nolote:0},pl=(n,a,b)=>n+' '+(n===1?a:b);
+ for(const id of uniq){const ks=(Array.isArray(by.get(id)?.lotes)?by.get(id).lotes:[]).map(e=>e?.verdict?.key);counts[PROD_RANK.find(k=>ks.includes(k))||'nolote']++;}
+ return {total:uniq.length,counts,text:[pl(uniq.length,'plano','planos'),...PROD_SUM.filter(([k])=>counts[k]).map(([k,a,b])=>pl(counts[k],a,b))].join(' · ')};}
+// Planos de un nivel agrupados por su secuencia (#71), en orden de primera aparición y sin repetir; sin nodo o sin secuencia, «Sin secuencia».
+export function productionGroups(index,ids){const groups=new Map(),seen=new Set();
+ for(const id of Array.isArray(ids)?ids:[]){if(typeof id!=='string'||seen.has(id))continue;seen.add(id);const sk=index?.nodes?.get?.('shot/'+id)?.sequence??null,s=sk?index.nodes.get(sk):null,k=s?sk:null;
+  let g=groups.get(k);if(!g){g=s?{sequence:sk,id:s.id,title:s.data?.title||s.id,role:s.role??null,ids:[]}:{sequence:null,id:null,title:'Sin secuencia',role:null,ids:[]};groups.set(k,g);}g.ids.push(id);}
+ return [...groups.values()];}
 // Lote y bloque con que abre Montaje (#65). lotes: [{id}] de /api/lotes; route: {lote, block} de la URL; remembered: el último lote usado.
 // block solo vale con su lote (la vista lo valida contra el plan); missing: el lote de la URL que no existe, para el aviso.
 export function montajeStart(lotes,route,remembered){const ids=(Array.isArray(lotes)?lotes:[]).map(l=>l?.id),want=route?.lote||null;
@@ -1277,14 +1291,14 @@ export function holders(index,targetKey,kind,q={}){const out=new Set(),ok=relMat
 // Marcas en el nodo que enlaza; los intermedios van sin marcas. counts: viñetas y planos con marca en el subárbol. Con current, sin los storys no vigentes.
 const AP_RELS={character:['appears','speaks'],location:['location'],environment:['environment']};
 const apSceneRoute=(index,sceneKey)=>{const sc=index.nodes.get(sceneKey);return {view:'storyboard',storyboard:index.nodes.get(sc.parent).id,scene:sc.id};};
-function apNode(index,n){const d=n.data||{},title=d.title||n.id;let label=title,route;
+function apNode(index,n){const d=n.data||{},title=d.title||n.id;let label=title,route,own={};
  if(n.kind==='act')route={view:'tree',node:n.key};
  else if(n.kind==='sequence')route=n.role==='container'?{view:'shots',sequence:n.id}:{view:'tree',node:n.key};
  else if(n.kind==='story'){label=n.version?'v'+n.version+' · '+title:title;route={view:'storyboard',storyboard:n.id};}
  else if(n.kind==='scene')route=apSceneRoute(index,n.key);
  else if(n.kind==='panel'){label=d.code?d.code+' · '+(d.title||''):title;route={...apSceneRoute(index,n.parent),panel:n.id};}
- else if(n.kind==='shot'){const seq=index.nodes.get(n.sequence),pos=(index.sequenceShots.get(n.sequence)||[]).indexOf(n.key)+1;label=shotLabel(pos,d.title).label;route={view:'shot',episode:n.episode,sequence:seq?.id??null,shot:n.id};}
- return {key:n.key,kind:n.kind,id:n.id,label,order:n.order,route,...(n.role?{role:n.role}:{}),...(n.version!==undefined?{version:n.version}:{}),...(n.current!==undefined?{current:n.current}:{}),...(offCurrent(index,n)?{stale:true}:{}),marks:[],counts:{panels:0,shots:0},children:[]};}
+ else if(n.kind==='shot'){const seq=index.nodes.get(n.sequence),pos=(index.sequenceShots.get(n.sequence)||[]).indexOf(n.key)+1;label=shotLabel(pos,d.title).label;route={view:'shot',episode:n.episode,sequence:seq?.id??null,shot:n.id};own={sequence:n.sequence,pos};}
+ return {key:n.key,kind:n.kind,id:n.id,label,order:n.order,route,...own,...(n.role?{role:n.role}:{}),...(n.version!==undefined?{version:n.version}:{}),...(n.current!==undefined?{current:n.current}:{}),...(offCurrent(index,n)?{stale:true}:{}),marks:[],counts:{panels:0,shots:0},children:[]};}
 function apMark(index,l){const d=index.nodes.get(l.from)?.data||{},m={rel:l.rel,via:l.via};if(l.inherited)m.inherited=true;
  if(l.rel==='speaks'){Object.assign(m,{channel:l.channel,offscreen:l.offscreen,line:l.line});const text=l.via==='dialogue'?d.dialogue?.[l.line]?.text:(Array.isArray(d.lines)?d.lines:[]).find(x=>x?.id===l.line)?.text;if(typeof text==='string')m.text=text;}
  return m;}
@@ -1346,8 +1360,12 @@ export function appearanceCrumbs(p,route,level){const v=route?.view,base=levelCr
  if(!base.length||!level?.path?.length)return base;const id=route[v],out=[base[0],{...base[1],route:{view:v,[v]:id}},
   ...level.path.map(a=>({key:a.key,kind:a.kind,label:a.label,route:{view:v,[v]:id,at:a.key}}))];
  out[out.length-1]={...out.at(-1),route:null};return out;}
-// Ids de los planos de un nodo de appearanceTree y de su subárbol (#65), en orden y sin repetir.
-export function levelShotIds(node){const out=new Set(),walk=a=>{if(!isObj(a))return;if(a.kind==='shot'&&typeof a.id==='string')out.add(a.id);(Array.isArray(a.children)?a.children:[]).forEach(walk);};walk(node);return [...out];}
+// Ids de los planos de un nodo de appearanceTree y de su subárbol (#65), en orden y sin repetir. Con T (el árbol del nodo) y un nodo de secuencia
+// (contenedor, prueba o esquema con planos propios, #71), primero los planos de esa secuencia que estén en T (colgados de viñetas), en orden de pos.
+export function levelShotIds(node,T){const out=new Set(),walk=a=>{if(!isObj(a))return;if(a.kind==='shot'&&typeof a.id==='string')out.add(a.id);(Array.isArray(a.children)?a.children:[]).forEach(walk);};
+ if(isObj(T)&&isObj(node)&&node.kind==='sequence'&&node.key){const own=[],look=a=>{if(!isObj(a))return;if(a.kind==='shot'&&typeof a.id==='string'&&a.sequence===node.key)own.push(a);(Array.isArray(a.children)?a.children:[]).forEach(look);};
+  (Array.isArray(T.roots)?T.roots:[]).forEach(look);own.sort((a,b)=>(a.pos??0)-(b.pos??0)).forEach(a=>out.add(a.id));}
+ walk(node);return [...out];}
 // Ambientes que usan un entorno (#65), en orden del proyecto: via (environment si es su location.environment; si no, modelSpace), el total de
 // sus apariciones directas (appearanceTree sin heredados, como la página del ambiente) y sus niveles: cada secuencia del árbol en profundidad,
 // sin bajar más, o la raíz tal cual si es nivel y no tiene secuencias; como mucho max, el resto en more. Entorno desconocido → []. Pura.

@@ -264,13 +264,19 @@ test('fuente: buscador de Ideas, Pendientes, Generaciones y Montaje; sondeo sin 
  for(const x of ['loteGroups(','<optgroup','refreshLotes(','visibleLotes'])assert.ok(mont.includes(x),'falta '+x);
  for(const x of ['onModel','setItems','facets=true'])assert.ok(filt.includes(x),'falta '+x);});
 
+test('fuente: Producción compacta en niveles grandes (#71)',()=>{
+ for(const x of ['productionLevelHTML(','data-prod-row','data-prod-sum','levelShotIds(L.node,T2)','productionGroups(ix,ids)','PRODUCTION_COMPACT'])assert.ok(src.includes(x),'falta '+x);
+ assert.ok(!/<[^<>]*data-prod-row[^<>]*data-prod-shot|<[^<>]*data-prod-shot[^<>]*data-prod-row/.test(src),'una fila compacta no lleva data-prod-shot');
+ assert.match(src,/async function fillProdFold\([^\n]*productionHTML\(productionView\(data,\[d\.dataset\.prodShot\]\),\{labels:false\}\)/,'Planos sigue con el detalle de un plano');
+ assert.match(src,/ids\.length>1\?productionLevelHTML\(view,ids\):productionHTML\(view,\{labels:false\}\)/);});
+
 test('fuente: Montaje por ruta, sin montajeFocus (#65)',()=>{
  assert.ok(!src.includes('montajeFocus'));assert.ok(src.includes("goRoute({view:'montaje',lote:b"));assert.ok(src.includes('onWrite:()=>lazy.invalidate(p.id)'));assert.ok(src.includes('({lote:montajeLote,block:montajeBlock}=m.route())'));
  for(const x of ['montajeStart(','onRoute(','onWrite();','route:inUse'])assert.ok(mont.includes(x),'falta '+x);assert.ok(!mont.includes('focus?.lote'));
  assert.match(mont,/send=async verdict=>\{[^]*?b\.attempts=await api\('\/api\/lote-review'[^]*?onWrite\(\);/,'send llama a onWrite tras un veredicto correcto');});
 
 test('fuente: sección Producción bajo demanda (#65 B)',()=>{
- for(const x of ['lazy.index(',"'/api/production?project='",'data-prod-slot','data-prod-shot','environmentUses(relationIndexFor(p)','levelShotIds(X.L.node)'])assert.ok(src.includes(x),'falta '+x);
+ for(const x of ['lazy.index(',"'/api/production?project='",'data-prod-slot','data-prod-shot','environmentUses(relationIndexFor(p)','levelShotIds(X.L.node,X.T)'])assert.ok(src.includes(x),'falta '+x);
  assert.equal(src.split('prod:true').length-1,1,'solo Planos pasa prod:true a shotTile');assert.match(src,/seqHTML=\(e,x\)=>[^\n]*shotTile\(\{[^}]*prod:true\}\)/);
  assert.ok(!/api\([^)]*\/api\/production/.test(src),'la producción solo se pide por productionData');
  assert.match(src,/'<section class="panel" id="environment-model"><\/section>'\+envUsesHTML\(e\)/,'la sección de entorno va debajo del panel del modelo, sin tocarlo');});

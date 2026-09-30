@@ -23,6 +23,15 @@ w('assets/L2/b2/attempts.json',[take(1)]);w('assets/L2/b2/generated-v01.mp4','')
 w('assets/L2/montaje/corte.cut.json',{at:'2026-09-03',duration:6,blocks:[{block:'b1',at:0,length:2},{block:'b2',at:2,length:4}]});w('assets/L2/montaje/corte.mp4','');
 w('storyboards/sb-a/animacion-3d/index.json',{entries:[{file:'storyboards/sb-a/animacion-3d/A01-v01.mp4',version:1,at:'2026-09-04T10:00:00.000Z',duration:2,storyboardShot:'v1',shot:'p1',episode:'e1',sequence:'s1'}]});
 w('storyboards/sb-a/animacion-3d/A01-v01.mp4','');
+// Proyecto grande (#71): la escena sq del story sb-b tiene 14 viñetas; el contenedor c enlaza las 14 y la prueba t, las dos primeras. Todos en el lote G.
+const big='prodbig-'+process.pid,wb=(rel,v)=>{const f=path.join(DATA,big,rel);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,typeof v==='string'?v:JSON.stringify(v));};
+{const N=14,panels=Array.from({length:N},(_,i)=>({id:'w'+(i+1),code:'B'+String(i+1).padStart(2,'0'),title:'Viñeta '+(i+1),duration:2,cast:[],dialogue:[]}));
+ wb('proyecto.json',{id:big,name:'Grande',type:'serie',language:'es',ideas:[],issues:[],characters:[],locations:[{id:'cruce',name:'Cruce'}],environments:[],
+  storyboards:[{id:'sb-b',title:'Story B',version:1,sequences:[{id:'sq',title:'Escena',location:'cruce',shots:panels}]}],
+  episodes:[{id:'e1',title:'E1',sequences:[{id:'c',title:'Contenedor',storyboard:'sb-b',location:'cruce',silent:true,cast:[],shots:panels.map((v,i)=>shot('c'+(i+1),'Plano '+(i+1),{storyboardShot:v.id}))},
+   {id:'t',title:'Prueba 3D (2 planos)',test:true,location:'cruce',silent:true,cast:[],shots:[shot('x1','Prueba uno',{storyboardShot:'w1'}),shot('x2','Prueba dos',{storyboardShot:'w2'})]}]}]});
+ const ids=[...panels.map((_,i)=>'c'+(i+1)),'x1','x2'];wb('assets/G/plan.json',ids.map(s=>({id:'b-'+s,length:2,parts:[{shot:s,from:0,to:2,at:0}]})));wb('assets/G/lote.json',{episode:'e1',sequence:'c',created:'2026-09-05T00:00:00.000Z'});
+ ids.forEach((s,i)=>{if(i===3)return;wb(`assets/G/b-${s}/attempts.json`,[take(1,i===5?'rejected':i===6?null:'accepted')]);wb(`assets/G/b-${s}/generated-v01.mp4`,'');});}
 let child;
 test.before(()=>new Promise((resolve,reject)=>{child=spawnServer(process.execPath,[path.join(ROOT,'app/server.mjs')],{cwd:ROOT,env:{...process.env,PORT:String(port),RODAJE_DATA:DATA,RODAJE_LAN:'',RODAJE_TLS_CERT:'',RODAJE_TLS_KEY:''},stdio:['ignore','pipe','pipe']});let out='';
  const t=setTimeout(()=>reject(Error('El servidor no arrancó: '+out)),15000);child.stdout.on('data',d=>{out+=d;if(out.includes('Rodaje ·')){clearTimeout(t);resolve();}});child.stderr.on('data',d=>out+=d);child.on('exit',c=>reject(Error('El servidor salió con '+c+': '+out)));}));
@@ -79,11 +88,36 @@ test('Apariciones: nivel de personaje y de ambiente con at lista sus planos con 
  await page.goto(BASE+'&view=location&location=plaza');await page.waitForSelector('[data-ap]');await settle();assert.equal(prod(),1,'el ambiente sin at no pide');
  await page.goto(BASE+'&view=location&location=plaza&at='+encodeURIComponent('sb/sb-a'));const u=await filled(page);assert.equal(prod(),2,'otra carga de página');
  assert.deepEqual(JSON.parse(await page.getAttribute('[data-prod-slot]','data-prod-slot')),['p1','p2'],'los planos del ambiente heredan su location');assert.match(u,/L1 · a1/);
- await page.goto(BASE+'&view=location&location=plaza&at='+encodeURIComponent('seq/s1'));assert.match(await filled(page),/Sin producción todavía/,'s1 solo tiene p3 directamente');}));
+ await page.goto(BASE+'&view=location&location=plaza&at='+encodeURIComponent('seq/s1'));await filled(page);
+ assert.deepEqual(JSON.parse(await page.getAttribute('[data-prod-slot]','data-prod-slot')),['p1','p2','p3'],'el nivel de la secuencia cubre también sus planos colgados de viñetas (#71)');
+ assert.equal(await text(page,'[data-prod-sum]'),'3 planos · 1 aceptado · 1 sin revisar · 1 sin lote');assert.equal(await page.$('[data-prod-group]'),null,'una sola secuencia, sin grupos');}));
+
+test('nivel grande (#71): resumen, grupos por secuencia, filas compactas sin petición y niveles de secuencia',{skip:SIN_CHROME},()=>session(async(page,prod)=>{
+ const B=`http://127.0.0.1:${port}/?project=${big}&view=location&location=cruce&at=`;
+ await page.goto(B+encodeURIComponent('scene/sb-b/sq'));await filled(page);assert.equal(prod(),1);
+ assert.equal(await text(page,'[data-prod-sum]'),'16 planos · 13 aceptados · 1 sin revisar · 1 sin toma válida · 1 pendiente');
+ const groups=await page.$$eval('[data-prod-group]',x=>x.map(g=>({seq:g.dataset.prodGroup,head:g.querySelector('.prod-group-head').textContent,labels:[...g.querySelectorAll('.prod-line .prod-label')].map(e=>e.textContent)})));
+ const by=Object.fromEntries(groups.map(g=>[g.seq,g]));assert.deepEqual(groups.map(g=>g.seq).sort(),['seq/c','seq/t']);assert.deepEqual([by['seq/c'].labels.length,by['seq/t'].labels.length],[14,2]);
+ assert.match(by['seq/c'].head,/^Contenedor14 planosPlanos$/);assert.match(by['seq/t'].head,/^Prueba 3D \(2 planos\)pruebaPlanos$/,'sin repetir el recuento del título');
+ for(const g of groups)assert.equal(new Set(g.labels).size,g.labels.length,'sin rótulos repetidos en '+g.seq);assert.deepEqual(by['seq/t'].labels,['P01 · Prueba uno','P02 · Prueba dos']);
+ assert.deepEqual(await page.$$eval('details.prod-item',x=>[x.length,x.filter(d=>d.open).length,x.filter(d=>d.hasAttribute('data-prod-shot')).length]),[16,0,0]);
+ assert.equal(await page.$$eval('[data-prod-slot] .prod-shot',x=>x.filter(e=>e.checkVisibility()).length),0,'los detalles empiezan plegados');
+ const mark=()=>page.$eval('[data-prod-row="c2"]>summary',e=>[getComputedStyle(e,'::before').content,getComputedStyle(e).listStyleType]);
+ const [closed,list]=await mark();assert.notEqual(closed,'none','la fila lleva señal de que se despliega');assert.equal(list,'none','sin el marcador nativo');
+ await page.click('[data-prod-row="c2"]>summary',{position:{x:3,y:8}});
+ await poll(()=>page.$eval('[data-prod-row="c2"]',d=>d.open),'fila abierta');assert.notEqual((await mark())[0],closed,'la señal cambia al abrir');const det=await text(page,'[data-prod-row="c2"] .prod-detail');
+ assert.match(det,/G · b-c2/);assert.match(det,/tramo 0–2 s/);assert.match(det,/1 intento/);await settle();assert.equal(prod(),1,'abrir una fila no pide');
+ await page.goto(B+encodeURIComponent('seq/c'));await filled(page);assert.equal(JSON.parse(await page.getAttribute('[data-prod-slot]','data-prod-slot')).length,14,'el contenedor cubre sus 14 planos');
+ assert.match(await text(page,'[data-prod-sum]'),/^14 planos/);assert.equal(await page.$$eval('details.prod-item',x=>x.length),14);assert.equal(await page.$('[data-prod-group]'),null);
+ await page.goto(B+encodeURIComponent('seq/t'));await filled(page);assert.deepEqual(JSON.parse(await page.getAttribute('[data-prod-slot]','data-prod-slot')),['x1','x2']);
+ assert.equal(await text(page,'[data-prod-sum]'),'2 planos · 2 aceptados');assert.equal(await page.$$eval('details.prod-item',x=>x.length),0,'con 12 o menos, el detalle de siempre');
+ assert.deepEqual(await page.$$eval('[data-prod-slot] .prod-label',x=>x.map(e=>e.textContent)),['P01 · Prueba uno','P02 · Prueba dos']);}));
 
 test('sin servidor: la sección lo dice y la página funciona',{skip:SIN_CHROME},()=>session(async(page,prod)=>{
  await page.route('**/api/production*',r=>r.abort());
  await page.goto(studio);assert.match(await filled(page),/Sin servidor: no se puede leer la producción\./);
+ await page.goto(BASE+'&view=character&character=ana&at='+encodeURIComponent('scene/sb-a/sq-1'));assert.match(await filled(page),/Sin servidor/);assert.equal(await page.$('[data-prod-sum]'),null,'sin resumen');
+ await page.goto(studio);await filled(page);
  for(const a of ['save','preview'])assert.equal(await page.$eval(`[data-action="${a}"]`,b=>b.disabled),false,a);
  await page.waitForSelector('#viewport canvas');
  await act(page,'nav:shots');await page.waitForSelector('[data-prod-shot="p1"]');await page.click('[data-prod-shot="p1"] summary');
@@ -96,6 +130,7 @@ test('caché: Actualizar y Montaje invalidan',{skip:SIN_CHROME},()=>session(asyn
  await act(page,'nav:shots');await page.waitForSelector('[data-prod-shot]');await act(page,'shot:e1:s1:p1');await filled(page);await settle();assert.equal(prod(),1,'de la caché');
  await page.click('[data-action="refresh"]');await poll(()=>prod()===2,'Actualizar vuelve a pedir');await filled(page);
  await page.goto(BASE+'&view=montaje&lote=L2&block=b2');await poll(()=>page.$eval('[data-mt="editor"]',e=>/bloque/.test(e.textContent)).catch(()=>false),'editor de Montaje');
+ await ready(page);// el editor se pinta antes de que termine el render inicial (window.rodaje llega después)
  const before=prod();await act(page,'shot:e1:s1:p2');await filled(page);assert.equal(prod(),before+1,'nueva carga de página');
  await page.goBack();await poll(()=>page.$eval('[data-mt="editor"]',e=>/bloque/.test(e.textContent)).catch(()=>false),'editor de Montaje');
  await page.$eval('[data-ed="accept"]',e=>e.click());await poll(()=>text(page,'#toast').then(t=>/aceptada/.test(t||'')),'veredicto');

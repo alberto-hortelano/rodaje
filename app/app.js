@@ -29419,7 +29419,7 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, routeHref, historyStep, historyState, entryScroll, navActive, sequenceRole, treeModel, levelCrumbs, levelResolve, levelRoute, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, nodeImage, firstNodeImage, cardColumns, appearanceTree, appearanceEnvironments, relationLinks, relationLine, appearanceLevel, appearanceCrumbs, APPEARANCE_LEVELS, shotLabel, voiceStatusLabel, storyboardItems, viewItems, storyboardResultSections, storyboardPage, storyScenes, movePanel, panelSceneOptions, shotItems, filterShotGroups, filterView as filterView2, hasFilters, filtersParam, JOB_TYPE_LABELS, JOB_STATUS_LABELS, jobItems, jobsSignature, routeFilters, productionView, levelShotIds, environmentUses } from "./workflow.mjs";
+import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, routeHref, historyStep, historyState, entryScroll, navActive, sequenceRole, treeModel, levelCrumbs, levelResolve, levelRoute, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, nodeImage, firstNodeImage, cardColumns, appearanceTree, appearanceEnvironments, relationLinks, relationLine, appearanceLevel, appearanceCrumbs, APPEARANCE_LEVELS, shotLabel, voiceStatusLabel, storyboardItems, viewItems, storyboardResultSections, storyboardPage, storyScenes, movePanel, panelSceneOptions, shotItems, filterShotGroups, filterView as filterView2, hasFilters, filtersParam, JOB_TYPE_LABELS, JOB_STATUS_LABELS, jobItems, jobsSignature, routeFilters, productionView, productionSummary, productionGroups, PRODUCTION_COMPACT, levelShotIds, environmentUses } from "./workflow.mjs";
 
 // app/filtros.source.js
 import { filterView, toggleFilter, heldFilters } from "./workflow.mjs";
@@ -30042,9 +30042,9 @@ function appearancesHTML(X2, { note = "" } = {}) {
   return entitySection("Apariciones", `<div class="row between"><p class="tiny">${esc2(sum || "Ninguna.")}</p><label class="ap-all"><input type="checkbox" data-appear-all${all ? " checked" : ""}> Todas las versiones</label></div>${note ? `<p class="tiny">${note}</p>` : ""}${empty || head + apChildren(n ? n.children : T2.roots, ent, index)}`);
 }
 var apLevelShots = (X2) => {
-  if (X2.inherited) return levelShotIds(X2.L.node);
-  const L2 = appearanceLevel(appearanceTree(X2.index, X2.key, { current: !X2.all, inherited: true }), X2.L.key, X2.index);
-  return L2.missing ? [] : levelShotIds(L2.node);
+  if (X2.inherited) return levelShotIds(X2.L.node, X2.T);
+  const T2 = appearanceTree(X2.index, X2.key, { current: !X2.all, inherited: true }), L2 = appearanceLevel(T2, X2.L.key, X2.index);
+  return L2.missing ? [] : levelShotIds(L2.node, T2);
 };
 var apLevelPage = (item, X2, heading2, actions, note) => {
   const v2 = X2.key.split("/")[0], ids = apLevelShots(X2);
@@ -30075,11 +30075,24 @@ var prodShotLabel = (ix, id3) => {
   const L2 = shotLabel((ix.sequenceShots.get(n.sequence) || []).indexOf(k) + 1, n.data?.title).label;
   return `<a href="${esc2(routeQuery({ project: p.id, view: "shot", episode: n.episode, sequence: ix.nodes.get(n.sequence)?.id ?? null, shot: n.id }))}" data-route>${esc2(L2)}</a>`;
 };
+var PROD_OFF = '<p class="tiny prod-off">Sin servidor: no se puede leer la producci\xF3n.</p>';
+var prodGo = (r, text2) => `<a href="${esc2(routeQuery({ project: p.id, ...r }))}" data-route>${esc2(text2)}</a>`;
+var prodShotHTML = (s, { label = false, ix = null, go = prodGo } = {}) => `<div class="prod-shot" data-prod="${esc2(s.id)}">${label ? `<h3 class="prod-label">${prodShotLabel(ix, s.id)}</h3>` : ""}${s.lotes.map((e) => `<div class="prod-row">${go(e.route, e.lote + " \xB7 " + e.block)}${Number.isFinite(e.from) && Number.isFinite(e.to) ? `<span class="tiny">tramo ${prodSecs(e.from)}\u2013${prodSecs(e.to)} s</span>` : ""}<span class="tiny">${plural(e.attempts, "intento", "intentos")}</span><span class="pill${PROD_PILL[e.verdict.key]}" data-verdict="${e.verdict.key}">${esc2(e.verdict.label)}</span>${e.cuts.length ? `<span class="prod-cuts"><span class="rel-k">Cortes:</span> ${e.cuts.map((c) => go(c.route, c.name) + ` <span class="tiny">${prodClock(c.start)}\u2013${prodClock(c.end)}</span>`).join(", ")}</span>` : ""}</div>`).join("")}${s.anim3d.length ? `<div class="prod-row prod-anim"><span class="rel-k">Animaci\xF3n 3D:</span> ${s.anim3d.map((a) => `<span class="prod-a3d"><a href="${media(a.file)}" target="_blank" rel="noopener">v${esc2(a.version ?? "?")}</a> <span class="tiny">${esc2([prodDate(a.at), Number.isFinite(a.duration) ? prodSecs(a.duration) + " s" : ""].filter(Boolean).join(" \xB7 "))}</span>${a.route ? " " + go(a.route, "vi\xF1eta") : ""}</span>`).join("")}</div>` : ""}</div>`;
 function productionHTML(view2, { labels = view2.shots.length > 1 } = {}) {
-  if (!view2.available) return '<p class="tiny prod-off">Sin servidor: no se puede leer la producci\xF3n.</p>';
+  if (!view2.available) return PROD_OFF;
   if (view2.empty) return '<p class="tiny">Sin producci\xF3n todav\xEDa.</p>';
-  const ix = labels ? relationIndexFor(p) : null, go = (r, text2) => `<a href="${esc2(routeQuery({ project: p.id, ...r }))}" data-route>${esc2(text2)}</a>`;
-  return view2.shots.map((s) => `<div class="prod-shot" data-prod="${esc2(s.id)}">${labels ? `<h3 class="prod-label">${prodShotLabel(ix, s.id)}</h3>` : ""}${s.lotes.map((e) => `<div class="prod-row">${go(e.route, e.lote + " \xB7 " + e.block)}${Number.isFinite(e.from) && Number.isFinite(e.to) ? `<span class="tiny">tramo ${prodSecs(e.from)}\u2013${prodSecs(e.to)} s</span>` : ""}<span class="tiny">${plural(e.attempts, "intento", "intentos")}</span><span class="pill${PROD_PILL[e.verdict.key]}" data-verdict="${e.verdict.key}">${esc2(e.verdict.label)}</span>${e.cuts.length ? `<span class="prod-cuts"><span class="rel-k">Cortes:</span> ${e.cuts.map((c) => go(c.route, c.name) + ` <span class="tiny">${prodClock(c.start)}\u2013${prodClock(c.end)}</span>`).join(", ")}</span>` : ""}</div>`).join("")}${s.anim3d.length ? `<div class="prod-row prod-anim"><span class="rel-k">Animaci\xF3n 3D:</span> ${s.anim3d.map((a) => `<span class="prod-a3d"><a href="${media(a.file)}" target="_blank" rel="noopener">v${esc2(a.version ?? "?")}</a> <span class="tiny">${esc2([prodDate(a.at), Number.isFinite(a.duration) ? prodSecs(a.duration) + " s" : ""].filter(Boolean).join(" \xB7 "))}</span>${a.route ? " " + go(a.route, "vi\xF1eta") : ""}</span>`).join("")}</div>` : ""}</div>`).join("");
+  const ix = labels ? relationIndexFor(p) : null;
+  return view2.shots.map((s) => prodShotHTML(s, { label: labels, ix })).join("");
+}
+var prodLineHTML = (s, ix, go) => `<details class="prod-item" data-prod-row="${esc2(s.id)}"><summary class="prod-line"><span class="prod-label">${prodShotLabel(ix, s.id)}</span>${s.lotes.map((e) => `<span class="prod-entry">${go(e.route, e.lote + " \xB7 " + e.block)}<span class="pill${PROD_PILL[e.verdict.key]}" data-verdict="${e.verdict.key}">${esc2(e.verdict.label)}</span></span>`).join("")}${s.anim3d.length ? `<span class="tiny">3D v${esc2(s.anim3d[0].version ?? "?")}</span>` : ""}</summary><div class="prod-detail">${prodShotHTML(s, { label: false, go })}</div></details>`;
+var prodGroupHead = (g) => `<h3 class="prod-group-head">${esc2(g.title)}${g.role === "test" ? '<span class="pill">prueba</span>' : ""}${/\(\d+ planos?\)\s*$/.test(g.title) ? "" : `<span class="tiny">${plural(g.ids.length, "plano", "planos")}</span>`}${g.id ? prodGo({ view: "shots", sequence: g.id }, "Planos") : ""}</h3>`;
+function productionLevelHTML(view2, ids) {
+  if (!view2.available) return PROD_OFF;
+  const sum = `<p class="tiny prod-sum" data-prod-sum>${esc2(productionSummary(view2, ids).text)}</p>`;
+  if (view2.empty) return sum + '<p class="tiny">Sin producci\xF3n todav\xEDa.</p>';
+  const ix = relationIndexFor(p), by = new Map(view2.shots.map((s) => [s.id, s])), groups = productionGroups(ix, ids), compact = view2.shots.length > PRODUCTION_COMPACT;
+  const body = (g) => g.ids.map((id3) => by.get(id3)).filter(Boolean).map((s) => compact ? prodLineHTML(s, ix, prodGo) : prodShotHTML(s, { label: true, ix })).join("");
+  return sum + (groups.length > 1 ? groups.map((g) => `<div class="prod-group" data-prod-group="${esc2(g.sequence ?? "")}">${prodGroupHead(g)}${body(g)}</div>`).join("") : groups.map(body).join(""));
 }
 async function fillProduction(generation) {
   const slots = [...document.querySelectorAll("#workspace [data-prod-slot]")];
@@ -30093,7 +30106,8 @@ async function fillProduction(generation) {
       ids = JSON.parse(el.dataset.prodSlot);
     } catch {
     }
-    el.innerHTML = "<h2>Producci\xF3n</h2>" + productionHTML(productionView(data2, ids), { labels: ids.length > 1 });
+    const view2 = productionView(data2, ids);
+    el.innerHTML = "<h2>Producci\xF3n</h2>" + (ids.length > 1 ? productionLevelHTML(view2, ids) : productionHTML(view2, { labels: false }));
     bind(el);
   }
 }

@@ -210,6 +210,11 @@ test('appearanceTree: vigente por defecto, orden, contenedor sin viñeta bajo su
  assert.deepEqual(flat(T.roots).find(a=>a.key==='act/e1').counts,{panels:1,shots:3});
  for(const a of flat(T.roots))assert.ok(a.children.every((c,i,l)=>!i||l[i-1].order<c.order),a.key);});
 
+test('appearanceTree: los shots llevan sequence y pos (#71)',()=>{
+ const T=appearanceTree(relationIndex(relProject()),'location/plaza',{current:false}),by=k=>flat(T.roots).find(a=>a.key===k);
+ assert.deepEqual(['shot/t1','shot/t2','shot/t4'].map(k=>[by(k).sequence,by(k).pos]),[['seq/c1',1],['seq/c1',2],['seq/k1',1]]);
+ assert.ok(flat(T.roots).filter(a=>a.kind!=='shot').every(a=>!('pos' in a)&&!('sequence' in a)),'solo los nodos shot');});
+
 test('appearanceTree: todas las versiones marcan el story no vigente; marcas de voz, fuera de campo y texto',()=>{
  const I=relationIndex(relProject()),T=appearanceTree(I,'character/ana',{current:false}),by=k=>flat(T.roots).find(a=>a.key===k);
  assert.deepEqual([by('sb/sb1').stale,by('sb/sb2').stale,by('sb/sb1').label,by('sb/sb2').current],[true,undefined,'v1 · Uno',true]);
