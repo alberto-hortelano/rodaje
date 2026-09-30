@@ -1,14 +1,16 @@
-import {storyboardShot,chosenAttempt,blockAt,montajeStart} from './workflow.mjs';
+import {storyboardShot,chosenAttempt,blockAt,montajeStart,loteGroups} from './workflow.mjs';
 // Vista Montaje: el corte de un lote con, en cada momento, su bloque, la toma, la viñeta del storyboard y la escena.
 // Debajo, el editor del bloque: tomas generadas, tramo usado, veredicto y prompt. «Volver a montar» lanza montar.mjs.
 // route {lote, block} de la URL (#65): abre ese lote (si no, el último usado) y edita ese bloque. Elegir otro lote o bloque llama a onRoute
 // (la app reemplaza la entrada); route() da el par en uso. onWrite: tras un veredicto o un montaje terminado (invalida la caché de la app).
-export async function mountMontaje(root,{project:p,api,toast,route={},onRoute=()=>{},onWrite=()=>{}}){
+// lotes: los de /api/lotes si la app ya los tiene (si no, se piden). visibleLotes(): Set de ids que deja el buscador de la app (#63) o null; el selector
+// se agrupa por «Acto › Secuencia» (loteGroups) y el lote cargado siempre está. refreshLotes() repinta las opciones sin change: filtrar no recarga.
+export async function mountMontaje(root,{project:p,api,toast,route={},onRoute=()=>{},onWrite=()=>{},lotes:given=null,visibleLotes=()=>null}){
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const media=f=>'/api/asset?project='+p.id+'&file='+encodeURIComponent(f);const fmt=s=>Number.isFinite(s)?`${Math.floor(s/60)}:${(s%60).toFixed(1).padStart(4,'0')}`:'–';
  const store=(k,v)=>{try{if(v===undefined)return localStorage.getItem('rodaje-montaje-'+p.id+'-'+k);localStorage.setItem('rodaje-montaje-'+p.id+'-'+k,v);}catch{}};
- const lotes=await api('/api/lotes?project='+p.id);
- if(!lotes.length){root.innerHTML='<div class="empty"><h2>Aún no hay lotes</h2><p>Un lote aparece aquí cuando <code>scripts/bloques/planificar.mjs</code> crea su <code>plan.json</code>; el montaje, al pasar <code>montar.mjs</code>.</p></div>';return {dispose(){},route:()=>({lote:null,block:null})};}
+ const lotes=Array.isArray(given)?given:await api('/api/lotes?project='+p.id);
+ if(!lotes.length){root.innerHTML='<div class="empty"><h2>Aún no hay lotes</h2><p>Un lote aparece aquí cuando <code>scripts/bloques/planificar.mjs</code> crea su <code>plan.json</code>; el montaje, al pasar <code>montar.mjs</code>.</p></div>';return {dispose(){},route:()=>({lote:null,block:null}),refreshLotes(){}};}
  let lote,cut,timeline=[],current=null,selected=null,take=null,poll=null,disposed=false,rangeDraft=null,ready=false,reported=null;
  const inUse=()=>({lote:lote?.id??null,block:selected??null});
  // Solo tras montar la vista y si cambia el par: los select(id,false) de la reproducción no escriben la URL si el bloque es el mismo.
@@ -27,12 +29,14 @@ export async function mountMontaje(root,{project:p,api,toast,route={},onRoute=()
  async function load(id){lote=await api(`/api/lote?project=${p.id}&lote=${encodeURIComponent(id)}`);store('lote',id);}
  function pickCut(name){cut=lote.cuts.find(c=>c.name===name)||lote.cuts.at(-1)||null;timeline=cut?.blocks||[];}
  root.innerHTML=`<div class="mt">
-  <div class="mt-bar"><label>Lote<select data-mt="lote">${lotes.map(l=>`<option value="${esc(l.id)}">${esc(l.id)} · ${l.blocks} bloques</option>`).join('')}</select></label><label>Corte<select data-mt="cut"></select></label><div class="mt-bar-info"></div><button data-mt="montar" class="primary">Volver a montar</button></div>
+  <div class="mt-bar"><label>Lote<select data-mt="lote"></select></label><label>Corte<select data-mt="cut"></select></label><div class="mt-bar-info"></div><button data-mt="montar" class="primary">Volver a montar</button></div>
   <div class="mt-main"><div class="mt-player"><video data-mt="video" controls preload="metadata"></video><div class="mt-timeline" data-mt="timeline"></div><div class="mt-legend"><span class="mt-dot accepted"></span>Aceptada <span class="mt-dot pending"></span>Sin revisar <span class="mt-dot missing"></span>Sin toma <span class="mt-dot stale"></span>Cambiada desde el montaje · <kbd>Espacio</kbd> reproducir · <kbd>←</kbd><kbd>→</kbd> plano anterior/siguiente · <kbd>E</kbd> editar el plano actual</div></div>
   <aside class="mt-side" data-mt="side"></aside></div>
   <section class="mt-editor panel" data-mt="editor"></section></div>`;
  const $=s=>root.querySelector(`[data-mt="${s}"]`),video=$('video');
- const start=montajeStart(lotes,route,store('lote'));if(start.missing)toast(`No existe el lote ${start.missing}: se abre ${start.lote}`);$('lote').value=start.lote;
+ // Opciones agrupadas; conserva el valor (asignarlo no dispara change).
+ function paintLotes(v=lote?.id??$('lote').value){const sel=$('lote');sel.innerHTML=loteGroups(p,lotes,visibleLotes(),v).map(g=>`<optgroup label="${esc(g.label)}">${g.options.map(o=>`<option value="${esc(o.id)}">${esc(o.label)}${o.outside?' · fuera del filtro':''}</option>`).join('')}</optgroup>`).join('');sel.value=v;}
+ const start=montajeStart(lotes,route,store('lote'));if(start.missing)toast(`No existe el lote ${start.missing}: se abre ${start.lote}`);paintLotes(start.lote);
  function renderBar(){$('cut').innerHTML=lote.cuts.length?lote.cuts.map(c=>`<option value="${esc(c.name)}" ${c===cut?'selected':''}>${esc(c.name)} · ${fmt(c.duration)}</option>`).join(''):'<option>Sin montar</option>';
   const changed=lote.blocks.filter(stale).length,counts=lote.blocks.reduce((n,b)=>(n[stateOf(b)]++,n),{accepted:0,pending:0,missing:0}),m=lote.montando;
   root.querySelector('.mt-bar-info').innerHTML=`<span class="pill ok">${counts.accepted} aceptados</span> <span class="pill warn">${counts.pending} sin revisar</span>${counts.missing?` <span class="pill">${counts.missing} sin toma</span>`:''}${changed?` <span class="pill mt-stale-pill">${changed} cambiados desde este corte</span>`:''}${m?.state==='running'?' <span class="pill">Montando…</span>':m?.state==='failed'?` <span class="pill warn" title="${esc(m.error)}">El montaje falló</span>`:''}`;
@@ -83,7 +87,7 @@ export async function mountMontaje(root,{project:p,api,toast,route={},onRoute=()
   q('accept').onclick=()=>send('accepted');q('reject').onclick=()=>send('rejected');if(q('clear'))q('clear').onclick=()=>send(null);
   q('prompt').ontoggle=async e=>{if(!e.target.open||e.target.dataset.loaded)return;e.target.dataset.loaded=1;const r=await fetch(media(`assets/${lote.id}/${b.id}/${a.prompt||'prompt.txt'}`));e.target.querySelector('pre').textContent=r.ok?await r.text():'No se encuentra el prompt.';};}
  function step(d){const i=lote.blocks.findIndex(b=>b.id===selected),n=lote.blocks[Math.max(0,Math.min(lote.blocks.length-1,i+d))];if(!n)return;const c=timeline.find(x=>x.block===n.id);if(c&&video.paused){video.currentTime=c.start+.01;tick();}select(n.id);}
- async function open(id,cutName){await load(id);pickCut(cutName);$('lote').value=id;renderBar();video.src=cut?media(cut.file):'';current=null;renderTimeline();video.currentTime=0;tick();if(!current)renderSide();select(selected&&blockById(selected)?selected:lote.blocks[0].id);report();watch();}
+ async function open(id,cutName){await load(id);pickCut(cutName);paintLotes();$('lote').value=id;renderBar();video.src=cut?media(cut.file):'';current=null;renderTimeline();video.currentTime=0;tick();if(!current)renderSide();select(selected&&blockById(selected)?selected:lote.blocks[0].id);report();watch();}
  function watch(){clearInterval(poll);if(lote.montando?.state!=='running')return;poll=setInterval(async()=>{if(disposed)return clearInterval(poll);const before=lote.cuts.length;const fresh=await api(`/api/lote?project=${p.id}&lote=${encodeURIComponent(lote.id)}`).catch(()=>null);if(!fresh||fresh.montando?.state==='running')return;clearInterval(poll);onWrite();if(fresh.montando?.state==='failed'){lote=fresh;renderBar();return toast('El montaje falló: '+fresh.montando.error);}toast(fresh.montando?.output||'Montaje terminado');const keep=selected;await open(lote.id,fresh.cuts.at(-1)?.name);if(keep&&fresh.cuts.length>before)select(keep);},3000);}
  $('lote').onchange=e=>{selected=null;open(e.target.value).catch(err=>toast(err.message));};
  $('cut').onchange=e=>{pickCut(e.target.value);video.src=media(cut.file);current=null;renderBar();renderTimeline();tick();};
@@ -94,4 +98,4 @@ export async function mountMontaje(root,{project:p,api,toast,route={},onRoute=()
  await open($('lote').value);
  if(start.block&&lote.id===start.lote&&blockById(start.block)){const c=timeline.find(x=>x.block===start.block);if(c){video.currentTime=c.start+.01;tick();}select(start.block);$('editor').scrollIntoView({behavior:'smooth'});}
  reported=inUse();ready=true;
- return {dispose(){disposed=true;clearInterval(poll);document.removeEventListener('keydown',keys);video.removeAttribute('src');video.load();},route:inUse};}
+ return {dispose(){disposed=true;clearInterval(poll);document.removeEventListener('keydown',keys);video.removeAttribute('src');video.load();},route:inUse,refreshLotes(){if(!disposed)paintLotes();}};}

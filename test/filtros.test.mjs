@@ -63,7 +63,8 @@ test('toggleFilter no muta y quita la faceta vacía; activeCount; hasFilters',()
  const f={cast:['ana']},g=toggleFilter(f,'cast','bea');assert.deepEqual(f,{cast:['ana']});assert.deepEqual(g,{cast:['ana','bea']});
  assert.deepEqual(toggleFilter(g,'cast','ana'),{cast:['bea']});assert.deepEqual(toggleFilter({cast:['ana']},'cast','ana'),{});assert.deepEqual(toggleFilter(undefined,'k','v'),{k:['v']});
  assert.equal(activeCount('',{}),0);assert.equal(activeCount('  ',{a:['x']}),1);assert.equal(activeCount('luna',{a:['x','y'],b:['z']}),4);
- assert.deepEqual(['storyboards','shots','tree','storyboard','character','shot',undefined].map(hasFilters),[true,true,false,false,false,false,false]);});
+ assert.deepEqual(['storyboards','shots','tree','storyboard','character','shot',undefined].map(hasFilters),[true,true,false,false,false,false,false]);
+ assert.deepEqual(['ideas','issues','jobs','montaje','overview','library'].map(hasFilters),[true,true,true,true,false,false]);});
 
 // Migrado (ficha x-colgado con v1 y v2 vigente, x-prologo con sb-carga, pruebas x-fuego y x-cruce) más un story sin ficha, una zona, una viñeta
 // con otro personaje que habla y una prueba con reparto.
@@ -173,7 +174,7 @@ test('filterView sobre characterItems: q por descripción y faceta voice',()=>{
 
 test('FILTER_SOURCES cubre toda vista con buscador',()=>{
  assert.deepEqual(Object.keys(ROUTE_PARAMS).filter(hasFilters).sort(),Object.keys(FILTER_SOURCES).sort());
- for(const [v,f] of Object.entries(FILTER_SOURCES))for(const x of [{},null,{characters:[1,null,{id:3}],locations:'x',environments:[{},null,{id:5}]}]){const r=f(x);assert.ok(Array.isArray(r.items)&&Array.isArray(r.defs),v);}
+ for(const [v,f] of Object.entries(FILTER_SOURCES))for(const x of [{},null,{characters:[1,null,{id:3}],locations:'x',environments:[{},null,{id:5}],ideas:[null,1,{}],issues:'x',episodes:[{id:'e'}]}])for(const o of [[],[undefined],[null],[{}],[{jobs:[null,{id:1}],lotes:[null,{id:3}]}]]){const r=f(x,...o);assert.ok(Array.isArray(r.items)&&Array.isArray(r.defs),v);}
  const p=relProject();assert.equal(viewItems('tree',p),null);assert.equal(viewItems('__proto__',p),null);assert.deepEqual(viewItems('characters',p).items.map(i=>i.id),characterItems(p).items.map(i=>i.id));});
 
 // Faceta Estado de Planos (#64): valores de /api/shot-states, filtros guardados de facetas sin fuente y opts en viewItems.

@@ -249,6 +249,11 @@ export function projectRequests(id,p){const shots=(p.episodes||[]).flatMap(e=>e.
 // Un pendiente es un fallo de guion, una decisión abierta o una tarea. Vive en p.issues; el orden del array es el orden dentro de cada columna.
 export const ISSUE_STATES=[['abierto','Pendiente'],['en-curso','En curso'],['cerrado','Cerrado']];
 export const ISSUE_SEVERITIES=[['grave','Grave'],['medio','Medio'],['ritmo','Ritmo'],['nota','Nota']];
+// Etiquetas de Generaciones (#63): tipo de trabajo y estado, las de la tarjeta de cada trabajo y las facetas Tipo y Estado.
+export const JOB_TYPE_LABELS={preview:'Previsualización 3D',keyframe:'Fotograma visual',video:'Vídeo H3 Max',character:'Hoja de personaje',location:'Ambiente visual',
+ voice:'Prueba de voz',line:'Diálogo',ambience:'Sonido ambiente',outline:'Desglose de capítulo',export:'Montaje',storyboard:'Fotograma de storyboard',
+ animatic:'Animáticas de storyboard',anim3d:'Animación 3D de viñeta'};
+export const JOB_STATUS_LABELS={queued:'En cola',running:'Procesando',submitting:'Enviando',remote:'Generando',done:'Listo',failed:'Error',interrupted:'Interrumpido'};
 export function issueBoard(p){const by=Object.fromEntries(ISSUE_STATES.map(([k])=>[k,[]]));for(const i of p.issues||[])(by[i.status]||by.abierto).push(i);return ISSUE_STATES.map(([key,label])=>({key,label,items:by[key]}));}
 // Mueve un pendiente a una columna; con beforeId lo deja delante de ese otro, si no al final de la columna. Marca la fecha de cierre al entrar en «cerrado».
 export function moveIssue(p,id,status,beforeId,now=()=>new Date().toISOString()){const list=p.issues||(p.issues=[]);if(!ISSUE_STATES.some(([k])=>k===status))throw Error('Estado no válido');const i=list.findIndex(x=>x.id===id);if(i<0)throw Error('Pendiente no encontrado');if(beforeId===id)return false;const [item]=list.splice(i,1);const was=item.status;item.status=status;if(status==='cerrado'){if(was!=='cerrado')item.closed=now();}else delete item.closed;let at=beforeId?list.findIndex(x=>x.id===beforeId):-1;if(at<0){at=list.length;for(let k=list.length-1;k>=0;k--)if(list[k].status===status){at=k+1;break;}}list.splice(at,0,item);return true;}
@@ -271,9 +276,10 @@ export function modelSpaceEnvironment(p,modelSpace){const m=modelSpace?.model;re
 // con proyecto, una vista desconocida, library o ninguna llevan al árbol. sequence de shots enfoca y no cuenta para el scroll; node es la página de la Escaleta;
 // scene y panel del storyboard son páginas (#68): la escena y la viñeta; at de personaje y ambiente es el nivel de sus Apariciones (#69).
 // lote y block de Montaje (#65): el lote es página; block enfoca (no cuenta para el scroll) y los cambios dentro de la vista reemplazan la entrada.
+// q y f (#59, #62, #63): el buscador de las vistas transversales; en Montaje van detrás de lote y block.
 export const VIEWS=['tree','overview','ideas','characters','locations','environments','environment','character','location','storyboards','storyboard','shots','shot','rehearsal','anim','montaje','issues','jobs'];
 export const VIEW_ALIASES={outline:'tree',episodes:'shots',ship:'environments'};
-export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene','panel'],environment:['environment'],character:['character','at'],location:['location','at'],tree:['node'],shots:['sequence','q','f'],storyboards:['q','f'],characters:['q','f'],locations:['q','f'],environments:['q','f'],montaje:['lote','block']};
+export const ROUTE_PARAMS={shot:['episode','sequence','shot'],anim:['episode','sequence','shot'],rehearsal:['episode'],storyboard:['storyboard','scene','panel'],environment:['environment'],character:['character','at'],location:['location','at'],tree:['node'],shots:['sequence','q','f'],storyboards:['q','f'],characters:['q','f'],locations:['q','f'],environments:['q','f'],ideas:['q','f'],issues:['q','f'],jobs:['q','f'],montaje:['lote','block','q','f']};
 export const FOCUS_PARAMS={shots:['sequence'],montaje:['block']};
 export const ROUTE_KEYS=['episode','sequence','shot','storyboard','environment','character','location','scene','panel','node','q','f','at','lote','block'];
 // Buscador y facetas (#59): q y f no cuentan para el scroll; en la URL, f conserva ':' y ',' legibles (f=act:e1,cast:ana).
@@ -340,7 +346,9 @@ export function storyboardMedia(storyboard,lotes,has=()=>true){const ids=new Set
    if(!takes.length)continue;if(!current){const c=chosenAttempt(list,ok);if(c.attempt){current=takes.find(t=>t.n===c.attempt.n);current.current=true;pending=c.pending;}}groups.push({lote:l.id,block,takes});}
   if(groups.length)shots[sb]={current,pending,groups};}
  const byLote=Object.fromEntries(info.map(x=>[x.id,x])),withCuts=rel.filter(({l})=>(l.cuts||[]).length);
- const list=withCuts.flatMap(({l})=>l.cuts.map(c=>({lote:l.id,name:c.name,file:c.file,at:c.at,duration:c.duration,partial:byLote[l.id].partial,covered:byLote[l.id].covered,total})));
+ // block: el primer bloque del corte enlazado a este story (si el corte no trae bloques, el primero enlazado): «Montaje →» lo lleva como foco (#63).
+ const firstBlock=(c,links)=>{const own=new Set(links.map(([b])=>b));return (Array.isArray(c?.blocks)?c.blocks:[]).map(x=>x?.block).find(b=>own.has(b))??links[0]?.[0]??null;};
+ const list=withCuts.flatMap(({l,links})=>l.cuts.map(c=>({lote:l.id,name:c.name,file:c.file,at:c.at,duration:c.duration,block:firstBlock(c,links),partial:byLote[l.id].partial,covered:byLote[l.id].covered,total})));
  const cuts={current:withCuts.length?list.filter(c=>c.lote===withCuts[0].l.id).at(-1):null,list};
  const sequences={};for(const s of storyboard?.sequences||[]){const found=withCuts.flatMap(({l})=>l.cuts.flatMap(c=>(c.sequences||[]).filter(x=>x.storyboard===storyboard.id&&x.sequence===s.id).map(x=>({lote:l.id,cut:c.name,file:x.file,at:x.at,duration:x.duration,blocks:x.blocks||[]}))));
   if(found.length)sequences[s.id]={current:found.filter(x=>x.lote===found[0].lote).at(-1),list:found};}
@@ -1358,6 +1366,11 @@ export function filtersParam(filters){return activeFilters(filters).flatMap(([k,
 export function toggleFilter(filters,id,value){const out={...(isObj(filters)?filters:{})},cur=Array.isArray(out[id])?out[id]:[],next=cur.includes(value)?cur.filter(v=>v!==value):[...cur,value];if(next.length)out[id]=next;else delete out[id];return out;}
 export function activeCount(query,filters){return (String(query??'').trim()?1:0)+activeFilters(filters).reduce((n,[,v])=>n+v.length,0);}
 export function hasFilters(view){return !!ROUTE_PARAMS[view]?.includes('q');}
+// Foco de la ruta: algún parámetro de FOCUS_PARAMS[view] con valor (sequence en Planos, block en Montaje).
+export function routeFocused(r){return (Object.hasOwn(FOCUS_PARAMS,r?.view)?FOCUS_PARAMS[r.view]:[]).some(k=>r[k]!==null&&r[k]!==undefined&&r[k]!=='');}
+// Filtros con que abre una vista con buscador: los de la URL; si no trae q, f ni foco, remembered() (la memoria) y, si no hay, vacíos.
+export function routeFilters(r,remembered=()=>null){if(!hasFilters(r?.view))return {q:'',f:{}};
+ if(r.q==null&&r.f==null&&!routeFocused(r))return remembered()||{q:'',f:{}};return {q:r.q||'',f:parseFilters(r.f)};}
 const relIds=(index,key,rels)=>[...new Set((index.from.get(key)||[]).filter(l=>rels.includes(l.rel)).map(l=>l.to.split('/').slice(1).join('/')))];
 const actLabel=p=>p?.type==='serie'?'Capítulo':'Acto';
 const entityValues=list=>(Array.isArray(list)?list:[]).filter(x=>isObj(x)&&typeof x.id==='string').map(x=>({value:x.id,label:x.name||x.id}));
@@ -1437,9 +1450,47 @@ export function environmentItems(p){const idx=relationIndexFor(p),list=environme
   facets:{kind:[environmentViewer(e).kind],loc:(idx.environmentLocations.get(key)||[]).map(k=>k.slice('location/'.length))},group:null,ref:list[i]};});
  const defs=[{id:'kind',label:'Tipo',values:Object.entries(ENVIRONMENT_KIND_LABELS).map(([value,label])=>({value,label}))},{id:'loc',label:'Ambiente',values:entityValues(p?.locations)}];
  return {items,defs};}
+// Historia e ideas, Pendientes, Generaciones y Montaje (#63): un ítem por elemento, sin grupos ni subs.
+const objList=x=>(Array.isArray(x)?x:[]).filter(isObj),strs=(...xs)=>xs.filter(x=>typeof x==='string').join(' ');
+// Ideas en el orden de p.ideas; sin facetas (no tienen metadatos).
+export function ideaItems(p){return {items:objList(p?.ideas).map((i,n)=>({key:'idea/'+(i.id??n),kind:'idea',id:i.id??null,text:searchText(strs(i.title,i.text)),facets:{},group:null,ref:i})),defs:[]};}
+// Pendientes en el orden de p.issues. Gravedad desconocida o ausente: '-'; estado desconocido: abierto (como issueBoard).
+export function issueItems(p){const sev=ISSUE_SEVERITIES.map(([k])=>k),st=ISSUE_STATES.map(([k])=>k);
+ const items=objList(p?.issues).map((i,n)=>({key:'issue/'+(i.id??n),kind:'issue',id:i.id??null,text:searchText(strs(i.title,i.text,i.code)),
+  facets:{severity:[sev.includes(i.severity)?i.severity:'-'],status:[st.includes(i.status)?i.status:'abierto']},group:null,ref:i}));
+ const defs=[{id:'severity',label:'Gravedad',values:[...ISSUE_SEVERITIES.map(([value,label])=>({value,label})),{value:'-',label:'Sin gravedad'}]},
+  {id:'status',label:'Estado',values:ISSUE_STATES.map(([value,label])=>({value,label}))}];
+ return {items,defs};}
+// Trabajos visibles: los de projectId (null: todos), del más reciente al más antiguo. Un tipo sin etiqueta se busca y se filtra por su id.
+const jobLabel=t=>typeof t==='string'&&Object.hasOwn(JOB_TYPE_LABELS,t)?JOB_TYPE_LABELS[t]:t;
+const visibleJobs=(jobs,projectId)=>objList(jobs).filter(j=>projectId==null||j.project===projectId).sort((a,b)=>String(b.created??'').localeCompare(String(a.created??'')));
+export function jobItems(jobs,projectId=null){const one=x=>typeof x==='string'&&x?[x]:[];
+ const items=visibleJobs(jobs,projectId).map((j,n)=>({key:'job/'+(j.id??n),kind:'job',id:j.id??null,text:searchText(strs(jobLabel(j.type),j.summary,j.error,j.target)),facets:{type:one(j.type),status:one(j.status)},group:null,ref:j}));
+ const defs=[{id:'type',label:'Tipo',values:Object.entries(JOB_TYPE_LABELS).map(([value,label])=>({value,label}))},{id:'status',label:'Estado',values:Object.entries(JOB_STATUS_LABELS).map(([value,label])=>({value,label}))}];
+ return {items,defs};}
+// Firma de lo que pinta Generaciones: cambia solo si cambia algún trabajo visible (id, status, progress, summary, error, output, requestId) o su orden.
+export function jobsSignature(jobs,projectId=null){return JSON.stringify(visibleJobs(jobs,projectId).map(j=>[j.id,j.status,j.progress,j.summary,j.error,j.output,j.requestId]));}
+// Acto y secuencia de un lote de /api/lotes en el proyecto vivo: '-' si no existen (lote sin lote.json, acto o secuencia borrados).
+export function loteSequence(p,lote){const e=objList(p?.episodes).find(x=>typeof lote?.episode==='string'&&x.id===lote.episode),s=e&&objList(e.sequences).find(x=>typeof lote?.sequence==='string'&&x.id===lote.sequence);
+ const act=e?e.id:'-',sequence=s?s.id:'-';return {act,sequence,group:s?act+'/'+sequence:'-',label:s?(e.title||e.id)+' › '+(s.title||s.id):'Sin secuencia',actTitle:e?e.title||e.id:''};}
+const loteList=lotes=>objList(lotes).filter(l=>typeof l.id==='string');
+// Lotes en el orden de /api/lotes (más reciente primero): texto con el id y los títulos del acto y la secuencia; facetas Acto y Secuencia.
+export function loteItems(p,lotes){const items=loteList(lotes).map(l=>{const x=loteSequence(p,l);
+  return {key:'lote/'+l.id,kind:'lote',id:l.id,text:searchText(strs(l.id,x.actTitle,x.label)),facets:{act:[x.act],sequence:[x.sequence]},group:null,ref:l};});
+ const seen=new Set(),seqs=seqList(p).filter(({episode:e,sequence:s})=>isObj(e)&&typeof s.id==='string'&&!seen.has(s.id)&&seen.add(s.id)).map(({sequence:s})=>({value:s.id,label:s.title||s.id}));
+ const defs=[{id:'act',label:actLabel(p),values:[...episodeValues(p),{value:'-',label:p?.type==='serie'?'Sin capítulo':'Sin acto'}]},{id:'sequence',label:'Secuencia',values:[...seqs,{value:'-',label:'Sin secuencia'}]}];
+ return {items,defs};}
+// Opciones del selector de Montaje: un grupo por «Acto › Secuencia» en el orden del proyecto y «Sin secuencia» al final; dentro, el orden de lotes.
+// visible: Set de ids o null (todos); current, el lote cargado, siempre está (outside si visible lo excluye). Sin grupos vacíos.
+export function loteGroups(p,lotes,visible=null,current=null){const vis=visible instanceof Set?visible:null,groups=new Map();
+ for(const l of loteList(lotes)){const outside=!!vis&&!vis.has(l.id);if(outside&&l.id!==current)continue;const x=loteSequence(p,l);
+  if(!groups.has(x.group))groups.set(x.group,{label:x.label,options:[]});groups.get(x.group).options.push({id:l.id,label:l.id+' · '+l.blocks+' bloques',outside});}
+ const order=[...seqList(p).filter(({episode:e})=>isObj(e)).map(({episode:e,sequence:s})=>e.id+'/'+s.id),'-'];
+ return uniq(order).filter(k=>groups.has(k)).map(k=>groups.get(k));}
 // Vistas con buscador: toda vista con q en ROUTE_PARAMS (hasFilters) tiene aquí su constructor de ítems (test/filtros.test.mjs lo exige).
-export const FILTER_SOURCES={storyboards:storyboardItems,shots:shotItems,characters:characterItems,locations:locationItems,environments:environmentItems};
-// opts va al constructor (shots: {states}); los demás lo ignoran.
+export const FILTER_SOURCES={storyboards:storyboardItems,shots:shotItems,characters:characterItems,locations:locationItems,environments:environmentItems,
+ ideas:ideaItems,issues:issueItems,jobs:(p,o)=>jobItems(o?.jobs,p?.id??null),montaje:(p,o)=>loteItems(p,o?.lotes)};
+// opts va al constructor (shots: {states}; jobs: {jobs}; montaje: {lotes}); los demás lo ignoran.
 export function viewItems(view,p,opts){return Object.hasOwn(FILTER_SOURCES,view)?FILTER_SOURCES[view](p,opts):null;}
 // shotGroups con los planos que quedan ({shot, index} con su posición original). keep null: todos; un Set de ids: sin secuencias, grupos ni actos vacíos.
 export function filterShotGroups(groups,keep){return (groups||[]).map(({episode,groups:gs,empty})=>{

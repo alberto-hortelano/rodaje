@@ -79,7 +79,7 @@ test('rutas: q y f del buscador (#59, #62) solo en las vistas con buscador, fuer
  assert.equal(routeQuery({project:'x',view:'shots',q:'a b',f}),'?project=x&view=shots&q=a%20b&f=act:e1,cast:ana');assert.equal(routeQuery({project:'x',view:'tree',q:'a',f}),'?project=x&view=tree');
  assert.equal(routeQuery({project:'x',view:'storyboards',q:'',f:null}),'?project=x&view=storyboards');
  const k=q=>routeKey(parseRoute(q));assert.equal(k('?project=x&view=storyboards&q=a&f='+f),k('?project=x&view=storyboards'));assert.equal(k('?project=x&view=shots&sequence=s&q=a'),JSON.stringify(['x','shots']));
- assert.deepEqual(FILTER_PARAMS,['q','f']);assert.deepEqual(Object.keys(ROUTE_PARAMS).filter(hasFilters).sort(),['characters','environments','locations','shots','storyboards']);
+ assert.deepEqual(FILTER_PARAMS,['q','f']);assert.deepEqual(Object.keys(ROUTE_PARAMS).filter(hasFilters).sort(),['characters','environments','ideas','issues','jobs','locations','montaje','shots','storyboards']);
  for(const v of ['characters','locations','environments']){const q='?project=x&view='+v+'&q=a&f=kind:voice';assert.equal(routeQuery(parseRoute(q)),q,v);assert.equal(k(q),k('?project=x&view='+v),v);}
  assert.deepEqual(Object.values(ROUTE_PARAMS).flat().filter(x=>!ROUTE_KEYS.includes(x)),[],'todo parámetro de vista está en ROUTE_KEYS');});
 
@@ -245,7 +245,24 @@ test('rutas: Montaje con lote y block (#65)',()=>{
  const k=s=>routeKey(parseRoute(s));assert.equal(k(q),k('?project=x&view=montaje&lote=l1&block=b9'));assert.equal(k(q),k('?project=x&view=montaje&lote=l1'));assert.notEqual(k(q),k('?project=x&view=montaje&lote=l2&block=b2'));
  assert.equal(parseRoute('?project=x&view=tree&lote=a').lote,null);assert.equal(parseRoute('?project=x&view=shots&block=a').block,null);
  assert.equal(historyStep('?project=x&view=tree',r).method,'push');assert.equal(historyStep('?project=x&view=montaje&lote=l1&block=b1',r).method,'push','block en la ruta: la app reemplaza con syncRoute, no historyStep');
- assert.deepEqual(ROUTE_PARAMS.montaje,['lote','block']);assert.deepEqual(ROUTE_KEYS.slice(-2),['lote','block']);});
+ assert.deepEqual(ROUTE_PARAMS.montaje,['lote','block','q','f']);assert.deepEqual(ROUTE_KEYS.slice(-2),['lote','block']);});
+
+test('rutas: q y f en Historia e ideas, Pendientes, Generaciones y Montaje (#63)',()=>{
+ for(const q of ['?project=x&view=montaje&lote=L2&block=b1&q=a&f=act:e1','?view=jobs&q=video&f=status:failed','?project=x&view=issues&f=severity:grave','?project=x&view=ideas&q=canci%C3%B3n'])assert.equal(routeQuery(parseRoute(q)),q);
+ assert.deepEqual([parseRoute('?view=jobs&q=v&f=type:video').q,parseRoute('?view=jobs&q=v&f=type:video').f],['v','type:video']);
+ assert.equal(routeQuery({project:'x',view:'montaje',lote:'L2',block:'b1',q:'a',f:'act:e1'}),'?project=x&view=montaje&lote=L2&block=b1&q=a&f=act:e1','q y f detrás de lote y block');
+ const k=s=>routeKey(parseRoute(s)),m='?project=x&view=montaje&lote=L2&block=b1&q=a&f=act:e1';
+ for(const o of ['?project=x&view=montaje&lote=L2&block=b9&q=a&f=act:e1','?project=x&view=montaje&lote=L2&block=b1&q=zz&f=act:e1','?project=x&view=montaje&lote=L2&block=b1&q=a&f=act:e2','?project=x&view=montaje&lote=L2'])assert.equal(k(m),k(o),o);
+ assert.notEqual(k(m),k('?project=x&view=montaje&lote=L1&block=b1&q=a&f=act:e1'));
+ assert.equal(historyStep(m,parseRoute('?project=x&view=montaje&lote=L2&block=b1&q=ab&f=act:e1')).method,'replace','solo cambia q');
+ for(const v of ['ideas','issues','jobs'])assert.equal(k('?project=x&view='+v+'&q=a&f=b:c'),k('?project=x&view='+v),v);});
+
+test('fuente: buscador de Ideas, Pendientes, Generaciones y Montaje; sondeo sin repintar (#63)',()=>{
+ const filt=fs.readFileSync(new URL('../app/filtros.source.js',import.meta.url),'utf8');
+ for(const x of ['routeFilters(',"saveFilters(p?.id||''",'jobsSignature(','setItems(','wireKanban',"viewItems('ideas',p)","viewItems('issues',p)","viewItems('jobs',p,{jobs:state.jobs})","viewItems('montaje',p,{lotes:mtLotes})",'visibleLotes:()=>mtVisible','stage?.refreshLotes?.()','facets:defs.length>0'])assert.ok(src.includes(x),'falta '+x);
+ for(const x of ["r.view==='shots'&&r.sequence","if(view==='jobs'&&!dirty)await render();","document.querySelectorAll('[data-kanban-card]')"])assert.ok(!src.includes(x),'queda '+x);
+ for(const x of ['loteGroups(','<optgroup','refreshLotes(','visibleLotes'])assert.ok(mont.includes(x),'falta '+x);
+ for(const x of ['onModel','setItems','facets=true'])assert.ok(filt.includes(x),'falta '+x);});
 
 test('fuente: Montaje por ruta, sin montajeFocus (#65)',()=>{
  assert.ok(!src.includes('montajeFocus'));assert.ok(src.includes("goRoute({view:'montaje',lote:b"));assert.ok(src.includes('onWrite:()=>lazy.invalidate(p.id)'));assert.ok(src.includes('({lote:montajeLote,block:montajeBlock}=m.route())'));

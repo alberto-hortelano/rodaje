@@ -205,7 +205,7 @@ test('informe.mjs y chosenAttempt eligen la misma toma; varias aceptadas rompen 
   assert.deepEqual(r.shots.v1.current,{lote:'lote-1',block:'b1',n:1,at:'t1',video:'assets/lote-1/b1/generated-v01.mp4',verdict:'accepted',rules:[],notes:'',endpoint:'minimax/h3',current:true});
   assert.equal(r.shots.v1.pending,false);assert.deepEqual(r.shots.v1.groups[0].takes.map(t=>t.n),[1]);
   assert.equal(r.shots.v3.pending,true);assert.equal(r.shots.v3.current.block,'b3');
-  assert.deepEqual(r.cuts,{current:r.cuts.list[0],list:[{lote:'lote-1',name:'lote-1-cut-v00',file:'assets/lote-1/montaje/lote-1-cut-v00.mp4',at:cutJSON.at,duration:20,partial:false,covered:3,total:3}]});
+  assert.deepEqual(r.cuts,{current:r.cuts.list[0],list:[{lote:'lote-1',name:'lote-1-cut-v00',file:'assets/lote-1/montaje/lote-1-cut-v00.mp4',at:cutJSON.at,duration:20,block:'b1',partial:false,covered:3,total:3}]});
   assert.deepEqual(Object.keys(r.sequences),['sq-1']);assert.equal(r.sequences['sq-1'].current.file,'assets/lote-1/montaje/lote-1-cut-v00.sq-1.mp4');
   assert.throws(()=>L.storyboardMediaFor(P4,live,'no-existe'),/Storyboard desconocido/);
   assert.equal(M.storyboardMediaFor,L.storyboardMediaFor);});}

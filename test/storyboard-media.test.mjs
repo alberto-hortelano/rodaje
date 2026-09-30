@@ -72,3 +72,9 @@ test('vista Storyboards: el vídeo de la viñeta no se precarga y lleva póster'
  const src=fs.readFileSync(new URL('../app/app.source.js',import.meta.url),'utf8'),m=/<video class="sb-video"[^>]*>/.exec(src);
  assert.ok(m,'sbFrame sin <video class="sb-video">');assert.match(m[0],/preload="none"/);assert.match(m[0],/poster=/);
  assert.match(src,/\/api\/storyboard-media\?project=/);});
+
+test('storyboardMedia: cada corte lleva block, el primero de su línea de tiempo enlazado al story (#63)',()=>{
+ const cut=(name,blocks)=>({name,file:name+'.mp4',at:'t',duration:4,...(blocks?{blocks:blocks.map(block=>({block,start:0,end:1}))}:{})});
+ const r=storyboardMedia(sb,[lote('l2','b',{b2:'v2',b3:'v3',b9:'w1'},{},[cut('c1',['b9','b3','b2']),cut('c0')])]);
+ assert.deepEqual(r.cuts.list.map(c=>[c.name,c.block]),[['c1','b3'],['c0','b2']],'sin bloques en el corte, el primero enlazado');
+ assert.equal(r.cuts.current,r.cuts.list[1]);});
