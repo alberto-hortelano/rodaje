@@ -268,3 +268,9 @@ test('fuente: Montaje por ruta, sin montajeFocus (#65)',()=>{
  assert.ok(!src.includes('montajeFocus'));assert.ok(src.includes("goRoute({view:'montaje',lote:b"));assert.ok(src.includes('onWrite:()=>lazy.invalidate(p.id)'));assert.ok(src.includes('({lote:montajeLote,block:montajeBlock}=m.route())'));
  for(const x of ['montajeStart(','onRoute(','onWrite();','route:inUse'])assert.ok(mont.includes(x),'falta '+x);assert.ok(!mont.includes('focus?.lote'));
  assert.match(mont,/send=async verdict=>\{[^]*?b\.attempts=await api\('\/api\/lote-review'[^]*?onWrite\(\);/,'send llama a onWrite tras un veredicto correcto');});
+
+test('fuente: sección Producción bajo demanda (#65 B)',()=>{
+ for(const x of ['lazy.index(',"'/api/production?project='",'data-prod-slot','data-prod-shot','environmentUses(relationIndexFor(p)','levelShotIds(X.L.node)'])assert.ok(src.includes(x),'falta '+x);
+ assert.equal(src.split('prod:true').length-1,1,'solo Planos pasa prod:true a shotTile');assert.match(src,/seqHTML=\(e,x\)=>[^\n]*shotTile\(\{[^}]*prod:true\}\)/);
+ assert.ok(!/api\([^)]*\/api\/production/.test(src),'la producción solo se pide por productionData');
+ assert.match(src,/'<section class="panel" id="environment-model"><\/section>'\+envUsesHTML\(e\)/,'la sección de entorno va debajo del panel del modelo, sin tocarlo');});

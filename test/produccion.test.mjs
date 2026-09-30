@@ -1,6 +1,7 @@
 // Producción por plano (#65): productionIndex (puro), montajeStart y el lector de disco productionFor (lib/lotes.mjs).
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';
-import {productionIndex,montajeStart} from '../app/workflow.mjs';
+import {productionIndex,montajeStart,productionView,PRODUCTION_VERDICTS,levelShotIds,environmentUses,relationIndexFor,appearanceTree,appearanceLevel} from '../app/workflow.mjs';
+import {relProject} from './fixtures/relaciones.mjs';
 const {DATA}=await import('../lib/paths.mjs'),L=await import('../lib/lotes.mjs');
 
 // Vivo con p1…p4; l2 (reciente) y l1; has responde a un Set de ficheros relativos al proyecto.
@@ -68,6 +69,46 @@ test('montajeStart: lote de la ruta, recordado o el primero; block solo con su l
  assert.deepEqual(montajeStart(lotes,{lote:'nope'},'zz'),{lote:'a',block:null,missing:'nope'});
  assert.deepEqual(montajeStart(lotes,null,null),{lote:'a',block:null,missing:null});
  assert.deepEqual(montajeStart([],{lote:'x'},'y'),{lote:null,block:null,missing:'x'});});
+
+// Entrega B: modelo de la sección Producción, planos de un nivel de Apariciones y ambientes de un entorno.
+test('productionView: sin servidor, vacío y con datos',()=>{
+ assert.deepEqual(productionView(null,['p1']),{available:false,empty:true,shots:[]});assert.deepEqual(productionView({error:'x'},['p1']).available,false);
+ assert.deepEqual(productionView({shots:{}},['p1']),{available:true,empty:true,shots:[]});
+ const v=productionView(idx(),['p2','p1','p9','p1']);assert.equal(v.empty,false);assert.deepEqual(v.shots.map(s=>s.id),['p2','p1'],'orden de ids, sin repetir ni huérfanos');
+ const [a,b]=v.shots[1].lotes;assert.deepEqual([a.lote,a.block,a.part,a.from,a.to,a.attempts],['l2','b1',0,0,2,2]);
+ assert.deepEqual(a.route,{view:'montaje',lote:'l2',block:'b1'});assert.deepEqual(b.route,{view:'montaje',lote:'l1',block:'b1'});
+ assert.deepEqual(a.cuts,[{name:'corte',start:0,end:4,route:{view:'montaje',lote:'l2',block:'b1'}}]);assert.deepEqual(b.cuts.map(c=>[c.name,c.start,c.end]),[['b',0,3]]);
+ assert.deepEqual(productionView(idx(),['p9']),{available:true,empty:true,shots:[]});});
+test('productionView: veredicto vigente',()=>{
+ const f=fixture();delete f.lotes[1].attempts.b1;const v=productionView(productionIndex({...f,has}),['p1','p3']),vs=v.shots.flatMap(s=>s.lotes.map(e=>[s.id,e.lote,e.block,e.verdict.key,e.verdict.label]));
+ assert.deepEqual(vs,[['p1','l2','b1','pending',PRODUCTION_VERDICTS.pending],['p1','l1','b1','none','Pendiente'],['p3','l1','b2','accepted','Aceptada'],['p3','l1','b3','rejected','Sin toma válida']]);
+ assert.deepEqual(PRODUCTION_VERDICTS,{accepted:'Aceptada',pending:'Sin revisar',rejected:'Sin toma válida',none:'Pendiente'});});
+test('productionView: animación 3D con ruta a la viñeta y no lanza con entradas raras',()=>{
+ const v=productionView(idx(),['p4']);assert.deepEqual(v.shots[0].lotes,[]);
+ assert.deepEqual(v.shots[0].anim3d[0],{file:'storyboards/sb/animacion-3d/v-v02.mp4',version:2,at:'b',duration:3.5,storyboard:'sb',storyboardShot:'v1',route:{view:'storyboard',storyboard:'sb',panel:'v1'}});
+ assert.deepEqual(productionView(idx(),null),{available:true,empty:true,shots:[]});
+ const odd=productionView({shots:{a:{},b:{lotes:null,anim3d:'x'},c:{lotes:[null,{lote:'L',block:'B',cuts:[null,{name:'n'}]}],anim3d:[null,{}]},toString:1}},['a','b','c','toString',null,7]);
+ assert.deepEqual(odd.shots.map(s=>s.id),['c']);assert.deepEqual(odd.shots[0].lotes[0].verdict.key,'none');assert.deepEqual(odd.shots[0].lotes[0].cuts,[{name:'n',start:null,end:null,route:{view:'montaje',lote:'L',block:'B'}}]);
+ assert.deepEqual(odd.shots[0].anim3d,[]);assert.deepEqual(productionView({shots:{}},['constructor']).shots,[]);});
+test('levelShotIds',()=>{
+ const ix=relationIndexFor(relProject()),T=appearanceTree(ix,'character/beto'),f1=T.roots[0].children[0];
+ assert.equal(f1.key,'seq/f1');assert.deepEqual(levelShotIds(f1),['t3','t4']);assert.deepEqual(levelShotIds({kind:'act',children:T.roots}),['t3','t4','t5']);
+ assert.deepEqual(levelShotIds({kind:'act',children:[f1,f1,{kind:'shot',id:'t3',children:[]}]}),['t3','t4'],'un plano repetido sale una vez');
+ assert.deepEqual(levelShotIds({kind:'shot',id:'x'}),['x']);assert.deepEqual(levelShotIds(null),[]);assert.deepEqual(levelShotIds({children:[null,1]}),[]);});
+test('environmentUses',()=>{
+ const ix=relationIndexFor(relProject()),a=environmentUses(ix,'env-a'),b=environmentUses(ix,'env-b');
+ assert.deepEqual(a.map(u=>[u.id,u.name,u.via]),[['plaza','Plaza','environment']]);assert.deepEqual(b.map(u=>[u.id,u.name,u.via]),[['nave','Nave','modelSpace']]);
+ assert.deepEqual(a[0].route,{view:'location',location:'plaza'});assert.equal(b[0].total.sequences,2);
+ for(const u of [...a,...b]){const T=appearanceTree(ix,'location/'+u.id,{current:true,inherited:false});assert.ok(u.levels.length);
+  for(const l of u.levels){assert.equal(l.kind,'sequence');assert.deepEqual(l.route,{view:'location',location:u.id,at:l.key});const L=appearanceLevel(T,l.route.at,ix);assert.equal(L.missing,false);assert.equal(L.key,l.key);assert.equal(L.node.label,l.label);}}
+ assert.deepEqual(b[0].levels.map(l=>l.key),['seq/f1']);
+ const all=environmentUses(ix,'env-a',{current:false});assert.deepEqual(all[0].levels.map(l=>l.key),['seq/f1','seq/k1']);
+ const one=environmentUses(ix,'env-a',{current:false,max:1});assert.deepEqual([one[0].levels.length,one[0].more],[1,1]);assert.equal(all[0].more,0);
+ // Raíz que es nivel sin secuencias (story «Sin secuencia») y entorno sin ambientes.
+ const p=relProject();p.storyboards.push({id:'sb3',title:'Suelto',version:1,sequences:[{id:'sc3',title:'Tres',location:'plaza',shots:[{id:'P9',code:'C1',title:'x',duration:2,cast:[],dialogue:[]}]}]});
+ p.environments.push({id:'env-c',builder:'m/c.js',data:'m/c.json'});const ix2=relationIndexFor(p),u=environmentUses(ix2,'env-a')[0];
+ assert.ok(u.levels.some(l=>l.kind==='story'&&l.key==='sb/sb3'),JSON.stringify(u.levels));assert.deepEqual(environmentUses(ix2,'env-c'),[]);
+ assert.deepEqual(environmentUses(ix,'nope'),[]);assert.deepEqual(environmentUses(null,'env-a'),[]);});
 
 // Lector sobre un proyecto en DATA (test/setup.mjs), como test/lotes.test.mjs.
 const P='produccion-test',base=path.join(DATA,P);

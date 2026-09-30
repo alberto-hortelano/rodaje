@@ -369,6 +369,20 @@ export function productionIndex({lotes,anim3d,live,has=()=>true}={}){const shots
   entry(e.shot).anim3d.push({file:e.file,version:e.version??null,at:e.at??null,duration:e.duration??null,storyboard:g.storyboard??null,storyboardShot:e.storyboardShot??null});}
  for(const [id,s] of Object.entries(shots)){s.anim3d.sort((a,b)=>(b.version||0)-(a.version||0)||String(b.at||'').localeCompare(String(a.at||'')));if(!alive.has(id))s.orphan=true;}
  return {shots,skipped};}
+// Sección «Producción» (#65 B): modelo de vista de la respuesta de /api/production (null: sin servidor) para los planos ids, en su orden y sin
+// repetir. Omite los planos sin lotes ni animación 3D y los huérfanos. Veredicto vigente por entrada: sin intentos, none; con elegido, accepted
+// (o pending si está sin revisar); con intentos y sin elegido, rejected. Rutas a Montaje con lote y bloque; la animación 3D, a su viñeta. No lanza.
+export const PRODUCTION_VERDICTS={accepted:'Aceptada',pending:'Sin revisar',rejected:'Sin toma válida',none:'Pendiente'};
+const productionVerdict=e=>{const key=!(Array.isArray(e.attempts)&&e.attempts.length)?'none':e.current===null||e.current===undefined?'rejected':e.pending?'pending':'accepted';return {key,label:PRODUCTION_VERDICTS[key]};};
+export function productionView(prod,ids){const src=isObj(prod)&&isObj(prod.shots)?prod.shots:null;if(!src)return {available:false,empty:true,shots:[]};const shots=[];
+ for(const id of new Set(Array.isArray(ids)?ids:[])){const s=typeof id==='string'&&Object.hasOwn(src,id)?src[id]:null;if(!isObj(s)||s.orphan)continue;
+  const lotes=(Array.isArray(s.lotes)?s.lotes:[]).filter(isObj).map(e=>{const route=()=>({view:'montaje',lote:e.lote,block:e.block});
+   return {lote:e.lote,block:e.block,part:e.part??0,from:e.from??null,to:e.to??null,attempts:Array.isArray(e.attempts)?e.attempts.length:0,current:e.current??null,verdict:productionVerdict(e),route:route(),
+    cuts:(Array.isArray(e.cuts)?e.cuts:[]).filter(isObj).map(c=>({name:c.name,start:c.start??null,end:c.end??null,route:route()}))};});
+  const anim3d=(Array.isArray(s.anim3d)?s.anim3d:[]).filter(a=>isObj(a)&&a.file).map(a=>({file:a.file,version:a.version??null,at:a.at??null,duration:a.duration??null,storyboard:a.storyboard??null,storyboardShot:a.storyboardShot??null,
+   route:a.storyboard?{view:'storyboard',storyboard:a.storyboard,...(a.storyboardShot?{panel:a.storyboardShot}:{})}:null}));
+  if(lotes.length||anim3d.length)shots.push({id,lotes,anim3d});}
+ return {available:true,empty:!shots.length,shots};}
 // Lote y bloque con que abre Montaje (#65). lotes: [{id}] de /api/lotes; route: {lote, block} de la URL; remembered: el último lote usado.
 // block solo vale con su lote (la vista lo valida contra el plan); missing: el lote de la URL que no existe, para el aviso.
 export function montajeStart(lotes,route,remembered){const ids=(Array.isArray(lotes)?lotes:[]).map(l=>l?.id),want=route?.lote||null;
@@ -1332,6 +1346,18 @@ export function appearanceCrumbs(p,route,level){const v=route?.view,base=levelCr
  if(!base.length||!level?.path?.length)return base;const id=route[v],out=[base[0],{...base[1],route:{view:v,[v]:id}},
   ...level.path.map(a=>({key:a.key,kind:a.kind,label:a.label,route:{view:v,[v]:id,at:a.key}}))];
  out[out.length-1]={...out.at(-1),route:null};return out;}
+// Ids de los planos de un nodo de appearanceTree y de su subárbol (#65), en orden y sin repetir.
+export function levelShotIds(node){const out=new Set(),walk=a=>{if(!isObj(a))return;if(a.kind==='shot'&&typeof a.id==='string')out.add(a.id);(Array.isArray(a.children)?a.children:[]).forEach(walk);};walk(node);return [...out];}
+// Ambientes que usan un entorno (#65), en orden del proyecto: via (environment si es su location.environment; si no, modelSpace), el total de
+// sus apariciones directas (appearanceTree sin heredados, como la página del ambiente) y sus niveles: cada secuencia del árbol en profundidad,
+// sin bajar más, o la raíz tal cual si es nivel y no tiene secuencias; como mucho max, el resto en more. Entorno desconocido → []. Pura.
+export function environmentUses(index,envId,{current=true,max=12}={}){const ek='environment/'+envId;if(!index?.nodes?.has?.(ek))return [];
+ return (index.environmentLocations?.get(ek)||[]).map(lk=>{const n=index.nodes.get(lk),id=n.id,T=appearanceTree(index,lk,{current,inherited:false}),found=[];
+  const hasSeq=a=>a.kind==='sequence'||a.children.some(hasSeq),walk=a=>{if(a.kind==='sequence')found.push(a);else a.children.forEach(walk);};
+  for(const r of T.roots){if(hasSeq(r))walk(r);else if(APPEARANCE_LEVELS.has(r.kind))found.push(r);}
+  const route={view:'location',location:id};
+  return {id,name:n.data?.name||id,via:n.data?.environment===envId?'environment':'modelSpace',route,total:T.total,
+   levels:found.slice(0,max).map(a=>({key:a.key,kind:a.kind,label:a.label,route:{...route,at:a.key}})),more:Math.max(0,found.length-max)};});}
 // ---- Buscador y facetas (#59): lógica de la barra de búsqueda de las vistas transversales (docs/ARQUITECTURA.md). Puras; el estado va en la URL
 // (q, f) y en localStorage, nunca en proyecto.json. Ítem {key, kind, id, text, facets:{faceta:[valores]}, group, subs?, ref}; sub {key, kind, scene,
 // label, text, facets}. Definición de faceta {id, label, sub?, values:[{value, label}]}; sub: también se exige a las subs para marcar coincidencias.

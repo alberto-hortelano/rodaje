@@ -247,3 +247,9 @@ details.menu.down>div{top:calc(100% + 4px);bottom:auto}details.menu.end>div,deta
 .tile .tree-actions{margin-top:auto}.tile .ap-line{margin:0}.tile .ap-chev{margin-left:auto}
 .tile.sb-card{gap:0;padding-bottom:0}.tile.sb-card-page{display:grid}
 .shots-seq>.tiles{margin-top:12px}
+/* Producción por plano (#65): filas compactas que se envuelven; en Planos, un plegable pequeño al pie de la tarjeta. */
+.prod-shot+.prod-shot{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.prod-label{margin-bottom:6px;overflow-wrap:anywhere}
+.prod-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:12px;padding:4px 0;min-width:0;overflow-wrap:anywhere}.prod-row .pill{font-size:11px;padding:2px 8px}
+.prod-cuts,.prod-a3d{display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:2px 6px;min-width:0}.prod-a3d+.prod-a3d::before{content:'·';color:var(--muted)}
+.prod-fold summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--muted)}.prod-fold .prod-body{margin-top:6px}.prod-fold .prod-row{font-size:11px}
+.env-levels{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;align-items:baseline}.env-level .eyebrow{margin:0 4px 0 0;letter-spacing:.8px}
