@@ -181,7 +181,7 @@ test('fuente: menú, vistas nuevas, sin las antiguas y renombrados',()=>{
 
 test('fuente: Escaleta por niveles, migas únicas, versión, escena y posición sin esperar a las imágenes perezosas',()=>{
  assert.match(src,/#workspace img:not\(\[loading="lazy"\]\)/);
- for(const d of ['data-level=','class="level-link"','data-route','data-sb-version','data-sb-scene=','data-shots-seq=','loading="lazy" class="tree-thumb"','aria-current="page"','aria-label="Ruta"'])assert.ok(src.includes(d),'falta '+d);
+ for(const d of ['data-level=',"linkCls:'level-link'",'data-route','data-sb-version','data-sb-scene=','data-shots-seq=','loading="lazy" decoding="async"','class="tiles','data-cols="','aria-current="page"','aria-label="Ruta"'])assert.ok(src.includes(d),'falta '+d);
  for(const a of ["'sb-current:'","'shots:'","'tree:seq/'"])assert.ok(src.includes(a),'falta '+a);
  for(const x of ['levelCrumbs(','levelResolve(','crumbsNav(levelCrumbs(',"'No existe en la escaleta: '","localStorage.removeItem('rodaje-tree-'"])assert.ok(src.includes(x),'falta '+x);
  for(const x of ['treeStore','tree-node','storyCrumbs','treeOpen',"'tree-fold'",'data-tree=','data-loaded','class="tree-kids"','bind(kids)','<nav class="crumbs" aria-label="Ruta"><ol>${crumbs.map'])assert.ok(!src.includes(x),'queda '+x);
@@ -189,10 +189,10 @@ test('fuente: Escaleta por niveles, migas únicas, versión, escena y posición 
  for(const x of ['sbMove(','ol.scrollLeft=ol.scrollWidth',"['sb-scene',sceneId]","' target'"])assert.ok(!src.includes(x),'queda '+x);
  assert.equal(src.split('<nav class="crumbs"').length,2,'un solo sitio pinta migas');assert.match(src,/function bind\(root\)/);});
 
-test('estilos: niveles, miniaturas, migas sin desbordar y foco',()=>{
+test('estilos: tarjetas 16:9, rejilla por columnas, migas sin desbordar y foco',()=>{
  const rule=sel=>new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\{([^}]*)\\}').exec(css)?.[1]||'';
- assert.match(rule('.tree-thumb'),/aspect-ratio:16\/9/);assert.match(rule('.tree-thumb'),/width:96px/);assert.match(rule('.tree-thumb'),/object-fit:cover/);
- assert.match(rule('.level-item'),/display:flex/);assert.match(rule('.level-link'),/min-width:0/);
+ assert.match(rule('.tile-media'),/aspect-ratio:16\/9/);assert.match(rule('.tile-media'),/overflow:hidden/);assert.match(rule('.tile-media>img'),/object-fit:cover/);
+ assert.match((/\n\.tiles\{([^}]*)\}/.exec(css)?.[1]||''),/repeat\(var\(--cols/);assert.match((/\n\.tile\{([^}]*)\}/.exec(css)?.[1]||''),/flex-direction:column/);assert.doesNotMatch((/\n\.tile\{([^}]*)\}/.exec(css)?.[1]||''),/overflow/);for(const x of ['.tree-thumb','.levels{','.grid.cast'])assert.ok(!css.includes(x),'queda '+x);
  assert.match(rule('.crumbs ol'),/display:flex/);assert.match(rule('.crumbs li+li::before'),/content:'›'/);assert.match(rule('.crumbs li>a,.crumbs li>span'),/text-overflow:ellipsis/);
  const movil=/@media\(max-width:750px\)\{\.crumbs ol\{([^}]*)\}/.exec(css)?.[1]||'';assert.match(movil,/flex-wrap:wrap/);assert.match(movil,/overflow:visible/);assert.doesNotMatch(movil,/overflow-x:auto/);
  assert.match(css,/\.crumbs li>span\[aria-current\]\{max-width:none;white-space:normal/);assert.ok(!css.includes('.sb-seq.target'),'la escena ya no es foco');for(const x of ['.tree-kids','.tree-node','.tree-panel'])assert.ok(!css.includes(x),'queda '+x);});

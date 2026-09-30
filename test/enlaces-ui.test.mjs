@@ -18,7 +18,7 @@ const session=(fn,viewport=VIEWPORTS.lineaBase)=>withChrome(async browser=>{cons
 const load=async(page,q='',pid=id)=>{await page.goto(URL0+'?project='+pid+q);await page.waitForSelector('#workspace .heading');await page.waitForTimeout(150);};
 const counter=page=>page.evaluate(async()=>(await import('/workflow.mjs')).relationCounters.relatedTo);
 const texts=(page,sel)=>page.$$eval(sel,l=>l.map(e=>e.textContent.replace(/\s+/g,' ').trim()));
-const card=a=>`article.card:has([data-action="shot:${a}"])`;
+const card=a=>`article.tree-shot:has([data-action="shot:${a}"])`;
 
 test('páginas: la raíz no calcula relaciones; el acto, una por nivel y ficha; la línea nunca dentro del enlace',{skip:SIN_CHROME},()=>session(async page=>{
  await load(page,'&view=tree');assert.equal(await counter(page),0);assert.equal(await page.$$eval('.rel-links',l=>l.length),0);
@@ -45,7 +45,7 @@ test('Planos, estudio y Animación: ambiente propio o heredado, fuera de campo y
  await load(page,'&view=shots');
  const t3=(await texts(page,card('e1:c2:t3')+' .rel-links'))[0],t2=(await texts(page,card('e1:c1:t2')+' .rel-links'))[0];
  assert.match(t3,/Ambiente Bosque/);assert.doesNotMatch(t3,/heredado/);assert.match(t2,/Ambiente Plaza heredado/);
- assert.deepEqual([await page.textContent(card('e1:c1:t1')+' .pill'),await page.textContent(card('e1:c1:t1')+' h3')],['P01','Entrada']);
+ assert.deepEqual([await page.textContent(card('e1:c1:t1')+' .tree-code'),await page.textContent(card('e1:c1:t1')+' .tile-title')],['P01','Entrada']);
  for(const v of ['shot','anim']){await load(page,`&view=${v}&episode=e1&sequence=c2&shot=t3`);const h=await texts(page,'.rel-head');assert.equal(h.length,1,v);assert.match(h[0],/fuera de campo · pa/);}}));
 
 test('entidades: sin id, la lista sin aviso; con id inexistente, el aviso',{skip:SIN_CHROME},()=>session(async page=>{

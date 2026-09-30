@@ -6264,17 +6264,17 @@ var Tile = class {
   get posAtEnd() {
     return this.posAtStart + this.length;
   }
-  posBefore(tile, start = this.posAtStart) {
+  posBefore(tile2, start = this.posAtStart) {
     let pos = start;
     for (let child of this.children) {
-      if (child == tile)
+      if (child == tile2)
         return pos;
       pos += child.length + child.breakAfter;
     }
     throw new RangeError("Invalid child in posBefore");
   }
-  posAfter(tile) {
-    return this.posBefore(tile) + tile.length;
+  posAfter(tile2) {
+    return this.posBefore(tile2) + tile2.length;
   }
   covers(side) {
     return true;
@@ -6364,9 +6364,9 @@ var DocTile = class extends CompositeTile {
     super(dom);
     this.view = view2;
   }
-  owns(tile) {
-    for (; tile; tile = tile.parent)
-      if (tile == this)
+  owns(tile2) {
+    for (; tile2; tile2 = tile2.parent)
+      if (tile2 == this)
         return true;
     return false;
   }
@@ -6377,9 +6377,9 @@ var DocTile = class extends CompositeTile {
     for (; ; ) {
       if (!dom)
         return null;
-      let tile = Tile.get(dom);
-      if (tile && this.owns(tile))
-        return tile;
+      let tile2 = Tile.get(dom);
+      if (tile2 && this.owns(tile2))
+        return tile2;
       dom = dom.parentNode;
     }
   }
@@ -6414,21 +6414,21 @@ var DocTile = class extends CompositeTile {
   // to get coordinates for positions that aren't valid cursor positions).
   resolveBlock(pos, side) {
     let before, beforeOff = -1, after, afterOff = -1;
-    this.blockTiles((tile, off) => {
-      let end = off + tile.length;
+    this.blockTiles((tile2, off) => {
+      let end = off + tile2.length;
       if (pos >= off && pos <= end) {
-        if (tile.isWidget() && side >= -1 && side <= 1) {
-          if (tile.flags & 32)
+        if (tile2.isWidget() && side >= -1 && side <= 1) {
+          if (tile2.flags & 32)
             return true;
-          if (tile.flags & 16)
+          if (tile2.flags & 16)
             before = void 0;
         }
-        if ((off < pos || pos == end && (side < -1 ? tile.length : tile.covers(1))) && (!before || !tile.isWidget() && before.isWidget())) {
-          before = tile;
+        if ((off < pos || pos == end && (side < -1 ? tile2.length : tile2.covers(1))) && (!before || !tile2.isWidget() && before.isWidget())) {
+          before = tile2;
           beforeOff = pos - off;
         }
-        if ((end > pos || pos == off && (side > 1 ? tile.length : tile.covers(-1))) && (!after || !tile.isWidget() && after.isWidget())) {
-          after = tile;
+        if ((end > pos || pos == off && (side > 1 ? tile2.length : tile2.covers(-1))) && (!after || !tile2.isWidget() && after.isWidget())) {
+          after = tile2;
           afterOff = pos - off;
         }
       }
@@ -6455,10 +6455,10 @@ var BlockWrapperTile = class _BlockWrapperTile extends CompositeTile {
     return this.wrapper.attributes;
   }
   static of(wrapper, dom) {
-    let tile = new _BlockWrapperTile(dom || document.createElement(wrapper.tagName), wrapper);
+    let tile2 = new _BlockWrapperTile(dom || document.createElement(wrapper.tagName), wrapper);
     if (!dom)
-      tile.flags |= 4;
-    return tile;
+      tile2.flags |= 4;
+    return tile2;
   }
 };
 var LineTile = class _LineTile extends CompositeTile {
@@ -6484,9 +6484,9 @@ var LineTile = class _LineTile extends CompositeTile {
   // be after/before a cursor position.
   resolveInline(pos, side, forCoords) {
     let before = null, beforeOff = -1, after = null, afterOff = -1;
-    function scan(tile, pos2) {
-      for (let i2 = 0, off = 0; i2 < tile.children.length && off <= pos2; i2++) {
-        let child = tile.children[i2], end = off + child.length;
+    function scan(tile2, pos2) {
+      for (let i2 = 0, off = 0; i2 < tile2.children.length && off <= pos2; i2++) {
+        let child = tile2.children[i2], end = off + child.length;
         if (end >= pos2) {
           if (child.isComposite()) {
             scan(child, pos2 - off);
@@ -6514,11 +6514,11 @@ var LineTile = class _LineTile extends CompositeTile {
   domIn(pos, side) {
     let found = this.resolveInline(pos, side);
     if (found) {
-      let { tile, offset } = found;
-      if (this.dom.contains(tile.dom)) {
-        if (tile.isText())
-          return new DOMPos(tile.dom, Math.min(tile.dom.nodeValue.length, offset));
-        return tile.domPosFor(offset, tile.flags & 16 ? 1 : tile.flags & 32 ? -1 : side);
+      let { tile: tile2, offset } = found;
+      if (this.dom.contains(tile2.dom)) {
+        if (tile2.isText())
+          return new DOMPos(tile2.dom, Math.min(tile2.dom.nodeValue.length, offset));
+        return tile2.domPosFor(offset, tile2.flags & 16 ? 1 : tile2.flags & 32 ? -1 : side);
       }
       let parent = found.tile.parent, saw = false;
       for (let ch of parent.children) {
@@ -6532,10 +6532,10 @@ var LineTile = class _LineTile extends CompositeTile {
     return new DOMPos(this.dom, 0);
   }
 };
-function fallbackRect(tile) {
-  let last2 = tile.dom.lastChild;
+function fallbackRect(tile2) {
+  let last2 = tile2.dom.lastChild;
   if (!last2)
-    return tile.dom.getBoundingClientRect();
+    return tile2.dom.getBoundingClientRect();
   let rects = clientRectsFor(last2);
   return rects[rects.length - 1] || null;
 }
@@ -6552,10 +6552,10 @@ var MarkTile = class _MarkTile extends CompositeTile {
     return this.mark.attrs;
   }
   static of(mark, dom) {
-    let tile = new _MarkTile(dom || document.createElement(mark.tagName), mark);
+    let tile2 = new _MarkTile(dom || document.createElement(mark.tagName), mark);
     if (!dom)
-      tile.flags |= 4;
-    return tile;
+      tile2.flags |= 4;
+    return tile2;
   }
 };
 var TextTile = class _TextTile extends Tile {
@@ -6609,10 +6609,10 @@ var TextTile = class _TextTile extends Tile {
     return rtl == null ? rect : flattenRect(rect, (flatten2 ? flatten2 > 0 : side < 0) == rtl);
   }
   static of(text2, dom) {
-    let tile = new _TextTile(dom || document.createTextNode(text2), text2);
+    let tile2 = new _TextTile(dom || document.createTextNode(text2), text2);
     if (!dom)
-      tile.flags |= 2;
-    return tile;
+      tile2.flags |= 2;
+    return tile2;
   }
 };
 var WidgetTile = class _WidgetTile extends Tile {
@@ -6705,20 +6705,20 @@ var TilePointer = class {
   // has been traversed. When side is 1, leave, enter, or skip
   // everything at the end position.
   advance(dist2, side, walker) {
-    let { tile, index, beforeBreak, parents } = this;
+    let { tile: tile2, index, beforeBreak, parents } = this;
     while (dist2 || side > 0) {
-      if (!tile.isComposite()) {
-        let len = tile.length;
+      if (!tile2.isComposite()) {
+        let len = tile2.length;
         if (index < len && dist2) {
           let take = Math.min(dist2, len - index);
           if (walker)
-            walker.skip(tile, index, index + take);
+            walker.skip(tile2, index, index + take);
           dist2 -= take;
           index += take;
         }
         if (index == len) {
-          beforeBreak = !!tile.breakAfter;
-          ({ tile, index } = parents.pop());
+          beforeBreak = !!tile2.breakAfter;
+          ({ tile: tile2, index } = parents.pop());
           index++;
         } else if (!dist2) {
           break;
@@ -6730,30 +6730,30 @@ var TilePointer = class {
           walker.break();
         dist2--;
         beforeBreak = false;
-      } else if (index == tile.children.length) {
+      } else if (index == tile2.children.length) {
         if (!dist2 && !parents.length)
           break;
         if (walker)
-          walker.leave(tile);
-        beforeBreak = !!tile.breakAfter;
-        ({ tile, index } = parents.pop());
+          walker.leave(tile2);
+        beforeBreak = !!tile2.breakAfter;
+        ({ tile: tile2, index } = parents.pop());
         index++;
       } else {
-        let next = tile.children[index], brk = next.breakAfter;
+        let next = tile2.children[index], brk = next.breakAfter;
         if ((side > 0 ? next.length <= dist2 : next.length < dist2) && (!walker || walker.skip(next, 0, next.length) !== false || !next.isComposite)) {
           beforeBreak = !!brk;
           index++;
           dist2 -= next.length;
         } else {
-          parents.push({ tile, index });
-          tile = next;
+          parents.push({ tile: tile2, index });
+          tile2 = next;
           index = 0;
           if (walker && next.isComposite())
             walker.enter(next);
         }
       }
     }
-    this.tile = tile;
+    this.tile = tile2;
     this.index = index;
     this.beforeBreak = beforeBreak;
     return this;
@@ -6782,7 +6782,7 @@ var TileBuilder = class {
     this.wrappers = [];
     this.wrapperPos = 0;
   }
-  addText(text2, marks2, openStart, tile) {
+  addText(text2, marks2, openStart, tile2) {
     var _a2;
     this.flushBuffer();
     let parent = this.ensureMarks(marks2, openStart);
@@ -6793,10 +6793,10 @@ var TileBuilder = class {
         2
         /* Reused.DOM */
       );
-      let tile2 = parent.children[parent.children.length - 1] = new TextTile(prev.dom, prev.text + text2);
-      tile2.parent = parent;
+      let tile3 = parent.children[parent.children.length - 1] = new TextTile(prev.dom, prev.text + text2);
+      tile3.parent = parent;
     } else {
-      parent.append(tile || TextTile.of(text2, (_a2 = this.cache.find(TextTile)) === null || _a2 === void 0 ? void 0 : _a2.dom));
+      parent.append(tile2 || TextTile.of(text2, (_a2 = this.cache.find(TextTile)) === null || _a2 === void 0 ? void 0 : _a2.dom));
     }
     this.pos += text2.length;
     this.afterWidget = null;
@@ -6822,8 +6822,8 @@ var TileBuilder = class {
       } else {
         let { dom } = mark;
         if (this.cache.reused.get(mark)) {
-          let tile = Tile.get(mark.dom);
-          if (tile)
+          let tile2 = Tile.get(mark.dom);
+          if (tile2)
             dom = freeNode(mark.dom);
         }
         let nw = MarkTile.of(mark.mark, dom);
@@ -6859,11 +6859,11 @@ var TileBuilder = class {
     this.pos += widget.length;
     this.afterWidget = widget;
   }
-  addMark(tile, marks2, openStart) {
+  addMark(tile2, marks2, openStart) {
     this.flushBuffer();
     let parent = this.ensureMarks(marks2, openStart);
-    parent.append(tile);
-    this.pos += tile.length;
+    parent.append(tile2);
+    this.pos += tile2.length;
     this.afterWidget = null;
   }
   addBlockWidget(widget) {
@@ -6881,13 +6881,13 @@ var TileBuilder = class {
     var _a2;
     if (!attrs)
       attrs = lineBaseAttrs;
-    let tile = LineTile.start(attrs, dom || ((_a2 = this.cache.find(LineTile)) === null || _a2 === void 0 ? void 0 : _a2.dom), !!dom);
-    this.getBlockPos().append(this.lastBlock = this.curLine = tile);
+    let tile2 = LineTile.start(attrs, dom || ((_a2 = this.cache.find(LineTile)) === null || _a2 === void 0 ? void 0 : _a2.dom), !!dom);
+    this.getBlockPos().append(this.lastBlock = this.curLine = tile2);
   }
-  addLine(tile) {
-    this.getBlockPos().append(tile);
-    this.pos += tile.length;
-    this.lastBlock = tile;
+  addLine(tile2) {
+    this.getBlockPos().append(tile2);
+    this.pos += tile2.length;
+    this.lastBlock = tile2;
     this.endLine();
   }
   addBreak() {
@@ -6912,9 +6912,9 @@ var TileBuilder = class {
         parent = last2;
         openStart--;
       } else {
-        let tile = MarkTile.of(mark, (_a2 = this.cache.find(MarkTile, (m2) => m2.mark.eq(mark))) === null || _a2 === void 0 ? void 0 : _a2.dom);
-        parent.append(tile);
-        parent = tile;
+        let tile2 = MarkTile.of(mark, (_a2 = this.cache.find(MarkTile, (m2) => m2.mark.eq(mark))) === null || _a2 === void 0 ? void 0 : _a2.dom);
+        parent.append(tile2);
+        parent = tile2;
         openStart = 0;
       }
     }
@@ -6967,9 +6967,9 @@ var TileBuilder = class {
       if (wrap.from < this.pos && last2 instanceof BlockWrapperTile && last2.wrapper.eq(wrap.wrapper)) {
         parent = last2;
       } else {
-        let tile = BlockWrapperTile.of(wrap.wrapper, (_a2 = this.cache.find(BlockWrapperTile, (t2) => t2.wrapper.eq(wrap.wrapper))) === null || _a2 === void 0 ? void 0 : _a2.dom);
-        parent.append(tile);
-        parent = tile;
+        let tile2 = BlockWrapperTile.of(wrap.wrapper, (_a2 = this.cache.find(BlockWrapperTile, (t2) => t2.wrapper.eq(wrap.wrapper))) === null || _a2 === void 0 ? void 0 : _a2.dom);
+        parent.append(tile2);
+        parent = tile2;
       }
     }
     return parent;
@@ -7040,27 +7040,27 @@ var TileCache = class {
     this.reused = /* @__PURE__ */ new Map();
   }
   // Put a tile in the cache.
-  add(tile) {
-    let i2 = tile.constructor.bucket, bucket = this.buckets[i2];
+  add(tile2) {
+    let i2 = tile2.constructor.bucket, bucket = this.buckets[i2];
     if (bucket.length < 6)
-      bucket.push(tile);
+      bucket.push(tile2);
     else
       bucket[
         this.index[i2] = (this.index[i2] + 1) % 6
         /* C.Bucket */
-      ] = tile;
+      ] = tile2;
   }
   find(cls, test, type = 2) {
     let i2 = cls.bucket;
     let bucket = this.buckets[i2], off = this.index[i2];
     for (let j = 0; j < bucket.length; j++) {
-      let index = (j + off) % bucket.length, tile = bucket[index];
-      if ((!test || test(tile)) && !this.reused.has(tile)) {
+      let index = (j + off) % bucket.length, tile2 = bucket[index];
+      if ((!test || test(tile2)) && !this.reused.has(tile2)) {
         bucket.splice(index, 1);
         if (index < off)
           this.index[i2]--;
-        this.reused.set(tile, type);
-        return tile;
+        this.reused.set(tile2, type);
+        return tile2;
       }
     }
     return null;
@@ -7075,42 +7075,42 @@ var TileCache = class {
           pass = 1;
           i2 = 0;
         }
-        let tile = widgets[i2];
-        if (!this.reused.has(tile) && (pass == 0 ? tile.widget.compare(widget) : tile.widget.constructor == widget.constructor && widget.updateDOM(tile.dom, this.view, tile.widget))) {
+        let tile2 = widgets[i2];
+        if (!this.reused.has(tile2) && (pass == 0 ? tile2.widget.compare(widget) : tile2.widget.constructor == widget.constructor && widget.updateDOM(tile2.dom, this.view, tile2.widget))) {
           widgets.splice(i2, 1);
           if (i2 < this.index[0])
             this.index[0]--;
-          if (tile.widget == widget && tile.length == length && (tile.flags & (496 | 1)) == flags) {
+          if (tile2.widget == widget && tile2.length == length && (tile2.flags & (496 | 1)) == flags) {
             this.reused.set(
-              tile,
+              tile2,
               1
               /* Reused.Full */
             );
-            return tile;
+            return tile2;
           } else {
             this.reused.set(
-              tile,
+              tile2,
               2
               /* Reused.DOM */
             );
-            return new WidgetTile(tile.dom, length, widget, tile.flags & ~(496 | 1) | flags);
+            return new WidgetTile(tile2.dom, length, widget, tile2.flags & ~(496 | 1) | flags);
           }
         }
       }
   }
-  reuse(tile) {
+  reuse(tile2) {
     this.reused.set(
-      tile,
+      tile2,
       1
       /* Reused.Full */
     );
-    return tile;
+    return tile2;
   }
-  maybeReuse(tile, type = 2) {
-    if (this.reused.has(tile))
+  maybeReuse(tile2, type = 2) {
+    if (this.reused.has(tile2))
       return void 0;
-    this.reused.set(tile, type);
-    return tile.dom;
+    this.reused.set(tile2, type);
+    return tile2.dom;
   }
   clear() {
     for (let i2 = 0; i2 < this.buckets.length; i2++)
@@ -7134,12 +7134,12 @@ var TileUpdate = class {
     );
     this.old = new TilePointer(old);
     this.reuseWalker = {
-      skip: (tile, from, to) => {
-        this.cache.add(tile);
-        if (tile.isComposite())
+      skip: (tile2, from, to) => {
+        this.cache.add(tile2);
+        if (tile2.isComposite())
           return false;
       },
-      enter: (tile) => this.cache.add(tile),
+      enter: (tile2) => this.cache.add(tile2),
       leave: () => {
       },
       break: () => {
@@ -7182,12 +7182,12 @@ var TileUpdate = class {
   preserve(length, incStart, incEnd) {
     let activeMarks = getMarks(this.old), openMarks = this.openMarks;
     this.old.advance(length, incEnd ? 1 : -1, {
-      skip: (tile, from, to) => {
-        if (tile.isWidget()) {
+      skip: (tile2, from, to) => {
+        if (tile2.isWidget()) {
           if (this.openWidget) {
             this.builder.continueWidget(to - from);
           } else {
-            let widget = to > 0 || from < tile.length ? WidgetTile.of(tile.widget, this.view, to - from, tile.flags & 496, this.cache.maybeReuse(tile)) : this.cache.reuse(tile);
+            let widget = to > 0 || from < tile2.length ? WidgetTile.of(tile2.widget, this.view, to - from, tile2.flags & 496, this.cache.maybeReuse(tile2)) : this.cache.reuse(tile2);
             if (widget.flags & 256) {
               widget.flags &= ~1;
               this.builder.addBlockWidget(widget);
@@ -7197,30 +7197,30 @@ var TileUpdate = class {
               openMarks = activeMarks.length;
             }
           }
-        } else if (tile.isText()) {
+        } else if (tile2.isText()) {
           this.builder.ensureLine(null);
-          if (!from && to == tile.length && !this.cache.reused.has(tile)) {
-            this.builder.addText(tile.text, activeMarks, openMarks, this.cache.reuse(tile));
+          if (!from && to == tile2.length && !this.cache.reused.has(tile2)) {
+            this.builder.addText(tile2.text, activeMarks, openMarks, this.cache.reuse(tile2));
           } else {
-            this.cache.add(tile);
-            this.builder.addText(tile.text.slice(from, to), activeMarks, openMarks);
+            this.cache.add(tile2);
+            this.builder.addText(tile2.text.slice(from, to), activeMarks, openMarks);
           }
           openMarks = activeMarks.length;
-        } else if (tile.isLine()) {
-          tile.flags &= ~1;
+        } else if (tile2.isLine()) {
+          tile2.flags &= ~1;
           this.cache.reused.set(
-            tile,
+            tile2,
             1
             /* Reused.Full */
           );
-          this.builder.addLine(tile);
-        } else if (tile instanceof WidgetBufferTile) {
-          this.cache.add(tile);
-        } else if (tile instanceof MarkTile) {
+          this.builder.addLine(tile2);
+        } else if (tile2 instanceof WidgetBufferTile) {
+          this.cache.add(tile2);
+        } else if (tile2 instanceof MarkTile) {
           this.builder.ensureLine(null);
-          this.builder.addMark(tile, activeMarks, openMarks);
+          this.builder.addMark(tile2, activeMarks, openMarks);
           this.cache.reused.set(
-            tile,
+            tile2,
             1
             /* Reused.Full */
           );
@@ -7230,21 +7230,21 @@ var TileUpdate = class {
         }
         this.openWidget = false;
       },
-      enter: (tile) => {
-        if (tile.isLine()) {
-          this.builder.addLineStart(tile.attrs, this.cache.maybeReuse(tile));
+      enter: (tile2) => {
+        if (tile2.isLine()) {
+          this.builder.addLineStart(tile2.attrs, this.cache.maybeReuse(tile2));
         } else {
-          this.cache.add(tile);
-          if (tile instanceof MarkTile)
-            activeMarks.unshift(tile.mark);
+          this.cache.add(tile2);
+          if (tile2 instanceof MarkTile)
+            activeMarks.unshift(tile2.mark);
         }
         this.openWidget = false;
       },
-      leave: (tile) => {
-        if (tile.isLine()) {
+      leave: (tile2) => {
+        if (tile2.isLine()) {
           if (activeMarks.length)
             activeMarks.length = openMarks = 0;
-        } else if (tile instanceof MarkTile) {
+        } else if (tile2 instanceof MarkTile) {
           activeMarks.shift();
           openMarks = Math.min(openMarks, activeMarks.length);
         }
@@ -7274,14 +7274,14 @@ var TileUpdate = class {
           } else {
             let widget = deco.widget || (deco.block ? NullWidget.block : NullWidget.inline);
             let flags = widgetFlags(deco);
-            let tile = this.cache.findWidget(widget, to2 - from2, flags) || WidgetTile.of(widget, this.view, to2 - from2, flags);
+            let tile2 = this.cache.findWidget(widget, to2 - from2, flags) || WidgetTile.of(widget, this.view, to2 - from2, flags);
             if (deco.block) {
               if (deco.startSide > 0)
                 b2.addLineStartIfNotCovered(pendingLineAttrs);
-              b2.addBlockWidget(tile);
+              b2.addBlockWidget(tile2);
             } else {
               b2.ensureLine(pendingLineAttrs);
-              b2.addInlineWidget(tile, active, openStart);
+              b2.addInlineWidget(tile2, active, openStart);
             }
           }
           pendingLineAttrs = null;
@@ -7326,14 +7326,14 @@ var TileUpdate = class {
   getCompositionContext(text2) {
     let marks2 = [], line = null;
     for (let parent = text2.parentNode; ; parent = parent.parentNode) {
-      let tile = Tile.get(parent);
+      let tile2 = Tile.get(parent);
       if (parent == this.view.contentDOM)
         break;
-      if (tile instanceof MarkTile)
-        marks2.push(tile);
-      else if (tile === null || tile === void 0 ? void 0 : tile.isLine())
-        line = tile;
-      else if (tile instanceof BlockWrapperTile) ;
+      if (tile2 instanceof MarkTile)
+        marks2.push(tile2);
+      else if (tile2 === null || tile2 === void 0 ? void 0 : tile2.isLine())
+        line = tile2;
+      else if (tile2 instanceof BlockWrapperTile) ;
       else if (parent.nodeName == "DIV" && !line)
         line = new LineTile(parent, lineBaseAttrs);
       else if (!line)
@@ -7344,14 +7344,14 @@ var TileUpdate = class {
     return { line, marks: marks2 };
   }
 };
-function hasContent(tile, requireText) {
-  let scan = (tile2) => {
-    for (let ch of tile2.children)
+function hasContent(tile2, requireText) {
+  let scan = (tile3) => {
+    for (let ch of tile3.children)
       if ((requireText ? ch.isText() : ch.length) || scan(ch))
         return true;
     return false;
   };
-  return scan(tile);
+  return scan(tile2);
 }
 function widgetFlags(deco) {
   let flags = deco.isReplace ? (deco.startSide < 0 ? 64 : 0) | (deco.endSide > 0 ? 128 : 0) : deco.startSide > 0 ? 32 : 16;
@@ -7375,16 +7375,16 @@ function addLineDeco(value, deco) {
 function getMarks(ptr) {
   let found = [];
   for (let i2 = ptr.parents.length; i2 > 1; i2--) {
-    let tile = i2 == ptr.parents.length ? ptr.tile : ptr.parents[i2].tile;
-    if (tile instanceof MarkTile)
-      found.push(tile.mark);
+    let tile2 = i2 == ptr.parents.length ? ptr.tile : ptr.parents[i2].tile;
+    if (tile2 instanceof MarkTile)
+      found.push(tile2.mark);
   }
   return found;
 }
 function freeNode(node) {
-  let tile = Tile.get(node);
-  if (tile)
-    tile.setDOM(node.cloneNode());
+  let tile2 = Tile.get(node);
+  if (tile2)
+    tile2.setDOM(node.cloneNode());
   return node;
 }
 var NullWidget = class extends WidgetType {
@@ -7632,19 +7632,19 @@ var DocView = class {
       sel.collapse(anchorNode, anchorOffset);
   }
   posFromDOM(node, offset) {
-    let tile = this.tile.nearest(node);
-    if (!tile)
+    let tile2 = this.tile.nearest(node);
+    if (!tile2)
       return this.tile.dom.compareDocumentPosition(node) & 2 ? 0 : this.view.state.doc.length;
-    let start = tile.posAtStart;
-    if (tile.isComposite()) {
+    let start = tile2.posAtStart;
+    if (tile2.isComposite()) {
       let after;
-      if (node == tile.dom) {
-        after = tile.dom.childNodes[offset];
+      if (node == tile2.dom) {
+        after = tile2.dom.childNodes[offset];
       } else {
         let bias = maxOffset(node) == 0 ? 0 : offset == 0 ? -1 : 1;
         for (; ; ) {
           let parent = node.parentNode;
-          if (parent == tile.dom)
+          if (parent == tile2.dom)
             break;
           if (bias == 0 && parent.firstChild != parent.lastChild) {
             if (node == parent.firstChild)
@@ -7659,48 +7659,48 @@ var DocView = class {
         else
           after = node.nextSibling;
       }
-      if (after == tile.dom.firstChild)
+      if (after == tile2.dom.firstChild)
         return start;
       while (after && !Tile.get(after))
         after = after.nextSibling;
       if (!after)
-        return start + tile.length;
+        return start + tile2.length;
       for (let i2 = 0, pos = start; ; i2++) {
-        let child = tile.children[i2];
+        let child = tile2.children[i2];
         if (child.dom == after)
           return pos;
         pos += child.length + child.breakAfter;
       }
-    } else if (tile.isText()) {
-      return node == tile.dom ? start + offset : start + (offset ? tile.length : 0);
+    } else if (tile2.isText()) {
+      return node == tile2.dom ? start + offset : start + (offset ? tile2.length : 0);
     } else {
       return start;
     }
   }
   domAtPos(pos, side) {
-    let { tile, offset } = this.tile.resolveBlock(pos, side);
-    if (tile.isWidget())
-      return tile.domPosFor(offset, side);
-    return tile.domIn(offset, side);
+    let { tile: tile2, offset } = this.tile.resolveBlock(pos, side);
+    if (tile2.isWidget())
+      return tile2.domPosFor(offset, side);
+    return tile2.domIn(offset, side);
   }
   inlineDOMNearPos(pos, side) {
     let before, beforeOff = -1, beforeBad = false;
     let after, afterOff = -1, afterBad = false;
-    this.tile.blockTiles((tile, off) => {
-      if (tile.isWidget()) {
-        if (tile.flags & 32 && off >= pos)
+    this.tile.blockTiles((tile2, off) => {
+      if (tile2.isWidget()) {
+        if (tile2.flags & 32 && off >= pos)
           return true;
-        if (tile.flags & 16)
+        if (tile2.flags & 16)
           beforeBad = true;
       } else {
-        let end = off + tile.length;
+        let end = off + tile2.length;
         if (off <= pos) {
-          before = tile;
+          before = tile2;
           beforeOff = pos - off;
           beforeBad = end < pos;
         }
         if (end >= pos && !after) {
-          after = tile;
+          after = tile2;
           afterOff = pos - off;
           afterBad = off > pos;
         }
@@ -7719,25 +7719,25 @@ var DocView = class {
   // Get the coord of the element at the given side of the given
   // position. If rtl is given, flatten it using that text direction.
   coordsAt(pos, side, rtl) {
-    let { tile, offset } = this.tile.resolveBlock(pos, side);
-    if (tile.isWidget()) {
-      if (tile.widget instanceof BlockGapWidget)
+    let { tile: tile2, offset } = this.tile.resolveBlock(pos, side);
+    if (tile2.isWidget()) {
+      if (tile2.widget instanceof BlockGapWidget)
         return null;
-      return tile.coordsInWidget(offset, side, true);
+      return tile2.coordsInWidget(offset, side, true);
     }
-    return tile.coordsIn(offset, side, rtl);
+    return tile2.coordsIn(offset, side, rtl);
   }
   lineAt(pos, side) {
-    let { tile } = this.tile.resolveBlock(pos, side);
-    return tile.isLine() ? tile : null;
+    let { tile: tile2 } = this.tile.resolveBlock(pos, side);
+    return tile2.isLine() ? tile2 : null;
   }
   coordsForChar(pos) {
-    let { tile, offset } = this.tile.resolveBlock(pos, 1);
-    if (!tile.isLine())
+    let { tile: tile2, offset } = this.tile.resolveBlock(pos, 1);
+    if (!tile2.isLine())
       return null;
-    function scan(tile2, offset2) {
-      if (tile2.isComposite()) {
-        for (let ch of tile2.children) {
+    function scan(tile3, offset2) {
+      if (tile3.isComposite()) {
+        for (let ch of tile3.children) {
           if (ch.length >= offset2) {
             let found = scan(ch, offset2);
             if (found)
@@ -7747,11 +7747,11 @@ var DocView = class {
           if (offset2 < 0)
             break;
         }
-      } else if (tile2.isText() && offset2 < tile2.length) {
-        let end = findClusterBreak2(tile2.text, offset2);
+      } else if (tile3.isText() && offset2 < tile3.length) {
+        let end = findClusterBreak2(tile3.text, offset2);
         if (end == offset2)
           return null;
-        let rects = textRange(tile2.dom, offset2, end).getClientRects();
+        let rects = textRange(tile3.dom, offset2, end).getClientRects();
         for (let i2 = 0; i2 < rects.length; i2++) {
           let rect = rects[i2];
           if (i2 == rects.length - 1 || rect.top < rect.bottom && rect.left < rect.right)
@@ -7760,7 +7760,7 @@ var DocView = class {
       }
       return null;
     }
-    return scan(tile, offset);
+    return scan(tile2, offset);
   }
   measureVisibleLineHeights(viewport) {
     let result = [], { from, to } = viewport;
@@ -7768,11 +7768,11 @@ var DocView = class {
     let isWider = contentWidth > Math.max(this.view.scrollDOM.clientWidth, this.minWidth) + 1;
     let widest = -1, ltr = this.view.textDirection == Direction.LTR;
     let spaceAbove = 0;
-    let scan = (tile, pos, measureBounds) => {
-      for (let i2 = 0; i2 < tile.children.length; i2++) {
+    let scan = (tile2, pos, measureBounds) => {
+      for (let i2 = 0; i2 < tile2.children.length; i2++) {
         if (pos > to)
           break;
-        let child = tile.children[i2], end = pos + child.length;
+        let child = tile2.children[i2], end = pos + child.length;
         let childRect = child.dom.getBoundingClientRect(), { height } = childRect;
         if (measureBounds && !i2)
           spaceAbove += childRect.top - measureBounds.top;
@@ -7799,7 +7799,7 @@ var DocView = class {
             }
           }
         }
-        if (measureBounds && i2 == tile.children.length - 1)
+        if (measureBounds && i2 == tile2.children.length - 1)
           spaceAbove += measureBounds.bottom - childRect.bottom;
         pos = end + child.breakAfter;
       }
@@ -7808,14 +7808,14 @@ var DocView = class {
     return result;
   }
   textDirectionAt(pos) {
-    let { tile } = this.tile.resolveBlock(pos, 1);
-    return getComputedStyle(tile.dom).direction == "rtl" ? Direction.RTL : Direction.LTR;
+    let { tile: tile2 } = this.tile.resolveBlock(pos, 1);
+    return getComputedStyle(tile2.dom).direction == "rtl" ? Direction.RTL : Direction.LTR;
   }
   measureTextSize() {
-    let lineMeasure = this.tile.blockTiles((tile) => {
-      if (tile.isLine() && tile.children.length && tile.length <= 20) {
+    let lineMeasure = this.tile.blockTiles((tile2) => {
+      if (tile2.isLine() && tile2.children.length && tile2.length <= 20) {
         let totalWidth = 0, textHeight2;
-        for (let child of tile.children) {
+        for (let child of tile2.children) {
           if (!child.isText() || /[^ -~]/.test(child.text))
             return void 0;
           let rects = clientRectsFor(child.dom);
@@ -7826,8 +7826,8 @@ var DocView = class {
         }
         if (totalWidth)
           return {
-            lineHeight: tile.dom.getBoundingClientRect().height,
-            charWidth: totalWidth / tile.length,
+            lineHeight: tile2.dom.getBoundingClientRect().height,
+            charWidth: totalWidth / tile2.length,
             textHeight: textHeight2
           };
       }
@@ -7947,12 +7947,12 @@ var DocView = class {
     destroyDropped(this.tile);
   }
 };
-function destroyDropped(tile, reused) {
-  let r = reused === null || reused === void 0 ? void 0 : reused.get(tile);
+function destroyDropped(tile2, reused) {
+  let r = reused === null || reused === void 0 ? void 0 : reused.get(tile2);
   if (r != 1) {
     if (r == null)
-      tile.destroy();
-    for (let ch of tile.children)
+      tile2.destroy();
+    for (let ch of tile2.children)
       destroyDropped(ch, reused);
   }
 }
@@ -8420,37 +8420,37 @@ var InlineCoordsScan = class {
       after: this.x > (closestRect.left + closestRect.right) / 2 == ltr
     };
   }
-  scanText(tile, offset) {
+  scanText(tile2, offset) {
     let positions = [];
-    for (let i2 = 0; i2 < tile.length; i2 = findClusterBreak2(tile.text, i2))
+    for (let i2 = 0; i2 < tile2.length; i2 = findClusterBreak2(tile2.text, i2))
       positions.push(offset + i2);
-    positions.push(offset + tile.length);
+    positions.push(offset + tile2.length);
     let scan = this.scan(positions, (i2) => {
       let off = positions[i2] - offset, end = positions[i2 + 1] - offset;
-      return textRange(tile.dom, off, end).getClientRects();
+      return textRange(tile2.dom, off, end).getClientRects();
     });
     return scan.after ? new PosAssoc(positions[scan.i + 1], -1) : new PosAssoc(positions[scan.i], 1);
   }
-  scanTile(tile, offset) {
-    if (!tile.length)
+  scanTile(tile2, offset) {
+    if (!tile2.length)
       return new PosAssoc(offset, 1);
-    if (tile.children.length == 1) {
-      let child2 = tile.children[0];
+    if (tile2.children.length == 1) {
+      let child2 = tile2.children[0];
       if (child2.isText())
         return this.scanText(child2, offset);
       else if (child2.isComposite())
         return this.scanTile(child2, offset);
     }
     let positions = [offset];
-    for (let i2 = 0, pos2 = offset; i2 < tile.children.length; i2++)
-      positions.push(pos2 += tile.children[i2].length);
+    for (let i2 = 0, pos2 = offset; i2 < tile2.children.length; i2++)
+      positions.push(pos2 += tile2.children[i2].length);
     let scan = this.scan(positions, (i2) => {
-      let child2 = tile.children[i2];
+      let child2 = tile2.children[i2];
       if (child2.flags & 48)
         return null;
       return (child2.dom.nodeType == 1 ? child2.dom : textRange(child2.dom, 0, child2.length)).getClientRects();
     });
-    let child = tile.children[scan.i], pos = positions[scan.i];
+    let child = tile2.children[scan.i], pos = positions[scan.i];
     if (child.isText())
       return this.scanText(child, pos);
     if (child.isComposite())
@@ -8480,14 +8480,14 @@ var DOMReader = class {
       this.findPointBefore(parent, cur);
       let oldLen = this.text.length;
       this.readNode(cur);
-      let tile = Tile.get(cur), next = cur.nextSibling;
+      let tile2 = Tile.get(cur), next = cur.nextSibling;
       if (next == end) {
-        if ((tile === null || tile === void 0 ? void 0 : tile.breakAfter) && !next && parent != this.view.contentDOM)
+        if ((tile2 === null || tile2 === void 0 ? void 0 : tile2.breakAfter) && !next && parent != this.view.contentDOM)
           this.lineBreak();
         break;
       }
       let nextTile = Tile.get(next);
-      if ((tile && nextTile ? tile.breakAfter : (tile ? tile.breakAfter : isBlockElement(cur)) || isBlockElement(next) && (cur.nodeName != "BR" || (tile === null || tile === void 0 ? void 0 : tile.isWidget())) && this.text.length > oldLen) && !isEmptyToEnd(next, end))
+      if ((tile2 && nextTile ? tile2.breakAfter : (tile2 ? tile2.breakAfter : isBlockElement(cur)) || isBlockElement(next) && (cur.nodeName != "BR" || (tile2 === null || tile2 === void 0 ? void 0 : tile2.isWidget())) && this.text.length > oldLen) && !isEmptyToEnd(next, end))
         this.lineBreak();
       cur = next;
     }
@@ -8521,8 +8521,8 @@ var DOMReader = class {
     }
   }
   readNode(node) {
-    let tile = Tile.get(node);
-    let fromView = tile && tile.overrideDOMText;
+    let tile2 = Tile.get(node);
+    let fromView = tile2 && tile2.overrideDOMText;
     if (fromView != null) {
       this.findPointInside(node, fromView.length);
       for (let i2 = fromView.iter(); !i2.next().done; ) {
@@ -8628,18 +8628,18 @@ var DOMChange = class {
     }
   }
 };
-function domBoundsAround(tile, from, to, offset) {
-  if (tile.isComposite()) {
+function domBoundsAround(tile2, from, to, offset) {
+  if (tile2.isComposite()) {
     let fromI = -1, fromStart = -1, toI = -1, toEnd = -1;
-    for (let i2 = 0, pos = offset, prevEnd = offset; i2 < tile.children.length; i2++) {
-      let child = tile.children[i2], end = pos + child.length;
+    for (let i2 = 0, pos = offset, prevEnd = offset; i2 < tile2.children.length; i2++) {
+      let child = tile2.children[i2], end = pos + child.length;
       if (pos < from && end > to)
         return domBoundsAround(child, from, to, pos);
       if (end >= from && fromI == -1) {
         fromI = i2;
         fromStart = pos;
       }
-      if (pos > to && child.dom.parentNode == tile.dom) {
+      if (pos > to && child.dom.parentNode == tile2.dom) {
         toI = i2;
         toEnd = prevEnd;
         break;
@@ -8649,12 +8649,12 @@ function domBoundsAround(tile, from, to, offset) {
     }
     return {
       from: fromStart,
-      to: toEnd < 0 ? offset + tile.length : toEnd,
-      startDOM: (fromI ? tile.children[fromI - 1].dom.nextSibling : null) || tile.dom.firstChild,
-      endDOM: toI < tile.children.length && toI >= 0 ? tile.children[toI].dom : null
+      to: toEnd < 0 ? offset + tile2.length : toEnd,
+      startDOM: (fromI ? tile2.children[fromI - 1].dom.nextSibling : null) || tile2.dom.firstChild,
+      endDOM: toI < tile2.children.length && toI >= 0 ? tile2.children[toI].dom : null
     };
-  } else if (tile.isText()) {
-    return { from: offset, to: offset + tile.length, startDOM: tile.dom, endDOM: tile.dom.nextSibling };
+  } else if (tile2.isText()) {
+    return { from: offset, to: offset + tile2.length, startDOM: tile2.dom, endDOM: tile2.dom.nextSibling };
   } else {
     return null;
   }
@@ -9183,8 +9183,8 @@ function eventBelongsToEditor(view2, event) {
     return true;
   if (event.defaultPrevented)
     return false;
-  for (let node = event.target, tile; node != view2.contentDOM; node = node.parentNode)
-    if (!node || node.nodeType == 11 || (tile = Tile.get(node)) && tile.isWidget() && !tile.isHidden && tile.widget.ignoreEvent(event))
+  for (let node = event.target, tile2; node != view2.contentDOM; node = node.parentNode)
+    if (!node || node.nodeType == 11 || (tile2 = Tile.get(node)) && tile2.isWidget() && !tile2.isHidden && tile2.widget.ignoreEvent(event))
       return false;
   return true;
 }
@@ -9372,9 +9372,9 @@ function removeRangeAround(sel, pos) {
 handlers.dragstart = (view2, event) => {
   let { selection: { main: range } } = view2.state;
   if (event.target.draggable) {
-    let tile = view2.docView.tile.nearest(event.target);
-    if (tile && tile.isWidget()) {
-      let from = tile.posAtStart, to = from + tile.length;
+    let tile2 = view2.docView.tile.nearest(event.target);
+    if (tile2 && tile2.isWidget()) {
+      let from = tile2.posAtStart, to = from + tile2.length;
       if (from >= range.to || to <= range.from)
         range = EditorSelection.undirectionalRange(from, to);
     }
@@ -11634,20 +11634,20 @@ var DOMObserver = class {
     return handled;
   }
   readMutation(rec) {
-    let tile = this.view.docView.tile.nearest(rec.target);
-    if (!tile || tile.isWidget())
+    let tile2 = this.view.docView.tile.nearest(rec.target);
+    if (!tile2 || tile2.isWidget())
       return null;
-    tile.markDirty(rec.type == "attributes");
+    tile2.markDirty(rec.type == "attributes");
     if (rec.type == "childList") {
-      let childBefore = findChild(tile, rec.previousSibling || rec.target.previousSibling, -1);
-      let childAfter = findChild(tile, rec.nextSibling || rec.target.nextSibling, 1);
+      let childBefore = findChild(tile2, rec.previousSibling || rec.target.previousSibling, -1);
+      let childAfter = findChild(tile2, rec.nextSibling || rec.target.nextSibling, 1);
       return {
-        from: childBefore ? tile.posAfter(childBefore) : tile.posAtStart,
-        to: childAfter ? tile.posBefore(childAfter) : tile.posAtEnd,
+        from: childBefore ? tile2.posAfter(childBefore) : tile2.posAtStart,
+        to: childAfter ? tile2.posBefore(childAfter) : tile2.posAtEnd,
         typeOver: false
       };
     } else if (rec.type == "characterData") {
-      return { from: tile.posAtStart, to: tile.posAtEnd, typeOver: rec.target.nodeValue == rec.oldValue };
+      return { from: tile2.posAtStart, to: tile2.posAtEnd, typeOver: rec.target.nodeValue == rec.oldValue };
     } else {
       return null;
     }
@@ -11709,13 +11709,13 @@ var DOMObserver = class {
     }
   }
 };
-function findChild(tile, dom, dir) {
+function findChild(tile2, dom, dir) {
   while (dom) {
     let curTile = Tile.get(dom);
-    if (curTile && curTile.parent == tile)
+    if (curTile && curTile.parent == tile2)
       return curTile;
     let parent = dom.parentNode;
-    dom = parent != tile.dom ? parent : dir > 0 ? dom.nextSibling : dom.previousSibling;
+    dom = parent != tile2.dom ? parent : dir > 0 ? dom.nextSibling : dom.previousSibling;
   }
   return null;
 }
@@ -12547,7 +12547,7 @@ var EditorView = class _EditorView {
   non-whitespace characters.
   */
   moveByGroup(start, forward) {
-    return skipAtoms(this, start, moveByChar(this, start, forward, (initial) => byGroup(this, start.head, initial)));
+    return skipAtoms(this, start, moveByChar(this, start, forward, (initial2) => byGroup(this, start.head, initial2)));
   }
   /**
   Get the cursor position visually at the start or end of a line.
@@ -12871,8 +12871,8 @@ var EditorView = class _EditorView {
   static findFromDOM(dom) {
     var _a2;
     let content2 = dom.querySelector(".cm-content");
-    let tile = content2 && Tile.get(content2) || Tile.get(dom);
-    return ((_a2 = tile === null || tile === void 0 ? void 0 : tile.root) === null || _a2 === void 0 ? void 0 : _a2.view) || null;
+    let tile2 = content2 && Tile.get(content2) || Tile.get(dom);
+    return ((_a2 = tile2 === null || tile2 === void 0 ? void 0 : tile2.root) === null || _a2 === void 0 ? void 0 : _a2.view) || null;
   }
 };
 EditorView.styleModule = styleModule;
@@ -29393,7 +29393,7 @@ function mountMarkdown(dialog, value) {
 }
 
 // app/app.source.js
-import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, routeHref, historyStep, historyState, entryScroll, navActive, sequenceRole, treeModel, levelCrumbs, levelResolve, levelRoute, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, appearanceTree, appearanceEnvironments, relationLinks, relationLine, appearanceLevel, appearanceCrumbs, APPEARANCE_LEVELS, shotLabel, voiceStatusLabel, storyboardItems, storyboardResultSections, storyboardPage, storyScenes, movePanel, panelSceneOptions, shotItems, filterShotGroups, filterView as filterView2, hasFilters, parseFilters, filtersParam } from "./workflow.mjs";
+import { projectVariants, projectZones, projectChannels as projectChannels2, channelOf, zoneOf, catalogOptions, channelShort, catalogStyle, storyboardShot as storyboardShot2, storyboardPrompt, storyboardToEpisode, storyPlansLabel, applyStoryPlans, detachStory, outline, outlineSequence, coverPrompt, ISSUE_STATES, ISSUE_SEVERITIES, issueBoard, moveIssue, environmentList, environmentViewer, locationEnvironment, environmentChoice, hasPlantaEditor, plantaEditorUrl, modelSpaceEnvironment, routeView, applyShotCamera, storyboardAnimTargets, storyboardPlayer, storyboardSequenceHeader, parseRoute, routeQuery, routeKey, routeHref, historyStep, historyState, entryScroll, navActive, sequenceRole, treeModel, levelCrumbs, levelResolve, levelRoute, storyVersionOptions, setCurrentStory, shotGroups, projectStats, resolveSpeaker, storyboardDialogueWarnings, ROUTE_KEYS, relationIndexFor, nodeImage, firstNodeImage, cardColumns, appearanceTree, appearanceEnvironments, relationLinks, relationLine, appearanceLevel, appearanceCrumbs, APPEARANCE_LEVELS, shotLabel, voiceStatusLabel, storyboardItems, storyboardResultSections, storyboardPage, storyScenes, movePanel, panelSceneOptions, shotItems, filterShotGroups, filterView as filterView2, hasFilters, parseFilters, filtersParam } from "./workflow.mjs";
 
 // app/filtros.source.js
 import { filterView, toggleFilter } from "./workflow.mjs";
@@ -29689,7 +29689,7 @@ imageViewer.addEventListener("click", (e) => {
 });
 imageViewer.addEventListener("close", () => imageViewer.querySelector("img").removeAttribute("src"));
 function enableImageViewer(root) {
-  root.querySelectorAll("img:not(summary img):not(.level-link img)").forEach((img) => {
+  root.querySelectorAll("img:not(summary img):not(.tile-link img)").forEach((img) => {
     img.tabIndex = 0;
     img.setAttribute("role", "button");
     img.setAttribute("aria-label", "Ampliar imagen: " + (img.alt || "referencia"));
@@ -29733,7 +29733,12 @@ function bind(root) {
 }
 var pad2 = (n) => String(n).padStart(2, "0");
 var plural = (n, one, many) => n + " " + (n === 1 ? one : many);
-var treeThumb = (file, alt) => file ? `<img loading="lazy" class="tree-thumb" src="${media(file)}" alt="${esc2(alt)}">` : '<span class="tree-thumb blank" aria-hidden="true"></span>';
+var tileFrame = (file, alt, label = "") => `<div class="tile-media">${file ? `<img loading="lazy" decoding="async" src="${media(file)}" alt="${esc2(alt)}">` : `<span class="tile-blank" aria-hidden="true">${esc2(label)}</span>`}</div>`;
+function tile({ kind, cls = "", attrs = "", href = null, linkCls = "", still = false, image: image2 = null, alt = "", label = "", frame = null, head = "", meta: meta2 = "", metaCls = "", body = "" }) {
+  const F2 = frame ?? tileFrame(image2, alt, label), L2 = linkCls ? " " + linkCls : "";
+  return `<article class="tile tile-${kind}${cls ? " " + cls : ""}"${attrs}>${href ? `<a class="tile-link${L2}" href="${esc2(href)}" data-route>${F2}<span class="tile-head">${head}</span></a>` : still ? `<span class="tile-still${L2}">${F2}<span class="tile-head">${head}</span></span>` : F2 + (head ? `<div class="tile-head">${head}</div>` : "")}${meta2 ? `<div class="tile-meta${metaCls ? " " + metaCls : ""}">${meta2}</div>` : ""}${body}</article>`;
+}
+var tiles = (kind, items, { attrs = "", cls = "" } = {}) => `<div class="tiles${cls ? " " + cls : ""}" data-cols="${cardColumns(kind)}"${attrs}>${items.join("")}</div>`;
 var shotIds = (l3) => l3.episode.id + ":" + l3.sequence.id + ":" + l3.shot.id;
 var relLinksCache = { index: null, map: /* @__PURE__ */ new Map(), clear() {
   this.index = null;
@@ -29751,46 +29756,78 @@ function relHTML(key, { max = 6, current: current2 = true, cls = "" } = {}) {
   if (!relLinksCache.map.has(k)) relLinksCache.map.set(k, relationLinks(index, key, { current: current2 }));
   return relLineHTML(relationLine(relLinksCache.map.get(k), { max }), cls);
 }
-var treeLeaf = (l3) => `<div class="tree-shot" title="${esc2((l3.episode.title || l3.episode.id) + " / " + (l3.sequence.title || l3.sequence.id))}"><span>${esc2(shotLabel(l3.number, l3.shot.title).label + (l3.shot.duration ? ` \xB7 ${l3.shot.duration} s` : ""))}</span>${l3.role === "test" ? '<span class="pill">prueba</span>' : ""}<span class="tree-actions">${btn("Abrir estudio \u2192", "shot:" + shotIds(l3))}${btn("Animaci\xF3n", "anim:" + shotIds(l3))}</span>${relHTML("shot/" + l3.shot.id, { max: 4 })}</div>`;
-var treeLeaves = (list) => list.length ? list.map(treeLeaf).join("") : '<p class="tiny">Sin planos.</p>';
+var shotTile = (l3) => {
+  const t2 = l3.shot, L2 = shotLabel(l3.number, t2.title), d2 = String(t2.description || "");
+  return tile({
+    kind: "shot",
+    cls: "tree-shot",
+    attrs: ` title="${esc2((l3.episode.title || l3.episode.id) + " / " + (l3.sequence.title || l3.sequence.id))}"`,
+    href: routeQuery({ project: p.id, view: "shot", episode: l3.episode.id, sequence: l3.sequence.id, shot: t2.id }),
+    image: nodeImage(relationIndexFor(p), "shot/" + t2.id),
+    alt: L2.label,
+    label: L2.code,
+    head: `<span class="tree-code">${esc2(L2.code)}</span><b class="tile-title">${esc2(L2.title || t2.title || t2.id)}</b>`,
+    meta: (t2.duration ? levelPill(t2.duration + " s") : "") + (t2.lines?.length ? levelPill(plural(t2.lines.length, "di\xE1logo", "di\xE1logos")) : "") + (l3.role === "test" ? levelPill("prueba") : ""),
+    body: (d2 ? `<p class="tile-text">${esc2(clip2(d2, 90))}</p>` : "") + relHTML("shot/" + t2.id, { max: 4 }) + `<span class="tree-actions">${btn("Abrir estudio \u2192", "shot:" + shotIds(l3))}${btn("Animaci\xF3n", "anim:" + shotIds(l3))}</span>`
+  });
+};
+var treeLeaves = (list) => list.length ? tiles("shot", list.map(shotTile)) : '<p class="tiny">Sin planos.</p>';
 var fichaCard = (n) => {
   const s = n.sequence;
   return `<div class="ficha-body"><div class="sb-frame">${s.cover ? `<img loading="lazy" src="${media(s.cover)}" alt="${esc2(n.code + " \xB7 " + s.title)}">` : '<div class="sb-empty">Sin car\xE1tula \xB7 genera o sube una imagen</div>'}<span class="sb-code">${esc2(n.code)}</span>${n.minutes ? `<span class="sb-dur">${esc2(n.minutes)} min</span>` : ""}</div><div><p>${esc2(s.text || "Sin texto de escaleta.")}</p><details style="margin-top:10px"><summary class="tiny">Prompt de car\xE1tula</summary><textarea data-cover-prompt="${esc2(s.id)}" style="margin-top:8px;font-size:12px;min-height:120px" aria-label="Prompt de car\xE1tula de ${esc2(s.title)}">${esc2(s.coverPrompt || "")}</textarea><p class="tiny">Vac\xEDo: se compone con el estilo del proyecto y el texto de la secuencia.</p></details><div class="actions">${btn("Generar car\xE1tula", "gen-cover:" + s.id, s.cover ? "" : "lime")}${btn("Subir car\xE1tula", "upload-cover:" + s.id)}${btn("Prompt", "cover-prompt:" + s.id)}${btn("Editar", "edit-outline:" + s.id)}${s.covers?.length > 1 ? `<select data-cover-version="${esc2(s.id)}" aria-label="Versi\xF3n de la car\xE1tula">${opts(s.covers.map((x2, i2) => [x2.file, "Car\xE1tula " + (i2 + 1)]), s.cover)}</select>` : ""}</div></div></div>`;
 };
 var levelPill = (t2, cls = "") => `<span class="pill${cls ? " " + cls : ""}">${esc2(t2)}</span>`;
 var clip2 = (t2, n) => t2.length > n ? t2.slice(0, n - 1).trimEnd() + "\u2026" : t2;
-var levelItem = (n, cls, link, meta2 = "", extra = "") => `<article class="level-item ${cls}" data-level="${esc2(n.key)}"><a class="level-link" href="${esc2(routeQuery({ project: p.id, ...levelRoute(treeData, n.key) }))}" data-route>${link}</a>${meta2 ? `<span class="level-meta">${meta2}</span>` : ""}${extra}</article>`;
+var levelItem = (n, kind, cls, { image: image2 = null, alt = "", label = "", head = "", meta: meta2 = "", body = "" }) => tile({ kind, cls: "level-item " + cls, attrs: ` data-level="${esc2(n.key)}"`, href: routeQuery({ project: p.id, ...levelRoute(treeData, n.key) }), linkCls: "level-link", image: image2, alt, label, head, meta: meta2, metaCls: "level-meta", body });
 var fichaItem = (f2) => {
-  const cur = f2.children.find((c) => c.current), t2 = f2.sequence.text;
-  return levelItem(
-    f2,
-    "level-ficha",
-    `${treeThumb(f2.cover, f2.code + " \xB7 " + (f2.sequence.title || ""))}<span class="tree-code">${esc2(f2.code)}</span><b>${esc2(f2.sequence.title || f2.sequence.id)}</b>`,
-    (cur ? levelPill(`v${cur.version} vigente`, "ok") : "") + levelPill(f2.children.length ? plural(f2.children.length, "story", "storys") : "sin story") + (f2.shots.length ? levelPill(plural(f2.shots.length, "plano", "planos")) : "") + (f2.minutes ? levelPill(f2.minutes + " min") : ""),
-    (t2 ? `<p class="level-text">${esc2(clip2(String(t2), 180))}</p>` : "") + relHTML(f2.key, { max: 4 })
-  );
+  const cur = f2.children.find((c) => c.current), t2 = f2.sequence.text, name2 = f2.sequence.title || f2.sequence.id;
+  return levelItem(f2, "ficha", "level-ficha", {
+    image: nodeImage(relationIndexFor(p), f2.key),
+    alt: f2.code + " \xB7 " + name2,
+    label: f2.code,
+    head: `<span class="tree-code">${esc2(f2.code)}</span><b class="tile-title">${esc2(name2)}</b>`,
+    meta: (cur ? levelPill(`v${cur.version} vigente`, "ok") : "") + levelPill(f2.children.length ? plural(f2.children.length, "story", "storys") : "sin story") + (f2.shots.length ? levelPill(plural(f2.shots.length, "plano", "planos")) : "") + (f2.minutes ? levelPill(f2.minutes + " min") : ""),
+    body: (t2 ? `<p class="level-text">${esc2(clip2(String(t2), 180))}</p>` : "") + relHTML(f2.key, { max: 4 })
+  });
 };
 var storyItem = (n) => {
   const b2 = n.storyboard, c = n.container, own = c && sequenceRole(p, c.sequence) === "container", acts = (n.version && !n.current ? btn("Marcar como vigente", "sb-current:" + b2.id) : "") + (c ? own ? btn(`Planos en \xAB${esc2(c.sequence.title)}\xBB (${n.counts.shots}) \u2192`, "shots:" + c.sequence.id) : btn(`Planos en \xAB${esc2(c.sequence.title)}\xBB \u2192`, "tree:seq/" + c.sequence.id) : "");
-  return levelItem(n, "level-story", `<b>${n.version ? "v" + n.version + " \xB7 " : ""}${esc2(b2.title || b2.id)}</b>`, (n.current ? levelPill("vigente", "ok") : "") + `<span class="tiny">${plural(n.counts.scenes, "escena", "escenas")} \xB7 ${plural(n.counts.panels, "vi\xF1eta", "vi\xF1etas")}</span>`, (acts ? `<span class="tree-actions">${acts}</span>` : "") + relHTML(n.key, { max: 4 }));
+  return levelItem(n, "story", "level-story", {
+    image: nodeImage(relationIndexFor(p), n.key),
+    alt: b2.title || b2.id,
+    label: n.version ? "v" + n.version : "STORY",
+    head: `<b class="tile-title">${n.version ? "v" + n.version + " \xB7 " : ""}${esc2(b2.title || b2.id)}</b>`,
+    meta: (n.current ? levelPill("vigente", "ok") : "") + `<span class="tiny">${plural(n.counts.scenes, "escena", "escenas")} \xB7 ${plural(n.counts.panels, "vi\xF1eta", "vi\xF1etas")}</span>`,
+    body: relHTML(n.key, { max: 4 }) + (acts ? `<span class="tree-actions">${acts}</span>` : "")
+  });
 };
-var levels = (list) => `<div class="levels">${list.join("")}</div>`;
 function levelRootPage(heading2) {
-  const serie = p.type === "serie", storys = (a) => a.children.reduce((k, f2) => k + f2.children.length, 0);
-  return heading2("Escaleta.", (serie ? "Cap\xEDtulos" : "Actos") + ", secuencias y storys en orden. Entra en cada nivel; las migas te devuelven.", `<div class="row">${btn("Generar car\xE1tulas que faltan", "gen-covers")}</div>`) + levels([
-    ...treeData.acts.map((a) => levelItem(a, "level-act", `<span class="eyebrow">${serie ? "CAP\xCDTULO" : "ACTO"}</span><b>${esc2(a.episode.title || a.episode.id)}</b>`, levelPill(a.minutes + " min") + levelPill(plural(a.children.length, "secuencia", "secuencias")) + levelPill(plural(storys(a), "story", "storys")))),
-    ...treeData.groups.map((g) => levelItem(g, "level-group level-" + g.kind, g.kind === "tests" ? '<span class="eyebrow">FUERA DE LA ESCALETA</span><b>Pruebas</b><span class="level-sub">Secuencias de prueba con sus planos.</span>' : '<b>Sin secuencia</b><span class="level-sub">Storys que a\xFAn no cuelgan de una ficha.</span>', levelPill(g.kind === "tests" ? plural(g.children.length, "secuencia", "secuencias") : plural(g.children.length, "story", "storys"))))
+  const serie = p.type === "serie", ix = relationIndexFor(p), storys = (a) => a.children.reduce((k, f2) => k + f2.children.length, 0);
+  return heading2("Escaleta.", (serie ? "Cap\xEDtulos" : "Actos") + ", secuencias y storys en orden. Entra en cada nivel; las migas te devuelven.", `<div class="row">${btn("Generar car\xE1tulas que faltan", "gen-covers")}</div>`) + tiles("act", [
+    ...treeData.acts.map((a) => levelItem(a, "act", "level-act", {
+      image: nodeImage(ix, a.key),
+      alt: a.episode.title || a.episode.id,
+      label: serie ? "CAP\xCDTULO" : "ACTO",
+      head: `<span class="eyebrow">${serie ? "CAP\xCDTULO" : "ACTO"}</span><b class="tile-title">${esc2(a.episode.title || a.episode.id)}</b>`,
+      meta: levelPill(a.minutes + " min") + levelPill(plural(a.children.length, "secuencia", "secuencias")) + levelPill(plural(storys(a), "story", "storys"))
+    })),
+    ...treeData.groups.map((g) => levelItem(g, "group", "level-group level-" + g.kind, {
+      image: firstNodeImage(ix, g.children.map((c) => c.key)),
+      alt: g.kind === "tests" ? "Pruebas" : "Sin secuencia",
+      label: g.kind === "tests" ? "PRUEBAS" : "SIN SECUENCIA",
+      head: g.kind === "tests" ? '<span class="eyebrow">FUERA DE LA ESCALETA</span><b class="tile-title">Pruebas</b><span class="level-sub">Secuencias de prueba con sus planos.</span>' : '<b class="tile-title">Sin secuencia</b><span class="level-sub">Storys que a\xFAn no cuelgan de una ficha.</span>',
+      meta: levelPill(g.kind === "tests" ? plural(g.children.length, "secuencia", "secuencias") : plural(g.children.length, "story", "storys"))
+    }))
   ]) + (p.episodes.length ? "" : `<div class="empty"><h2>La escaleta se llena desde ${serie ? "los cap\xEDtulos" : "los actos"}.</h2><p>Crea el primero en Planos y sus secuencias aparecer\xE1n aqu\xED en orden, cada una con su car\xE1tula.</p></div>`);
 }
 function levelPage(n, heading2) {
   const head = (title2, desc, actions = "") => crumbsNav(levelCrumbs(p, { view: "tree", node: n.key }, treeData)) + heading2(title2, desc, actions), title = (x2) => esc2(x2?.title || x2?.id || "");
-  if (n.kind === "act") return head(title(n.episode), esc2(n.episode.synopsis || plural(n.children.length, "secuencia", "secuencias") + " \xB7 " + n.minutes + " min")) + relHTML(n.key, { max: 8, cls: "rel-head" }) + (n.children.length ? levels(n.children.map(fichaItem)) : '<p class="tiny">Sin secuencias todav\xEDa.</p>');
-  if (n.kind === "ficha") return head(esc2(n.code + " \xB7 " + (n.sequence.title || n.sequence.id)), esc2(n.minutes ? n.minutes + " min" : "")) + fichaCard(n) + relHTML(n.key, { cls: "rel-head" }) + (n.children.length ? `<section class="level-section"><h2>Storys</h2>${levels(n.children.map(storyItem))}</section>` : "") + (n.shots.length ? `<section class="level-section"><h2>Planos propios</h2>${treeLeaves(n.shots)}</section>` : "") + (n.children.length || n.shots.length ? "" : '<p class="tiny">Sin storys ni planos todav\xEDa.</p>');
+  if (n.kind === "act") return head(title(n.episode), esc2(n.episode.synopsis || plural(n.children.length, "secuencia", "secuencias") + " \xB7 " + n.minutes + " min")) + relHTML(n.key, { max: 8, cls: "rel-head" }) + (n.children.length ? tiles("ficha", n.children.map(fichaItem)) : '<p class="tiny">Sin secuencias todav\xEDa.</p>');
+  if (n.kind === "ficha") return head(esc2(n.code + " \xB7 " + (n.sequence.title || n.sequence.id)), esc2(n.minutes ? n.minutes + " min" : "")) + fichaCard(n) + relHTML(n.key, { cls: "rel-head" }) + (n.children.length ? `<section class="level-section"><h2>Storys</h2>${tiles("story", n.children.map(storyItem))}</section>` : "") + (n.shots.length ? `<section class="level-section"><h2>Planos propios</h2>${treeLeaves(n.shots)}</section>` : "") + (n.children.length || n.shots.length ? "" : '<p class="tiny">Sin storys ni planos todav\xEDa.</p>');
   if (n.kind === "test") return head(title(n.sequence), title(n.episode) + " \xB7 " + plural(n.shots.length, "plano", "planos"), `<div class="row">${btn("Ver en Planos \u2192", "shots:" + n.sequence.id)}</div>`) + relHTML(n.key, { cls: "rel-head" }) + `<section class="level-section"><h2>Planos</h2>${treeLeaves(n.shots)}</section>`;
-  if (n.kind === "tests") return head("Pruebas", "Secuencias de prueba, fuera de la escaleta.") + levels(n.children.map((t2) => levelItem(t2, "level-test", `<b>${title(t2.sequence)}</b>`, `<span class="tiny">${title(t2.episode)} \xB7 ${plural(t2.shots.length, "plano", "planos")}</span>`)));
-  return head("Sin secuencia", "Storys que a\xFAn no cuelgan de una ficha de la escaleta.") + levels(n.children.map(storyItem));
+  if (n.kind === "tests") return head("Pruebas", "Secuencias de prueba, fuera de la escaleta.") + tiles("test", n.children.map((t2) => levelItem(t2, "test", "level-test", { image: nodeImage(relationIndexFor(p), t2.key), alt: t2.sequence.title || t2.sequence.id, label: "PRUEBA", head: `<b class="tile-title">${title(t2.sequence)}</b>`, meta: `<span class="tiny">${title(t2.episode)} \xB7 ${plural(t2.shots.length, "plano", "planos")}</span>` })));
+  return head("Sin secuencia", "Storys que a\xFAn no cuelgan de una ficha de la escaleta.") + tiles("story", n.children.map(storyItem));
 }
-var entityRoute = (kind, id3) => esc2(routeQuery({ project: p.id, view: kind, [kind]: id3 }));
 var entityActions = (item, kind) => `<div class="actions">${btn("Editar", kind + ":" + item.id)}${btn("Subir imagen", "upload-" + kind + ":" + item.id)}${btn("Generar hoja", "gen-" + kind + ":" + item.id)}</div>`;
 var voiceLine = (c) => `<small>Voz: ${esc2(c.voice || "Sin asignar")}${/^[A-Za-z0-9]{20}$/.test(c.voice || "") ? ` \xB7 <a href="https://elevenlabs.io/app/voice-library?voiceId=${esc2(c.voice)}" target="_blank" rel="noopener">escuchar en ElevenLabs \u2197</a>` : ""}</small>`;
 var voiceActions = (c) => `<div class="actions">${btn("Probar voz", "voice:" + c.id)}${btn("Subir muestra", "upload-voice:" + c.id)}${c.kind !== "voice" && projectVariants(p).length > 1 ? btn("Variantes por zona", "variants:" + c.id) : ""}</div>`;
@@ -29801,8 +29838,26 @@ var modelSpaceBlock = (l3) => {
   return `<div class="note"><b>Encuadre 3D</b><p class="tiny">La imagen principal define el aspecto; esta vista fija la distribuci\xF3n y la c\xE1mara.</p><img src="${media(l3.modelSpace.snapshot)}" alt="Encuadre 3D de ${esc2(l3.name)}" style="width:100%;height:auto;object-fit:contain">${l3.modelSpace.room !== "exterior" && e ? btn("Visitar estancia en 3D", "visit-room:" + e.id + ":" + l3.modelSpace.room) : ""}</div>`;
 };
 var versionSelect = (item, kind) => item.images?.length > 1 ? `<label>Versi\xF3n visual<select data-version="${esc2(item.id)}" data-kind="${kind}">${opts(item.images.map((f2, i2) => [f2, "Versi\xF3n " + (i2 + 1)]), item.image)}</select></label>` : "";
-var characterCard = (c) => `<article class="card">${image(c.image)}<div class="inner"><div class="row between"><h2><a href="${entityRoute("character", c.id)}" data-route>${esc2(c.name)}</a></h2><span class="pill">PERSONAJE</span></div><p>${esc2((c.description || "").slice(0, 160))}</p>${voiceLine(c)}${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}${entityActions(c, "character")}${voiceActions(c)}${variantsBlock(c)}${versionSelect(c, "character")}</div></article>`;
-var locationCard = (l3) => `<article class="card">${image(l3.image)}<div class="inner"><div class="row between"><h2><a href="${entityRoute("location", l3.id)}" data-route>${esc2(l3.name)}</a></h2><span class="pill">${esc2(l3.kind)}</span></div><p>${esc2((l3.description || "").slice(0, 160))}</p>${entityActions(l3, "location")}${modelSpaceBlock(l3)}${versionSelect(l3, "location")}</div></article>`;
+var entityImage = (kind, x2) => nodeImage(relationIndexFor(p), kind + "/" + x2.id);
+var initial = (x2) => String(x2.name || x2.id || "?").trim().slice(0, 1).toUpperCase();
+var characterCard = (c) => tile({
+  kind: "character",
+  href: routeQuery({ project: p.id, view: "character", character: c.id }),
+  image: entityImage("character", c),
+  alt: c.name,
+  label: initial(c),
+  head: `<b class="tile-title">${esc2(c.name)}</b><span class="pill">PERSONAJE</span>`,
+  body: `<p class="tile-text">${esc2((c.description || "").slice(0, 160))}</p>${voiceLine(c)}${c.sample ? `<audio controls src="${media(c.sample)}"></audio>` : ""}${entityActions(c, "character")}${voiceActions(c)}${variantsBlock(c)}${versionSelect(c, "character")}`
+});
+var locationCard = (l3) => tile({
+  kind: "location",
+  href: routeQuery({ project: p.id, view: "location", location: l3.id }),
+  image: entityImage("location", l3),
+  alt: l3.name,
+  label: initial(l3),
+  head: `<b class="tile-title">${esc2(l3.name)}</b>${l3.kind ? `<span class="pill">${esc2(l3.kind)}</span>` : ""}`,
+  body: `<p class="tile-text">${esc2((l3.description || "").slice(0, 160))}</p>${entityActions(l3, "location")}${modelSpaceBlock(l3)}${versionSelect(l3, "location")}`
+});
 var crumbsNav = (list) => list.length < 2 ? "" : `<nav class="crumbs" aria-label="Ruta"><ol>${list.map((c) => `<li>${c.route ? `<a href="${esc2(routeQuery({ project: p.id, ...c.route }))}" title="${esc2(c.label)}" data-route>${esc2(c.label)}</a>` : `<span aria-current="page" title="${esc2(c.label)}">${esc2(c.label)}</span>`}</li>`).join("")}</ol></nav>`;
 var appearStore = { key: () => "rodaje-appear-all-" + p.id, get() {
   try {
@@ -29848,9 +29903,39 @@ var apEyebrow = (a) => a.kind === "act" ? p.type === "serie" ? "CAP\xCDTULO" : "
 var AP_OPEN = { act: "Abrir en la Escaleta", story: "Abrir story", scene: "Abrir escena" };
 var apOpen = (a) => AP_OPEN[a.kind] || (a.route?.view === "shots" ? "Abrir en Planos" : "Abrir en la Escaleta");
 var apPage = (a, text2 = "Abrir") => `<a class="ap-page" href="${esc2(routeQuery({ project: p.id, ...a.route }))}" data-route title="${esc2(apOpen(a) + " \xB7 " + a.label)}">${esc2(text2)} \u2197</a>`;
-var apRow = (a, ent) => `<article class="ap-row ap-${a.kind}" data-ap="${esc2(a.key)}">${a.children.length ? `<a class="ap-enter" href="${esc2(routeQuery({ project: p.id, ...ent, at: a.key }))}" data-route><span class="eyebrow">${apEyebrow(a)}</span><b>${esc2(a.label)}</b><span class="ap-chev" aria-hidden="true">\u203A</span></a>` : `<span class="ap-enter ap-still"><span class="eyebrow">${apEyebrow(a)}</span><b>${esc2(a.label)}</b></span>`}<span class="ap-meta">${apCount(a)}${apMarks(a)}</span>${apPage(a)}${apLines(a)}</article>`;
-var apInline = (a, sub = false) => `<div class="ap-leaf${sub ? " ap-sub" : ""}" data-ap="${esc2(a.key)}"><span class="eyebrow">${apEyebrow(a)}</span>${apLink(a)}${apMarks(a)}${apLines(a)}</div>` + a.children.map((c) => apInline(c, true)).join("");
-var apChildren = (list, ent) => list.length ? `<div class="ap-levels">${list.map((a) => APPEARANCE_LEVELS.has(a.kind) ? apRow(a, ent) : apInline(a)).join("")}</div>` : '<p class="tiny">Nada m\xE1s por debajo de este nivel.</p>';
+var apRow = (a, ent, ix) => tile({
+  kind: "ap-level",
+  cls: "ap-row ap-" + a.kind,
+  attrs: ` data-ap="${esc2(a.key)}"`,
+  href: a.children.length ? routeQuery({ project: p.id, ...ent, at: a.key }) : null,
+  still: !a.children.length,
+  linkCls: a.children.length ? "ap-enter" : "ap-enter ap-still",
+  image: nodeImage(ix, a.key),
+  alt: a.label,
+  label: apEyebrow(a),
+  head: `<span class="eyebrow">${apEyebrow(a)}</span><b class="tile-title">${esc2(a.label)}</b>${a.children.length ? '<span class="ap-chev" aria-hidden="true">\u203A</span>' : ""}`,
+  meta: apCount(a) + apMarks(a),
+  metaCls: "ap-meta",
+  body: apPage(a) + apLines(a)
+});
+var apSub = (a) => `<div class="ap-leaf ap-sub" data-ap="${esc2(a.key)}"><span class="eyebrow">${apEyebrow(a)}</span>${apLink(a)}${apMarks(a)}${apLines(a)}</div>`;
+var apInline = (a, ix) => tile({
+  kind: "ap-leaf",
+  cls: "ap-leaf",
+  attrs: ` data-ap="${esc2(a.key)}"`,
+  href: routeQuery({ project: p.id, ...a.route }),
+  image: nodeImage(ix, a.key),
+  alt: a.label,
+  label: apEyebrow(a),
+  head: `<span class="eyebrow">${apEyebrow(a)}</span><b class="tile-title">${esc2(a.label)}</b>`,
+  meta: apMarks(a),
+  body: apLines(a) + (a.children.length ? `<div class="ap-subs">${a.children.map(apSub).join("")}</div>` : "")
+});
+var apChildren = (list, ent, ix) => {
+  if (!list.length) return '<p class="tiny">Nada m\xE1s por debajo de este nivel.</p>';
+  const lv = list.filter((a) => APPEARANCE_LEVELS.has(a.kind)), lf = list.filter((a) => !APPEARANCE_LEVELS.has(a.kind));
+  return `<div class="ap-levels">${(lv.length ? tiles("ap-level", lv.map((a) => apRow(a, ent, ix))) : "") + (lf.length ? tiles("ap-leaf", lf.map((a) => apInline(a, ix))) : "")}</div>`;
+};
 function apResolve(key, inherited) {
   const all = appearStore.get(), index = relationIndexFor(p), T2 = appearanceTree(index, key, { current: !all, inherited }), L2 = appearanceLevel(T2, apAt, index);
   if ((L2.key ?? null) !== (apAt ?? null)) {
@@ -29865,7 +29950,7 @@ function appearancesHTML(X2, { note = "" } = {}) {
   const sum = [[t2.acts, p.type === "serie" ? "cap\xEDtulo" : "acto", p.type === "serie" ? "cap\xEDtulos" : "actos"], [t2.sequences, "secuencia", "secuencias"], [t2.storys, "story", "storys"], [t2.scenes, "escena", "escenas"], [t2.panels, "vi\xF1eta", "vi\xF1etas"], [t2.shots, "plano", "planos"], [t2.lines, "l\xEDnea", "l\xEDneas"]].filter(([n2]) => n2).map(([n2, a, b2]) => plural(n2, a, b2)).join(" \xB7 ");
   const empty = !T2.roots.length ? `<div class="empty"><h2>Sin apariciones todav\xEDa.</h2>${!all && appearanceTree(index, key, { current: false, inherited }).roots.length ? "<p>Hay apariciones en versiones no vigentes: marca \xABTodas las versiones\xBB.</p>" : ""}</div>` : "";
   const n = L2.node, head = n ? `<div class="ap-head ap-${n.kind}" data-ap="${esc2(n.key)}"><span class="eyebrow">${apEyebrow(n)}</span><h3>${esc2(n.label)}</h3><span class="ap-meta">${apCount(n)}${apMarks(n)}</span>${apPage(n, apOpen(n))}${apLines(n)}</div>` : "";
-  return entitySection("Apariciones", `<div class="row between"><p class="tiny">${esc2(sum || "Ninguna.")}</p><label class="ap-all"><input type="checkbox" data-appear-all${all ? " checked" : ""}> Todas las versiones</label></div>${note ? `<p class="tiny">${note}</p>` : ""}${empty || head + apChildren(n ? n.children : T2.roots, ent)}`);
+  return entitySection("Apariciones", `<div class="row between"><p class="tiny">${esc2(sum || "Ninguna.")}</p><label class="ap-all"><input type="checkbox" data-appear-all${all ? " checked" : ""}> Todas las versiones</label></div>${note ? `<p class="tiny">${note}</p>` : ""}${empty || head + apChildren(n ? n.children : T2.roots, ent, index)}`);
 }
 var apLevelPage = (item, X2, heading2, actions, note) => {
   const v2 = X2.key.split("/")[0];
@@ -29991,7 +30076,18 @@ async function render() {
   }
   if (view === "environments") {
     const list = environmentList(p);
-    html3 = heading2("Entornos 3D.", "Decorados en 3D con medidas reales: exterior, interior y piezas con nombre. Cada entorno se abre en su visor; los planos los usar\xE1n como decorado.", btn("+ Entorno GLB", "new-environment", "primary")) + (list.length ? `<div class="grid">${list.map((e) => `<article class="card">${image(e.image)}<div class="inner"><div class="row between"><h2>${esc2(e.name)}</h2><span class="pill">${esc2(e.kind === "no v\xE1lido" ? "VISOR NO V\xC1LIDO" : e.kind === "constructor" ? "VISOR 3D" : e.kind === "glb" ? "GLB" : "SIN MODELO")}</span></div><p>${esc2(e.description.slice(0, 220))}</p>${e.invalid ? `<small>${esc2(e.invalid)}</small>` : ""}${e.glb ? `<small>${esc2(e.glb)}</small>` : ""}<div class="actions">${btn("Abrir", e.action, "primary")}${btn("Editar", "edit-environment:" + e.id) + btn("Subir GLB", "upload-environment:" + e.id)}</div></div></article>`).join("")}</div>` : '<section class="panel"><p>Este proyecto a\xFAn no tiene entornos 3D. Sube un GLB (de Tripo, Meshy, Hunyuan3D\u2026) o a\xF1ade uno con constructor y datos en <code>environments</code>.</p></section>');
+    html3 = heading2("Entornos 3D.", "Decorados en 3D con medidas reales: exterior, interior y piezas con nombre. Cada entorno se abre en su visor; los planos los usar\xE1n como decorado.", btn("+ Entorno GLB", "new-environment", "primary")) + (list.length ? tiles("environment", list.map((e) => {
+      const k = e.kind === "no v\xE1lido" ? "VISOR NO V\xC1LIDO" : e.kind === "constructor" ? "VISOR 3D" : e.kind === "glb" ? "GLB" : "SIN MODELO";
+      return tile({
+        kind: "environment",
+        href: routeQuery({ project: p.id, view: "environment", environment: e.id }),
+        image: nodeImage(relationIndexFor(p), "environment/" + e.id),
+        alt: e.name,
+        label: k,
+        head: `<b class="tile-title">${esc2(e.name)}</b><span class="pill">${esc2(k)}</span>`,
+        body: `<p class="tile-text">${esc2(e.description.slice(0, 220))}</p>${e.invalid ? `<small>${esc2(e.invalid)}</small>` : ""}${e.glb ? `<small>${esc2(e.glb)}</small>` : ""}<div class="actions">${btn("Abrir", e.action, "primary")}${btn("Editar", "edit-environment:" + e.id) + btn("Subir GLB", "upload-environment:" + e.id)}</div>`
+      });
+    })) : '<section class="panel"><p>Este proyecto a\xFAn no tiene entornos 3D. Sube un GLB (de Tripo, Meshy, Hunyuan3D\u2026) o a\xF1ade uno con constructor y datos en <code>environments</code>.</p></section>');
   }
   if (view === "environment") {
     const e = (p.environments || []).find((x2) => x2.id === environmentId);
@@ -30014,7 +30110,7 @@ async function render() {
   }
   if (view === "characters" || view === "locations") {
     const chars = view === "characters", list = chars ? p.characters : p.locations;
-    html3 = heading2(chars ? "El reparto." : "Los lugares de la historia.", chars ? "Identidad visual, vestuario y voz de cada personaje." : "Referencias de luz, color y geograf\xEDa para cada ambiente.", btn(chars ? "+ Personaje" : "+ Ambiente", chars ? "new-character" : "new-location", "primary")) + `<div class="grid${chars ? " cast" : ""}">${list.map(chars ? characterCard : locationCard).join("") || `<div class="empty"><h2>${chars ? "Presenta a tu protagonista." : "Define el primer ambiente."}</h2><p>Puedes generar im\xE1genes o importar las que ya tienes.</p></div>`}</div>`;
+    html3 = heading2(chars ? "El reparto." : "Los lugares de la historia.", chars ? "Identidad visual, vestuario y voz de cada personaje." : "Referencias de luz, color y geograf\xEDa para cada ambiente.", btn(chars ? "+ Personaje" : "+ Ambiente", chars ? "new-character" : "new-location", "primary")) + (list.length ? tiles(chars ? "character" : "location", list.map(chars ? characterCard : locationCard)) : `<div class="empty"><h2>${chars ? "Presenta a tu protagonista." : "Define el primer ambiente."}</h2><p>Puedes generar im\xE1genes o importar las que ya tienes.</p></div>`);
   }
   if (view === "character" || view === "location") {
     const chars = view === "character", eid = chars ? characterId : locationId, item = (chars ? p.characters : p.locations).find((x2) => x2.id === eid);
@@ -30035,7 +30131,7 @@ async function render() {
   };
   const sbFrame = (t2, m2) => {
     const main = t2.render || t2.sketch, v2 = sbShown(m2);
-    return `<div class="sb-frame${v2 ? " has-video" + (m2.current ? "" : " show-img") : ""}">${main ? `<img src="${media(main)}" alt="${esc2((t2.code ? t2.code + " \xB7 " : "") + t2.title)}">` : '<div class="sb-empty">Sin vi\xF1eta \xB7 sube un boceto o genera el fotograma</div>'}${v2 ? `<video class="sb-video" controls preload="none"${main ? ` poster="${media(main)}"` : ""} src="${media(v2.video)}"></video>` : ""}${t2.code ? `<span class="sb-code">${esc2(t2.code)}</span>` : ""}${t2.duration ? `<span class="sb-dur">${esc2(t2.duration)} s</span>` : ""}${t2.render && t2.sketch ? `<img class="sb-sketch" src="${media(t2.sketch)}" alt="Boceto ${esc2(t2.code || t2.title)}">` : ""}${v2 ? `<span class="pill sb-take ${sbPillClass(v2)}" data-sb-pill>v${v2.n} \xB7 ${esc2(sbVerdict(v2))}</span><button type="button" class="sb-toggle" data-sb-toggle>${m2.current ? "Imagen" : "V\xEDdeo"}</button>` : ""}</div>`;
+    return `<div class="sb-frame${v2 ? " has-video" + (m2.current ? "" : " show-img") : ""}">${main ? `<img loading="lazy" decoding="async" src="${media(main)}" alt="${esc2((t2.code ? t2.code + " \xB7 " : "") + t2.title)}">` : '<div class="sb-empty">Sin vi\xF1eta \xB7 sube un boceto o genera el fotograma</div>'}${v2 ? `<video class="sb-video" controls preload="none"${main ? ` poster="${media(main)}"` : ""} src="${media(v2.video)}"></video>` : ""}${t2.code ? `<span class="sb-code">${esc2(t2.code)}</span>` : ""}${t2.duration ? `<span class="sb-dur">${esc2(t2.duration)} s</span>` : ""}${t2.render && t2.sketch ? `<img class="sb-sketch" loading="lazy" decoding="async" src="${media(t2.sketch)}" alt="Boceto ${esc2(t2.code || t2.title)}">` : ""}${v2 ? `<span class="pill sb-take ${sbPillClass(v2)}" data-sb-pill>v${v2.n} \xB7 ${esc2(sbVerdict(v2))}</span><button type="button" class="sb-toggle" data-sb-toggle>${m2.current ? "Imagen" : "V\xEDdeo"}</button>` : ""}</div>`;
   };
   const sbTakes = (t2, m2) => {
     if (!m2) return "";
@@ -30092,19 +30188,32 @@ y ${list.length - 20} m\xE1s` : "");
   const sbRefList = (t2) => t2.references?.length ? `<ul class="tiny sb-refs">${t2.references.map((r) => `<li>${esc2(sbRefPath(r))}${r?.role ? " \u2014 " + esc2(r.role) : ""}</li>`).join("")}</ul>` : "";
   function sbCard(b2, s, t2, { page = false } = {}) {
     const M2 = sbMedia?.data, CH = projectChannels2(p);
-    return `<article class="sb-card${page ? " sb-card-page" : ""}"${page ? ` data-sb-panel="${esc2(t2.id)}"` : ` draggable="true" data-sb-drag="${esc2(t2.id)}"`}>${sbFrame(t2, M2?.shots?.[t2.id])}<div class="inner"><div class="sb-card-head">${page ? "" : `<h3><a href="${esc2(routeQuery({ project: p.id, view: "storyboard", storyboard: b2.id, scene: s.id, panel: t2.id }))}" data-route>${esc2(t2.title)}</a></h3>`}${t2.zone ? ((z) => `<span class="pill zone" style="${catalogStyle(z, "zone")}">${esc2(z.unknown ? t2.zone : z.label)}</span>`)(zoneOf(p, t2.zone)) : ""}</div>${t2.camera ? `<p class="tiny" style="margin:6px 0 0">${esc2(t2.camera)}</p>` : ""}${t2.action ? `<p style="margin:8px 0 0">${esc2(t2.action)}</p>` : ""}${t2.dialogue?.length ? `<ul class="sb-dial">${t2.dialogue.map((l3) => `<li style="${catalogStyle(channelOf(CH, l3.channel), "ch")}"><b>${esc2(l3.who || p.characters.find((c) => c.id === l3.character)?.name || "")}</b>${l3.channel ? `<span class="tiny">(${esc2(channelShort(channelOf(CH, l3.channel)))})</span> ` : ""}${esc2(l3.text)}</li>`).join("")}</ul>` : ""}${t2.sound ? `<p class="tiny" style="margin-top:8px;font-style:italic">${esc2(t2.sound)}</p>` : ""}${page ? sbRefList(t2) : ""}${relHTML("panel/" + t2.id, { max: page ? 12 : 5 })}<div class="sb-actions">${btn("Editar", "sb-shot:" + b2.id + ":" + s.id + ":" + t2.id)}${btn("Generar fotograma", "gen-sb:" + t2.id, t2.render ? "" : "lime")}${sbAnim(t2)}${btn("Prompt", "sb-prompt:" + t2.id)}<details class="menu down end sb-more"><summary aria-label="M\xE1s acciones de la vi\xF1eta">\u22EF</summary><div>${btn("Subir boceto", "upload-sb-sketch:" + t2.id)}${btn("Subir fotograma", "upload-sb-render:" + t2.id)}${panelSceneOptions(p, t2.id).length ? btn("\u21AA Mover a escena\u2026", "sb-move-to:" + t2.id) : ""}${btn("\u25C0 Mover antes", "sb-move:" + t2.id + ":-1")}${btn("\u25B6 Mover despu\xE9s", "sb-move:" + t2.id + ":1")}${btn("\u2715 Eliminar vi\xF1eta", "delete-sb-shot:" + t2.id)}</div></details></div>${sbCardVersions(t2, M2?.shots?.[t2.id], sbMedia.a3d?.shots?.[t2.id])}</div></article>`;
+    return tile({ kind: "panel", cls: "sb-card" + (page ? " sb-card-page" : ""), attrs: page ? ` data-sb-panel="${esc2(t2.id)}"` : ` draggable="true" data-sb-drag="${esc2(t2.id)}"`, frame: sbFrame(t2, M2?.shots?.[t2.id]), body: `<div class="inner"><div class="sb-card-head">${page ? "" : `<h3><a href="${esc2(routeQuery({ project: p.id, view: "storyboard", storyboard: b2.id, scene: s.id, panel: t2.id }))}" data-route>${esc2(t2.title)}</a></h3>`}${t2.zone ? ((z) => `<span class="pill zone" style="${catalogStyle(z, "zone")}">${esc2(z.unknown ? t2.zone : z.label)}</span>`)(zoneOf(p, t2.zone)) : ""}</div>${t2.camera ? `<p class="tiny" style="margin:6px 0 0">${esc2(t2.camera)}</p>` : ""}${t2.action ? `<p style="margin:8px 0 0">${esc2(t2.action)}</p>` : ""}${t2.dialogue?.length ? `<ul class="sb-dial">${t2.dialogue.map((l3) => `<li style="${catalogStyle(channelOf(CH, l3.channel), "ch")}"><b>${esc2(l3.who || p.characters.find((c) => c.id === l3.character)?.name || "")}</b>${l3.channel ? `<span class="tiny">(${esc2(channelShort(channelOf(CH, l3.channel)))})</span> ` : ""}${esc2(l3.text)}</li>`).join("")}</ul>` : ""}${t2.sound ? `<p class="tiny" style="margin-top:8px;font-style:italic">${esc2(t2.sound)}</p>` : ""}${page ? sbRefList(t2) : ""}${relHTML("panel/" + t2.id, { max: page ? 12 : 5 })}<div class="sb-actions">${btn("Editar", "sb-shot:" + b2.id + ":" + s.id + ":" + t2.id)}${btn("Generar fotograma", "gen-sb:" + t2.id, t2.render ? "" : "lime")}${sbAnim(t2)}${btn("Prompt", "sb-prompt:" + t2.id)}<details class="menu down end sb-more"><summary aria-label="M\xE1s acciones de la vi\xF1eta">\u22EF</summary><div>${btn("Subir boceto", "upload-sb-sketch:" + t2.id)}${btn("Subir fotograma", "upload-sb-render:" + t2.id)}${panelSceneOptions(p, t2.id).length ? btn("\u21AA Mover a escena\u2026", "sb-move-to:" + t2.id) : ""}${btn("\u25C0 Mover antes", "sb-move:" + t2.id + ":-1")}${btn("\u25B6 Mover despu\xE9s", "sb-move:" + t2.id + ":1")}${btn("\u2715 Eliminar vi\xF1eta", "delete-sb-shot:" + t2.id)}</div></details></div>${sbCardVersions(t2, M2?.shots?.[t2.id], sbMedia.a3d?.shots?.[t2.id])}</div>` });
   }
   const sceneItem = (b2, x2) => {
     const key = "scene/" + b2.id + "/" + x2.id, meta2 = storyboardSequenceHeader(x2.scene, p.locations, sbDur).meta;
-    return `<article class="level-item level-scene" data-level="${esc2(key)}"><a class="level-link" href="${esc2(routeQuery({ project: p.id, view: "storyboard", storyboard: b2.id, scene: x2.id }))}" data-route>${treeThumb(x2.thumb, x2.title)}<span class="tree-code">${pad2(x2.number)}</span><b>${esc2(x2.title)}</b></a><span class="level-meta">${levelPill(plural(x2.panels, "vi\xF1eta", "vi\xF1etas"))}${x2.seconds > 0 ? levelPill(sbDur(x2.seconds)) : ""}${meta2 ? `<span class="tiny">${esc2(meta2)}</span>` : ""}</span>${relHTML(key, { max: 4 })}</article>`;
+    return tile({
+      kind: "scene",
+      cls: "level-item level-scene",
+      attrs: ` data-level="${esc2(key)}"`,
+      href: routeQuery({ project: p.id, view: "storyboard", storyboard: b2.id, scene: x2.id }),
+      linkCls: "level-link",
+      image: nodeImage(relationIndexFor(p), key),
+      alt: x2.title,
+      label: pad2(x2.number),
+      head: `<span class="tree-code">${pad2(x2.number)}</span><b class="tile-title">${esc2(x2.title)}</b>`,
+      meta: levelPill(plural(x2.panels, "vi\xF1eta", "vi\xF1etas")) + (x2.seconds > 0 ? levelPill(sbDur(x2.seconds)) : "") + (meta2 ? `<span class="tiny">${esc2(meta2)}</span>` : ""),
+      metaCls: "level-meta",
+      body: relHTML(key, { max: 4 })
+    });
   };
   function storyPageHTML(b2, heading3) {
     const M2 = sbMedia?.data, A2 = sbMedia?.anim, shots = sbShots(b2), vo = storyVersionOptions(p, b2.id), shown = vo.find((o) => o.selected), scenes = storyScenes(b2);
-    return heading3(esc2(b2.title), esc2(b2.subtitle || ""), `<div class="heading-actions">${vo.length > 1 ? `<select data-sb-version="${esc2(b2.id)}" aria-label="Versi\xF3n del story">${vo.map((o) => `<option value="${esc2(o.id)}"${o.selected ? " selected" : ""}>${esc2(o.label)}</option>`).join("")}</select>` : ""}${shown ? shown.current ? '<span class="pill ok">vigente</span>' : btn("Marcar como vigente", "sb-current:" + b2.id) : ""}${btn(storyPlansLabel(p, b2), "sb-to-episode:" + b2.id, "primary")}${sbAnimBtn(b2)}${btn("Editar", "edit-storyboard:" + b2.id)}${btn("+ Escena", "new-sb-sequence:" + b2.id)}<details class="menu down"><summary>M\xE1s</summary><div>${btn("Exportar JSON", "sb-export:" + b2.id)}${btn("Eliminar", "delete-storyboard:" + b2.id)}</div></details></div>`, "stack") + `<div class="two"><section class="panel"><div class="eyebrow">Planteamiento</div><p style="white-space:pre-wrap">${esc2(b2.description || "Sin descripci\xF3n todav\xEDa.")}</p>${relHTML("sb/" + b2.id, { max: 12 })}${b2.notes ? `<div class="note" style="margin-top:16px;white-space:pre-wrap">${esc2(b2.notes)}</div>` : ""}</section><section class="panel"><div class="sb-stats"><div><span class="stat">${b2.sequences.length}</span>Escenas</div><div><span class="stat">${shots.length}</span>Vi\xF1etas</div><div><span class="stat">${shots.filter((t2) => t2.render).length}</span>Fotogramas</div><div><span class="stat">${sbDur(shots.reduce((n, t2) => n + (Number(t2.duration) || 0), 0))}</span>Duraci\xF3n</div></div>${sbPlayer("storyboard", storyboardPlayer(A2?.storyboard, M2?.cuts), { cutLabel: sbCutLabel, go: true })}<details class="sb-help"><summary>C\xF3mo funciona</summary><p>Cada escena tiene su p\xE1gina con sus vi\xF1etas, y cada vi\xF1eta la suya, con sus versiones y sus planos. Cada vi\xF1eta guarda su boceto, el fotograma generado, las referencias y el prompt: \xABGenerar fotograma\xBB env\xEDa el boceto y las referencias al modelo de imagen, y \xABCrear cap\xEDtulo\xBB convierte las vi\xF1etas en planos editables con su di\xE1logo. En la p\xE1gina de una escena, arrastra una vi\xF1eta sobre otra (o al final de la rejilla) para reordenarla; en el men\xFA \u22EF de la vi\xF1eta, \xABMover antes\xBB y \xABMover despu\xE9s\xBB hacen lo mismo con el teclado, y \xABMover a escena\u2026\xBB la lleva al final de otra escena del story.</p></details></section></div>` + (scenes.length ? `<section class="level-section"><h2>Escenas</h2><div class="levels">${scenes.map((x2) => sceneItem(b2, x2)).join("")}</div></section>` : '<div class="empty"><h2>Empieza por una escena.</h2><p>Cada escena agrupa vi\xF1etas con su encuadre, acci\xF3n y di\xE1logo.</p></div>');
+    return heading3(esc2(b2.title), esc2(b2.subtitle || ""), `<div class="heading-actions">${vo.length > 1 ? `<select data-sb-version="${esc2(b2.id)}" aria-label="Versi\xF3n del story">${vo.map((o) => `<option value="${esc2(o.id)}"${o.selected ? " selected" : ""}>${esc2(o.label)}</option>`).join("")}</select>` : ""}${shown ? shown.current ? '<span class="pill ok">vigente</span>' : btn("Marcar como vigente", "sb-current:" + b2.id) : ""}${btn(storyPlansLabel(p, b2), "sb-to-episode:" + b2.id, "primary")}${sbAnimBtn(b2)}${btn("Editar", "edit-storyboard:" + b2.id)}${btn("+ Escena", "new-sb-sequence:" + b2.id)}<details class="menu down"><summary>M\xE1s</summary><div>${btn("Exportar JSON", "sb-export:" + b2.id)}${btn("Eliminar", "delete-storyboard:" + b2.id)}</div></details></div>`, "stack") + `<div class="two"><section class="panel"><div class="eyebrow">Planteamiento</div><p style="white-space:pre-wrap">${esc2(b2.description || "Sin descripci\xF3n todav\xEDa.")}</p>${relHTML("sb/" + b2.id, { max: 12 })}${b2.notes ? `<div class="note" style="margin-top:16px;white-space:pre-wrap">${esc2(b2.notes)}</div>` : ""}</section><section class="panel"><div class="sb-stats"><div><span class="stat">${b2.sequences.length}</span>Escenas</div><div><span class="stat">${shots.length}</span>Vi\xF1etas</div><div><span class="stat">${shots.filter((t2) => t2.render).length}</span>Fotogramas</div><div><span class="stat">${sbDur(shots.reduce((n, t2) => n + (Number(t2.duration) || 0), 0))}</span>Duraci\xF3n</div></div>${sbPlayer("storyboard", storyboardPlayer(A2?.storyboard, M2?.cuts), { cutLabel: sbCutLabel, go: true })}<details class="sb-help"><summary>C\xF3mo funciona</summary><p>Cada escena tiene su p\xE1gina con sus vi\xF1etas, y cada vi\xF1eta la suya, con sus versiones y sus planos. Cada vi\xF1eta guarda su boceto, el fotograma generado, las referencias y el prompt: \xABGenerar fotograma\xBB env\xEDa el boceto y las referencias al modelo de imagen, y \xABCrear cap\xEDtulo\xBB convierte las vi\xF1etas en planos editables con su di\xE1logo. En la p\xE1gina de una escena, arrastra una vi\xF1eta sobre otra (o al final de la rejilla) para reordenarla; en el men\xFA \u22EF de la vi\xF1eta, \xABMover antes\xBB y \xABMover despu\xE9s\xBB hacen lo mismo con el teclado, y \xABMover a escena\u2026\xBB la lleva al final de otra escena del story.</p></details></section></div>` + (scenes.length ? `<section class="level-section"><h2>Escenas</h2>${tiles("scene", scenes.map((x2) => sceneItem(b2, x2)))}</section>` : '<div class="empty"><h2>Empieza por una escena.</h2><p>Cada escena agrupa vi\xF1etas con su encuadre, acci\xF3n y di\xE1logo.</p></div>');
   }
   function scenePageHTML(b2, s, heading3) {
     const H2 = storyboardSequenceHeader(s, p.locations, sbDur), P2 = storyboardPlayer(sbMedia?.anim?.sequences?.[s.id], sbMedia?.data?.sequences?.[s.id]);
-    return heading3(esc2(s.title || s.id), esc2([H2.eyebrow, H2.meta].filter(Boolean).join(" \xB7 ")), `<div class="row">${btn("Editar", "sb-sequence:" + b2.id + ":" + s.id)}${btn("+ Vi\xF1eta", "new-sb-shot:" + b2.id + ":" + s.id, "primary")}${btn("Eliminar", "delete-sb-sequence:" + b2.id + ":" + s.id)}</div>`) + relHTML("scene/" + b2.id + "/" + s.id, { max: 10, cls: "rel-head" }) + `<div class="panel sb-seq" data-sb-scene="${esc2(s.id)}"><div class="sb-grid" data-sb-grid="${esc2(s.id)}">${(s.shots || []).map((t2) => sbCard(b2, s, t2)).join("") || '<p class="tiny">Sin vi\xF1etas todav\xEDa.</p>'}</div></div>` + (P2.steps.length ? `<section class="panel sb-scene-videos"><h2>V\xEDdeos de la escena</h2>${sbPlayer("seq-" + s.id, P2, { cutLabel: (x2) => `${x2.cut} \xB7 ${sbTime(x2.duration)} \xB7 ${x2.blocks.length} bloques`, go: false })}</section>` : "");
+    return heading3(esc2(s.title || s.id), esc2([H2.eyebrow, H2.meta].filter(Boolean).join(" \xB7 ")), `<div class="row">${btn("Editar", "sb-sequence:" + b2.id + ":" + s.id)}${btn("+ Vi\xF1eta", "new-sb-shot:" + b2.id + ":" + s.id, "primary")}${btn("Eliminar", "delete-sb-sequence:" + b2.id + ":" + s.id)}</div>`) + relHTML("scene/" + b2.id + "/" + s.id, { max: 10, cls: "rel-head" }) + `<div class="panel sb-seq" data-sb-scene="${esc2(s.id)}">${tiles("panel", (s.shots || []).length ? s.shots.map((t2) => sbCard(b2, s, t2)) : ['<p class="tiny">Sin vi\xF1etas todav\xEDa.</p>'], { cls: "sb-grid", attrs: ` data-sb-grid="${esc2(s.id)}"` })}</div>` + (P2.steps.length ? `<section class="panel sb-scene-videos"><h2>V\xEDdeos de la escena</h2>${sbPlayer("seq-" + s.id, P2, { cutLabel: (x2) => `${x2.cut} \xB7 ${sbTime(x2.duration)} \xB7 ${x2.blocks.length} bloques`, go: false })}</section>` : "");
   }
   function panelPageHTML(b2, s, t2, heading3) {
     const shots = treeData?.panels?.get("panel/" + t2.id)?.node.shots || [];
@@ -30112,15 +30221,31 @@ y ${list.length - 20} m\xE1s` : "");
   }
   if (view === "storyboards") {
     const { items, defs } = storyboardItems(p), hitsHTML = (b2, hits) => hits.length ? `<ul class="filter-hits">${hits.slice(0, 12).map((h) => `<li><a href="${esc2(routeQuery({ project: p.id, view: "storyboard", storyboard: b2.id, scene: h.scene, panel: h.panel || null }))}" data-route>${esc2(h.label)}</a></li>`).join("")}${hits.length > 12 ? `<li class="tiny">y ${hits.length - 12} m\xE1s</li>` : ""}</ul>` : "";
-    const sbCard2 = ({ item, hits }) => {
-      const b2 = item.ref.storyboard, shots = sbShots(b2), cover = shots.find((t2) => t2.render)?.render || shots.find((t2) => t2.sketch)?.sketch;
-      return `<article class="card">${cover ? `<img src="${media(cover)}" alt="${esc2(b2.title)}">` : '<div class="cover">\u25A6</div>'}<div class="inner"><div class="row"><span class="pill">${item.ref.version ? "v" + item.ref.version : "STORYBOARD"}</span>${item.ref.current ? '<span class="pill ok">vigente</span>' : ""}</div><h2 style="margin-top:12px">${esc2(b2.title)}</h2><p>${esc2(b2.subtitle || (b2.description || "").slice(0, 140))}</p><p class="tiny" style="margin-bottom:14px">${(b2.sequences || []).length} escenas \xB7 ${shots.length} vi\xF1etas \xB7 ${sbDur(shots.reduce((n, t2) => n + (Number(t2.duration) || 0), 0))} \xB7 ${shots.filter((t2) => t2.render).length} fotogramas</p>${hitsHTML(b2, hits)}${btn("Abrir storyboard \u2192", "storyboard:" + b2.id, "primary")}</div></article>`;
+    const ix = relationIndexFor(p), sbCard2 = ({ item, hits }) => {
+      const b2 = item.ref.storyboard, shots = sbShots(b2);
+      return tile({
+        kind: "story-list",
+        href: routeQuery({ project: p.id, view: "storyboard", storyboard: b2.id }),
+        image: nodeImage(ix, "sb/" + b2.id),
+        alt: b2.title,
+        label: "STORYBOARD",
+        head: `<span class="pill">${item.ref.version ? "v" + item.ref.version : "STORYBOARD"}</span>${item.ref.current ? '<span class="pill ok">vigente</span>' : ""}<b class="tile-title">${esc2(b2.title)}</b>`,
+        body: `<p class="tile-text">${esc2(b2.subtitle || (b2.description || "").slice(0, 140))}</p><p class="tiny">${(b2.sequences || []).length} escenas \xB7 ${shots.length} vi\xF1etas \xB7 ${sbDur(shots.reduce((n, t2) => n + (Number(t2.duration) || 0), 0))} \xB7 ${shots.filter((t2) => t2.render).length} fotogramas</p>${hitsHTML(b2, hits)}${btn("Abrir storyboard \u2192", "storyboard:" + b2.id, "primary")}`
+      });
     };
     const testCard = ({ item }) => {
       const s = item.ref.sequence;
-      return `<article class="card"><div class="inner"><span class="pill">PRUEBA</span><h2 style="margin-top:12px">${esc2(s.title || s.id)}</h2><p class="tiny" style="margin-bottom:14px">${esc2(item.ref.episode.title || item.ref.episode.id)} \xB7 ${plural(item.ref.shots, "plano", "planos")}</p>${btn("Ver en Planos \u2192", "shots:" + s.id)}</div></article>`;
+      return tile({
+        kind: "story-list",
+        href: routeQuery({ project: p.id, view: "tree", node: "seq/" + s.id }),
+        image: nodeImage(ix, "seq/" + s.id),
+        alt: s.title || s.id,
+        label: "PRUEBA",
+        head: `<span class="pill">PRUEBA</span><b class="tile-title">${esc2(s.title || s.id)}</b>`,
+        body: `<p class="tiny">${esc2(item.ref.episode.title || item.ref.episode.id)} \xB7 ${plural(item.ref.shots, "plano", "planos")}</p>${btn("Ver en Planos \u2192", "shots:" + s.id)}`
+      });
     };
-    const grid = (list) => `<div class="grid">${list.map((r) => r.item.kind === "test" ? testCard(r) : sbCard2(r)).join("")}</div>`;
+    const grid = (list) => tiles("story-list", list.map((r) => r.item.kind === "test" ? testCard(r) : sbCard2(r)));
     html3 = heading2("Storyboards.", "Vi\xF1etas con boceto, fotograma generado, encuadre y di\xE1logo. Cuando un storyboard est\xE1 listo se convierte en cap\xEDtulo.", `<div class="row">${btn("Importar JSON", "import-storyboard")}${btn("+ Storyboard", "new-storyboard", "primary")}</div>`) + (items.length ? filterBarHTML({ view, query: filt.q, placeholder: "Buscar story, escena o vi\xF1eta (c\xF3digo o t\xEDtulo)", open: filterOpen ?? matchMedia("(min-width: 751px)").matches }) + "<div data-filter-results></div>" : '<div class="empty"><h2>Dibuja antes de rodar.</h2><p>Crea un storyboard vac\xEDo o importa uno en JSON con sus bocetos y fotogramas.</p></div>');
     fctx = { view, items, defs, noun: ["resultado", "resultados"], empty: "Ning\xFAn story, escena ni vi\xF1eta coincide con la b\xFAsqueda y los filtros.", paint: (m2) => storyboardResultSections(m2.results).map((x2) => x2.kind === "act" ? `<section class="panel sbs-act"><span class="eyebrow">${p.type === "serie" ? "CAP\xCDTULO" : "ACTO"}</span><h2>${esc2(x2.episode.title || x2.episode.id)}</h2>${x2.fichas.map((f2) => `<div class="sbs-ficha"><h3><a href="${esc2(routeQuery({ project: p.id, view: "tree", node: "seq/" + f2.ficha.id }))}" data-route>${esc2(f2.code + " \xB7 " + f2.ficha.title)}</a></h3>${grid(f2.results)}</div>`).join("")}</section>` : `<section class="panel sbs-group"><span class="eyebrow">${x2.kind === "tests" ? "Pruebas" : "Sin secuencia"}</span>${grid(x2.results)}</section>`).join("") };
   }
@@ -30157,9 +30282,9 @@ y ${list.length - 20} m\xE1s` : "");
     html3 = treeNode ? levelPage(treeData.index.get(treeNode).node, heading2) : levelRootPage(heading2);
   }
   if (view === "shots") {
-    const GT = { container: "Planos de storys", outline: "Planos propios", test: "Pruebas" }, shotCard = (e, s, t2, i2) => `<article class="card"><div class="inner"><div class="row between"><span class="pill">${shotLabel(i2 + 1, t2.title).code}</span><span class="tiny">${t2.duration}s \xB7 ${t2.lines.length} di\xE1logos</span></div><h3 style="margin-top:14px">${esc2(shotLabel(i2 + 1, t2.title).title || t2.title)}</h3><p>${esc2(t2.description.slice(0, 90) || "Define encuadre, acci\xF3n y conversaci\xF3n.")}</p>${relHTML("shot/" + t2.id, { max: 5 })}<div class="row">${btn("Abrir estudio \u2192", "shot:" + e.id + ":" + s.id + ":" + t2.id)}${btn("Animaci\xF3n", "anim:" + e.id + ":" + s.id + ":" + t2.id)}</div></div></article>`, seqHTML = (e, x2) => {
+    const GT = { container: "Planos de storys", outline: "Planos propios", test: "Pruebas" }, seqHTML = (e, x2) => {
       const s = x2.sequence;
-      return `<div class="shots-seq" data-shots-seq="${esc2(s.id)}"><div class="row between"><div><h3>${esc2(s.title)} <span class="tiny">${x2.shots.length !== s.shots.length ? x2.shots.length + " de " : ""}${plural(s.shots.length, "plano", "planos")} \xB7 ${esc2(p.locations.find((l3) => l3.id === s.location)?.name || "Sin ambiente")}</span></h3>${x2.storyboard ? `<p class="tiny">Story v${x2.version} de ${x2.ficha ? `<a href="${esc2(routeQuery({ project: p.id, view: "tree", node: "seq/" + x2.ficha.id }))}" data-route>\xAB${esc2(x2.ficha.title)}\xBB</a>` : "su secuencia"}</p>` : ""}</div>${btn("+ Plano", "new-shot:" + e.id + ":" + s.id)}</div><div class="grid" style="margin-top:12px">${x2.shots.map(({ shot: t2, index: i2 }) => shotCard(e, s, t2, i2)).join("")}</div></div>`;
+      return `<div class="shots-seq" data-shots-seq="${esc2(s.id)}"><div class="row between"><div><h3>${esc2(s.title)} <span class="tiny">${x2.shots.length !== s.shots.length ? x2.shots.length + " de " : ""}${plural(s.shots.length, "plano", "planos")} \xB7 ${esc2(p.locations.find((l3) => l3.id === s.location)?.name || "Sin ambiente")}</span></h3>${x2.storyboard ? `<p class="tiny">Story v${x2.version} de ${x2.ficha ? `<a href="${esc2(routeQuery({ project: p.id, view: "tree", node: "seq/" + x2.ficha.id }))}" data-route>\xAB${esc2(x2.ficha.title)}\xBB</a>` : "su secuencia"}</p>` : ""}</div>${btn("+ Plano", "new-shot:" + e.id + ":" + s.id)}</div>${tiles("shot", x2.shots.map(({ shot: t2, index: i2 }) => shotTile({ episode: e, sequence: s, shot: t2, number: i2 + 1, role: x2.role || sequenceRole(p, s) })))}</div>`;
     }, groupsHTML = (list) => list.map(({ episode: e, groups, empty }) => `<div class="panel"><div class="row between"><div><span class="eyebrow">${p.type === "serie" ? "CAP\xCDTULO" : "ACTO"}</span><h2>${esc2(e.title)}</h2><p>${esc2(e.synopsis)}</p></div><div class="row">${e.rehearsal ? btn("\u25B6 Ensayar 3D \xB7 voz del navegador", "rehearsal:" + e.id, "primary") : ""}${btn("Editar", "episode:" + e.id)}${btn("+ Secuencia", "new-sequence:" + e.id)}${btn(p.type === "serie" ? "Montar cap\xEDtulo" : "Montar acto", "export:" + e.id)}</div></div>${groups.map((g) => `<section class="shots-group">${groups.length === 1 && g.role === "outline" ? "" : `<div class="eyebrow">${GT[g.role]}</div>`}${g.sequences.map((x2) => seqHTML(e, x2)).join("")}</section>`).join("")}${empty.length ? `<details class="shots-empty"><summary>${plural(empty.length, "secuencia sin planos", "secuencias sin planos")}</summary>${empty.map((s) => `<div class="row between"><span>${esc2(s.title)}</span>${btn("+ Plano", "new-shot:" + e.id + ":" + s.id)}</div>`).join("")}</details>` : ""}${e.exports?.length ? `<div class="actions">${e.exports.map((x2, i2) => `<a href="${media(x2.file)}" target="_blank">Montaje v${i2 + 1} \u2197</a>`).join(" \xB7 ")}</div>` : ""}</div>`).join(""), { items, defs } = shotItems(p);
     html3 = heading2("Planos.", "Los planos de cada " + (p.type === "serie" ? "cap\xEDtulo" : "acto") + ": los de los storys, los propios de las secuencias y las pruebas. Cada uno se abre en su estudio o en Animaci\xF3n.", `<div class="row">${btn("Generar con IA", "outline")}${btn(p.type === "serie" ? "+ Cap\xEDtulo" : "+ Acto", "new-episode", "primary")}</div>`) + (items.length ? filterBarHTML({ view, query: filt.q, placeholder: "Buscar plano, descripci\xF3n o di\xE1logo", open: filterOpen ?? matchMedia("(min-width: 751px)").matches }) + "<div data-filter-results></div>" : groupsHTML(filterShotGroups(shotGroups(p), null)));
     fctx = { view, items, defs, noun: ["plano", "planos"], empty: "Ning\xFAn plano coincide con la b\xFAsqueda y los filtros.", paint: (m2) => {

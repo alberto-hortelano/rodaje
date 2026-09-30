@@ -75,13 +75,13 @@ test('Storyboards: acto › ficha, Pruebas y Sin secuencia; una viñeta enlaza a
  assert.deepEqual(sc.map(h=>h[0]),['Patio']);assert.match(sc[0][1],/view=storyboard&storyboard=sb-suelto&scene=su-e1$/,'la escena, sin viñeta');
  await page.click('.filter-hits a');await page.waitForFunction(()=>/scene=su-e1/.test(location.search));await page.waitForSelector('[data-sb-grid="su-e1"]');
  await load(page,'&view=storyboards&f=cast:bea');assert.deepEqual(await page.$$eval('.filter-hits a',l=>l.map(a=>a.textContent)),['Camino · A02 Viñeta A02']);
- assert.deepEqual(await page.$$eval('.sbs-group .card h2',l=>l.map(h=>h.textContent)),['El fuego','Prueba 3D · El cruce'],'pruebas con visibleCast y con reparto propio');
+ assert.deepEqual(await page.$$eval('.sbs-group .tile .tile-title',l=>l.map(h=>h.textContent)),['El fuego','Prueba 3D · El cruce'],'pruebas con visibleCast y con reparto propio');
  assert.equal(await revision(page),r0);}));
 
 test('Planos: personaje heredado deja sus planos con su número original; sin actos vacíos',{skip:SIN_CHROME},()=>session(async page=>{
  await load(page,'&view=shots');const r0=await revision(page);assert.ok(await page.$('.shots-empty'));
  await page.click(chip('cast','bea'));await page.waitForFunction(()=>new URLSearchParams(location.search).get('f')==='cast:bea');
- const t=await page.evaluate(()=>({seqs:[...document.querySelectorAll('[data-shots-seq]')].map(s=>[s.dataset.shotsSeq,[...s.querySelectorAll('.card .pill')].map(x=>x.textContent)]),acts:[...document.querySelectorAll('[data-filter-results]>.panel h2')].map(h=>h.textContent),empty:!!document.querySelector('.shots-empty'),count:document.querySelector('[data-filter-count]').textContent}));
+ const t=await page.evaluate(()=>({seqs:[...document.querySelectorAll('[data-shots-seq]')].map(s=>[s.dataset.shotsSeq,[...s.querySelectorAll('.tile .tree-code')].map(x=>x.textContent)]),acts:[...document.querySelectorAll('[data-filter-results]>.panel h2')].map(h=>h.textContent),empty:!!document.querySelector('.shots-empty'),count:document.querySelector('[data-filter-count]').textContent}));
  assert.deepEqual(t.seqs,[['x-fuego',['P02']],['x-cruce',['P01']]]);assert.deepEqual(t.acts,['Acto I']);assert.equal(t.empty,false);assert.equal(t.count,'2 de 8 planos');
  await load(page,'&view=shots&sequence=x-v1&f=cast:bea');assert.match(await page.$eval('[data-filter-results]',e=>e.textContent),/La secuencia enfocada queda oculta por los filtros/);
  await page.click('.filter-hidden [data-filter-clear]');assert.equal(params(page).f,undefined);assert.ok(await page.$('[data-shots-seq="x-v1"]'));

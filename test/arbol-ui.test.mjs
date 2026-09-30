@@ -44,10 +44,10 @@ test('acto: fichas con miniatura perezosa y enlaces; relaciones ≤ 1 + fichas',
  await load(page);await go(page,'[data-level="act/e1"] a.level-link',/node=act\/e1/);
  assert.equal(params(page).node,'act/e1');assert.deepEqual(await crumbs(page),[['Escaleta',true],['Acto I',false]]);
  assert.deepEqual(await levels(page),['seq/x-colgado','seq/x-prologo','seq/x-camino']);
- assert.deepEqual(await page.$$eval('.level-ficha .level-link',l=>l.map(a=>{const t=a.querySelector('.tree-thumb');return t.tagName==='IMG'?t.loading:t.classList.contains('blank')?'blank':'?';})),['blank','lazy','blank']);
+ assert.deepEqual(await page.$$eval('.level-ficha a.tile-link',l=>l.map(a=>{const t=a.querySelector('.tile-media img,.tile-media .tile-blank');return t.tagName==='IMG'?t.loading:t.classList.contains('tile-blank')?'blank':'?';})),['blank','lazy','blank']);
  const fichas=await page.$$eval('.level-ficha',l=>l.length);assert.ok(await counter(page)<=1+fichas);assert.equal(await page.$$eval('.level-link .rel-links',l=>l.length),0);
  assert.equal(await page.$$eval('.rel-head',l=>l.length),1);
- await go(page,'[data-level="seq/x-prologo"] img.tree-thumb',/node=seq\/x-prologo/);assert.equal(await page.evaluate(()=>document.querySelector('dialog[open]')),null,'la miniatura navega, no amplía');}));
+ await go(page,'[data-level="seq/x-prologo"] .tile-media img',/node=seq\/x-prologo/);assert.equal(await page.evaluate(()=>document.querySelector('dialog[open]')),null,'la miniatura navega, no amplía');}));
 
 // Antes de «ficha», que cambia el vigente a v1.
 test('story: migas desde la Escaleta y vuelta a la ficha',{skip:SIN_CHROME},()=>session(async page=>{
@@ -97,7 +97,8 @@ test('alias y claves que no son páginas',{skip:SIN_CHROME},()=>session(async pa
 
 test('scroll por página: cada nivel recuerda el suyo',{skip:SIN_CHROME},()=>session(async page=>{
  await load(page);await page.evaluate(()=>scrollTo(0,300));await page.waitForTimeout(100);const y0=await page.evaluate(()=>scrollY);assert.ok(y0>100,'la raíz da para bajar: '+y0);
- await go(page,'[data-level="unlinked"] a.level-link',/node=unlinked/);
+ // Clic por el DOM: page.click desplazaría la página para ver la tarjeta (#70: tarjetas altas) y cambiaría la posición que se guarda.
+ await page.$eval('[data-level="unlinked"] a.level-link',a=>a.click());await page.waitForFunction(()=>/node=unlinked/.test(decodeURIComponent(location.search)));await page.waitForSelector('#workspace .heading');
  // Con la máquina cargada (npm test en paralelo), la posición se aplica tras decodificar imágenes y un frame: se espera a ella.
  const settled=y=>page.waitForFunction(y=>scrollY===y,y,{timeout:5000}).then(()=>true,()=>false);
  assert.ok(await settled(0),'el nivel empieza arriba: '+await page.evaluate(()=>scrollY));

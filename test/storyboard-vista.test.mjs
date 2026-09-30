@@ -57,7 +57,7 @@ test('vista Storyboard: conserva acciones y data-sb-*, menús y «Montaje →» 
  assert.match(src,/class="menu down/);assert.match(src,/storyboardSequenceHeader\(s,/);assert.ok(src.includes("'+ Escena'"));assert.ok(src.includes('Vídeos de la escena'));
  assert.ok(!src.includes('sobre el hueco final de una escena'),'la ayuda describe las páginas (#68)');assert.ok(src.includes('«Mover a escena…» la lleva al final de otra escena del story'));});
 
-test('vista Storyboard: estilos de tarjeta, menús hacia abajo y tres columnas',()=>{
+test('vista Storyboard: estilos de tarjeta, menús hacia abajo y rejilla común (#70)',()=>{
  const rule=sel=>new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\{([^}]*)\\}').exec(css)?.[1];
  assert.doesNotMatch(rule('.sb-card')||'',/overflow:hidden/);assert.match(rule('.sb-frame')||'',/overflow:hidden/);
- assert.match(rule('details.menu.down>div')||'',/top:/);assert.match(rule('.sb-grid')||'',/320px/);});
+ assert.match(rule('details.menu.down>div')||'',/top:/);assert.match((/\n\.tiles\{([^}]*)\}/.exec(css)?.[1]||''),/repeat\(var\(--cols/);assert.doesNotMatch((/\n\.tile\{([^}]*)\}/.exec(css)?.[1]||''),/overflow/);});

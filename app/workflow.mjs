@@ -1183,6 +1183,28 @@ export function relationIndex(p){const nodes=new Map(),links=[],from=new Map(),t
 const relCache=new WeakMap();
 // relationIndex memorizado por objeto y revision.
 export function relationIndexFor(p){if(!isObj(p))return relationIndex(p);const c=relCache.get(p);if(c&&c.revision===(p.revision??null))return c.index;const index=relationIndex(p);relCache.set(p,{revision:index.revision,index});return index;}
+// ---- Tarjetas (#70): columnas por tipo y imagen principal de un nodo del índice de relaciones.
+// Columnas máximas por tipo de tarjeta: menos contenido, más columnas. Único sitio donde se fijan (el CSS solo recorta por ancho).
+export const CARD_COLUMNS=Object.freeze({act:5,group:5,test:5,scene:4,shot:4,story:4,'ap-level':4,ficha:3,'story-list':3,environment:3,'ap-leaf':3,panel:3,character:2,location:2});
+export function cardColumns(kind){const n=Object.hasOwn(CARD_COLUMNS,kind)?CARD_COLUMNS[kind]:null;return Number.isInteger(n)&&n>=1&&n<=5?n:3;}
+const imgOf=v=>typeof v==='string'&&v?v:null,nodeImages=new WeakMap();
+// Imagen principal de key (clave del índice) o null; memorizada por índice. Viñeta: render o boceto; escena: su primera viñeta con imagen;
+// story: su primera escena; plano: preview.snapshot, storyboardRender o su viñeta; ficha: carátula, story vigente, los demás storys y sus planos
+// propios; prueba y contenedor: su primer plano; acto: su primera ficha (las pruebas no cuentan); personaje, ambiente y entorno: image.
+export function nodeImage(index,key){if(!(index?.nodes instanceof Map))return null;let m=nodeImages.get(index);if(!m)nodeImages.set(index,m=new Map());
+ if(m.has(key))return m.get(key);m.set(key,null);const v=nodeImageOf(index,key);m.set(key,v);return v;}
+export function firstNodeImage(index,keys){for(const k of Array.isArray(keys)?keys:[]){const v=nodeImage(index,k);if(v)return v;}return null;}
+function nodeImageOf(index,key){const n=index.nodes.get(key);if(!n)return null;const d=isObj(n.data)?n.data:{},kids=kind=>n.children.filter(k=>index.nodes.get(k)?.kind===kind),first=keys=>firstNodeImage(index,keys);
+ switch(n.kind){
+  case 'character':case 'location':case 'environment':return imgOf(d.image);
+  case 'panel':return imgOf(d.render)||imgOf(d.sketch);
+  case 'scene':return first(kids('panel'));
+  case 'story':return first(kids('scene'));
+  case 'shot':return imgOf(isObj(d.preview)?d.preview.snapshot:null)||imgOf(d.storyboardRender)||(index.shotPanel?.has(key)?nodeImage(index,index.shotPanel.get(key)):null);
+  case 'sequence':{const c=imgOf(d.cover);if(c)return c;if(n.role!=='outline')return first(index.sequenceShots?.get(key)||kids('shot'));
+   const st=kids('story'),cur=st.filter(k=>index.nodes.get(k).current===true);return first([...cur,...st.filter(k=>!cur.includes(k)),...kids('shot')]);}
+  case 'act':return first(kids('sequence').filter(k=>index.nodes.get(k).role==='outline'));
+  default:return null;}}
 const ENTITY_KINDS=new Set(['character','location','environment']);
 // Story no vigente de una ficha que tiene vigente: con current, su rama no cuenta por encima de él.
 const offCurrent=(index,n)=>n.kind==='story'&&!n.current&&!!n.parent&&(index.nodes.get(n.parent)?.children||[]).some(k=>index.nodes.get(k)?.current===true);

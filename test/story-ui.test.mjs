@@ -40,7 +40,7 @@ test('story: cabecera, planteamiento y lista de escenas sin viñetas',{skip:SIN_
  for(const a of ['new-sb-sequence:sb-v2','edit-storyboard:sb-v2','sb-to-episode:sb-v2'])assert.ok(await page.$(`.heading [data-action="${a}"]`),a);
  assert.ok(await page.$('.two .sb-stats'));assert.ok(await page.$('.two details.sb-help'));
  assert.deepEqual(await levels(page),['scene/sb-v2/sb-v2-e1','scene/sb-v2/sb-v2-e2']);
- const items=await page.$$eval('.level-scene',l=>l.map(e=>{const t=e.querySelector('.tree-thumb');return [e.querySelector('.tree-code').textContent,e.querySelector('b').textContent,[...e.querySelectorAll('.level-meta .pill')].map(x=>x.textContent),t.tagName==='IMG'?t.loading:t.classList.contains('blank')?'blank':'?'];}));
+ const items=await page.$$eval('.level-scene',l=>l.map(e=>{const t=e.querySelector('.tile-media img,.tile-media .tile-blank');return [e.querySelector('.tree-code').textContent,e.querySelector('b').textContent,[...e.querySelectorAll('.level-meta .pill')].map(x=>x.textContent),t.tagName==='IMG'?t.loading:t.classList.contains('tile-blank')?'blank':'?'];}));
  assert.deepEqual(items,[['01','Camino',['3 viñetas','0 min 12 s'],'blank'],['02','Llegada',['1 viñeta','0 min 6 s'],'lazy']]);
  assert.equal(await page.$$eval('.sb-card',l=>l.length),0);assert.equal(await page.$$eval('[data-sb-grid]',l=>l.length),0);
  const h0=await len(page);await go(page,'[data-level="scene/sb-v2/sb-v2-e1"] a.level-link',/scene=sb-v2-e1/);
@@ -54,7 +54,7 @@ test('escena: migas, rejilla arrastrable, acciones y Atrás con su scroll',{skip
  for(const a of ['sb-sequence:sb-v2:sb-v2-e1','new-sb-shot:sb-v2:sb-v2-e1','delete-sb-sequence:sb-v2:sb-v2-e1'])assert.ok(await page.$(`.heading [data-action="${a}"]`),a);
  assert.match(await page.getAttribute('[data-sb-drag="v2b"] h3 a','href'),/view=storyboard&storyboard=sb-v2&scene=sb-v2-e1&panel=v2b$/);
  await page.evaluate(()=>scrollTo(0,250));await page.waitForTimeout(300);const y0=await page.evaluate(()=>scrollY);assert.ok(y0>100,'la escena da para bajar: '+y0);
- await go(page,'[data-sb-drag="v2b"] h3 a',/panel=v2b/);assert.equal(await page.evaluate(()=>scrollY),0,'la viñeta empieza arriba');
+ await go(page,'[data-sb-drag="v2b"] h3 a',/panel=v2b/);await page.waitForFunction(()=>scrollY===0,null,{timeout:5000}).catch(()=>{});assert.equal(await page.evaluate(()=>scrollY),0,'la viñeta empieza arriba');
  await page.goBack();await until(page,/scene=sb-v2-e1$/);await settle(page);assert.equal(await page.evaluate(()=>scrollY),y0,'Atrás vuelve a la escena con su scroll');},{width:1280,height:500}));
 
 test('viñeta: tarjeta grande, acciones, planos y estudio con migas hasta la viñeta',{skip:SIN_CHROME},()=>session(async page=>{
