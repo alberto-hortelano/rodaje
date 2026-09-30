@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Guía 3D por bloque (docs/PROCESO.md, paso 6): motion.mp4 sin rótulos, frame-start.png y frame-mid.png.
 //   node scripts/bloques/render.mjs <lote> [bloque] [--project id] [--labels] [--force]
-// Necesita la app abierta (./abrir.sh) porque renderiza con /stage.js en Chrome headless. No genera nada de pago.
+// Necesita la app abierta (./start.sh) porque renderiza con /stage.js en Chrome headless. No genera nada de pago.
 import fs from 'node:fs';import path from 'node:path';import {spawn} from 'node:child_process';import {once} from 'node:events';
 import {withChrome,newRenderContext,pinClock,VIEWPORTS} from '../../lib/chrome.mjs';
 import {parseArgs,cliProject,usageExit,loteProject} from './lib.mjs';import {loadLote} from '../../lib/lotes.mjs';import {stageReuseKey} from '../../app/workflow.mjs';
@@ -9,7 +9,7 @@ const USAGE='Uso: render.mjs <lote> [bloque] [--project id] [--labels] [--force]
 const {args:[lote,only],opts}=parseArgs(process.argv.slice(2));if(!lote)usageExit(USAGE);
 const {project:id}=cliProject({usage:USAGE,opts});
 const L=loadLote(id,lote);const project=loteProject(L);const port=process.env.PORT||4320,url=`http://127.0.0.1:${port}/`;
-try{await fetch(url);}catch{console.error(`La app no responde en ${url}. Arranca ./abrir.sh y repite.`);process.exit(1);}
+try{await fetch(url);}catch{console.error(`La app no responde en ${url}. Arranca ./start.sh y repite.`);process.exit(1);}
 await withChrome(async browser=>{for(const block of L.plan){if(only&&block.id!==only)continue;const dir=path.join(L.paths.out,block.id);fs.mkdirSync(dir,{recursive:true});if(fs.existsSync(path.join(dir,'motion.mp4'))&&!opts.force){console.log('ya existe',block.id);continue;}
  const ctx=await newRenderContext(browser,VIEWPORTS.guia);await pinClock(ctx);const page=await ctx.newPage();
  if(!opts.labels)await page.route('**/stage.js',async route=>{const res=await route.fetch();await route.fulfill({response:res,body:(await res.text()).replace('group.add(label);','label.visible=false;group.add(label);')});});

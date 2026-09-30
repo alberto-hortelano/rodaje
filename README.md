@@ -4,7 +4,7 @@ Aplicación local para crear series y películas desde su historia hasta la prev
 
 ## Abrir
 
-Ejecuta `./abrir.sh` desde esta carpeta. Abre http://127.0.0.1:4320.
+Ejecuta `./start.sh` desde esta carpeta. Abre http://127.0.0.1:4320.
 
 Necesita Node.js 24+, FFmpeg/FFprobe y Google Chrome. Las dependencias están instaladas; para reinstalarlas: `npm ci`. Puerto configurable con `PORT=4321 npm start`; Chrome con `CHROME_PATH=/ruta/chrome`. Para usarla desde el móvil en la misma wifi: `npm run start:lan` (o `RODAJE_LAN=1`), que escucha en todas las interfaces y muestra la dirección local al arrancar; cualquier dispositivo de esa red puede entonces usar la app entera, generaciones incluidas. Guarda todo localmente en `proyectos/` (o en `RODAJE_DATA`).
 
